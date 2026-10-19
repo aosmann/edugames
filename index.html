@@ -114,36 +114,50 @@ p{margin:0}
 .endbtn{border:2px solid rgba(255,255,255,.35);background:none;color:#fff;border-radius:999px;padding:8px 16px;font-weight:700}
 .endbtn:hover{border-color:#fff}
 
-/* class room: join on the left, students and games on the right */
-.room{display:grid;grid-template-columns:minmax(260px,380px) minmax(0,1fr);gap:clamp(20px,4vw,48px);padding-block:12px 40px;align-items:start}
-@media(max-width:820px){.room{grid-template-columns:1fr}}
-.room>*{min-width:0}
-.joinbox{display:grid;gap:14px;justify-items:start}
-.qr{background:#fff;border-radius:var(--r-l);padding:14px;width:100%;max-width:340px;aspect-ratio:1;display:grid;place-items:center;box-shadow:0 8px 0 var(--board2)}
-.qr svg{width:100%;height:100%}
-.qr .wait{color:var(--ink2);font-weight:700;text-align:center;padding:20px}
-.code{font-weight:800;font-size:clamp(60px,9vw,112px);line-height:.9;letter-spacing:.06em;color:var(--marker);font-variation-settings:'opsz' 96,'wdth' 75;font-variant-numeric:tabular-nums}
-.joinhint{font-size:17px;color:#dfe3ff;max-width:34ch}
-.joinhint b{color:#fff;font-weight:700;word-break:break-all}
-.roomnote{color:#ffe28a;font-weight:700;max-width:46ch}
-.sect{display:grid;gap:12px}
-.sect+.sect{margin-top:30px}
-.sect h2{font-size:clamp(24px,3vw,32px);font-weight:800;font-variation-settings:'opsz' 96,'wdth' 80;display:flex;align-items:baseline;gap:10px}
-.sect h2 em{font-style:normal;color:var(--marker);font-variant-numeric:tabular-nums}
-.sect p.sub{color:#c8cff5}
-.chips{display:flex;flex-wrap:wrap;gap:8px;min-height:44px}
-.chip{display:inline-flex;align-items:center;gap:8px;background:#fff;color:var(--ink);font-weight:800;font-size:18px;padding:6px 14px 6px 6px;border-radius:999px;box-shadow:0 3px 0 var(--board2);animation:pop .35s cubic-bezier(.3,1.6,.5,1)}
-.chip.off{opacity:.45}
-.chips .wait{color:#c8cff5;font-size:18px;align-self:center}
+/* avatars */
 .av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:800;color:#fff;background:hsl(var(--hue) 62% 46%);flex:none}
-.av.pic{background:none;border-radius:26%;overflow:hidden}
+.av.pic{display:block;background:none;border-radius:26%;overflow:hidden}
 .av svg,.av img{width:100%;height:100%;display:block;object-fit:cover}
-.chip .av.pic{border-radius:50%}
-@keyframes pop{from{transform:scale(.4);opacity:0}}
-@media(prefers-reduced-motion:reduce){.chip{animation:none}}
-.roomgames{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:22px 16px;max-width:720px}
+
+/* class room: join strip on top, students in the middle, games below */
+.roomwrap{display:grid;gap:22px;padding-bottom:40px}
+.joinbar{justify-self:center;width:min(100%,900px);display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:clamp(14px,3vw,30px);
+  background:#fff;color:var(--ink);border-radius:var(--r-l);padding:14px 14px 14px clamp(16px,3vw,28px);box-shadow:0 8px 0 var(--board2)}
+.jtext,.jcode{display:grid;gap:2px;min-width:0}
+.jtext span,.jcode span{font-size:15px;font-weight:700;color:var(--ink2)}
+.jtext b{font-size:clamp(18px,2.4vw,26px);font-weight:800;line-height:1.15;overflow-wrap:anywhere}
+.jcode{padding-left:clamp(14px,3vw,30px);border-left:2px solid var(--line)}
+.jcode .code{font-size:clamp(46px,7vw,86px);color:var(--board);line-height:.95}
+.qr{width:clamp(110px,15vw,168px);aspect-ratio:1;border:0;border-radius:14px;background:#fff;padding:0;display:grid;place-items:center;cursor:zoom-in}
+.qr svg{width:100%;height:100%;display:block}
+.qr .wait{color:var(--ink2);font-weight:700;font-size:14px}
+@media(max-width:680px){.joinbar{grid-template-columns:1fr auto;padding:14px}.jtext{grid-column:1/-1}.jcode{padding-left:0;border-left:0}}
+.qrbig{position:fixed;inset:0;z-index:40;background:var(--board);color:#fff;display:grid;place-content:center;justify-items:center;gap:16px;padding:24px;cursor:zoom-out;text-align:center}
+.qrbox{background:#fff;border-radius:var(--r-l);padding:clamp(14px,2vw,24px);width:min(80vmin,620px);aspect-ratio:1}
+.qrbox svg{width:100%;height:100%;display:block}
+.qrbig .code{font-size:clamp(48px,9vw,110px)}
+.qrbig p{color:#c8cff5}
+.roomnote{color:#ffe28a;font-weight:700;text-align:center;max-width:60ch;justify-self:center}
+.roomnote:empty{display:none}
+.players{display:grid;gap:16px;justify-items:center;min-height:170px;align-content:start}
+.players h2,.dock h2{font-size:clamp(24px,3vw,34px);font-weight:800;font-variation-settings:'opsz' 96,'wdth' 80}
+.players h2 em{font-style:normal;color:var(--marker);font-variant-numeric:tabular-nums}
+.ptiles{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;max-width:1040px}
+.ptile{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.13);border-radius:20px;padding:7px 22px 7px 7px;font-weight:800;font-size:clamp(18px,2vw,24px);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);animation:pop .4s cubic-bezier(.3,1.6,.5,1);max-width:100%}
+.ptile .av{width:clamp(60px,6.4vw,84px);height:clamp(60px,6.4vw,84px);border-radius:16px;box-shadow:0 4px 0 rgba(0,0,0,.18)}
+.ptile span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ptile.off{opacity:.42}
+.pwait{display:grid;justify-items:center;gap:10px;color:#dfe3ff;font-size:clamp(18px,2vw,22px);font-weight:700;padding:18px}
+.pwait .dots i{background:var(--marker)}
+.dock{display:grid;gap:10px;justify-items:center;text-align:center;border-top:1px solid rgba(255,255,255,.15);padding-top:22px}
+.dock .sub{color:#c8cff5;max-width:60ch}
+.roomgames{display:flex;flex-wrap:wrap;justify-content:center;gap:18px 22px;margin-top:6px}
+.roomgames .game{width:clamp(96px,11vw,132px)}
 .roomgames .game span{color:#fff}
-.roomgames .game .ic{max-width:150px;box-shadow:0 10px 0 -4px var(--board2),0 14px 24px -10px rgba(0,0,0,.5)}
+.roomgames .game .ic{box-shadow:0 10px 0 -4px var(--board2),0 14px 24px -10px rgba(0,0,0,.5)}
+@keyframes pop{from{transform:scale(.4);opacity:0}}
+@media(prefers-reduced-motion:reduce){.ptile{animation:none}}
 
 /* ---------- live leaderboard ---------- */
 .lbwrap{padding-block:8px 40px;display:grid;gap:18px}
@@ -157,7 +171,7 @@ p{margin:0}
 .counts b{color:#fff;font-size:20px;font-variant-numeric:tabular-nums}
 .lb{list-style:none;margin:0;padding:0;display:grid;gap:8px;position:relative}
 @media(min-width:1100px){.lb.two{grid-template-columns:1fr 1fr;column-gap:16px}}
-.lrow{position:relative;display:grid;grid-template-columns:52px 44px minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 18px 10px 10px;
+.lrow{position:relative;display:grid;grid-template-columns:52px 56px minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 18px 10px 10px;
   border-radius:18px;background:rgba(255,255,255,.08);overflow:hidden;will-change:transform;transition:background .3s}
 .lrow .fill{position:absolute;inset:0 auto 0 0;background:rgba(255,255,255,.1);border-radius:inherit;transition:width .6s cubic-bezier(.2,.8,.2,1);pointer-events:none}
 .lrow>*:not(.fill){position:relative}
@@ -166,7 +180,7 @@ p{margin:0}
 .lrow.r2 .rank{background:#dfe5f2;color:#3b4560}
 .lrow.r3 .rank{background:#f0a868;color:#5a2c08}
 .lrow.r1{background:rgba(255,210,63,.16)}
-.lrow .av{width:44px;height:44px;font-size:17px}
+.lrow .av{width:56px;height:56px;font-size:17px;border-radius:14px}
 .who{min-width:0;display:grid;gap:2px}
 .who strong{font-size:clamp(18px,2vw,24px);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .who span{color:#c8cff5;font-size:15px;display:flex;gap:12px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
@@ -185,7 +199,7 @@ p{margin:0}
 .delta.ok{color:#5ef0a8}.delta.no{color:#ff8a7a}
 @keyframes rise{to{transform:translateY(-18px);opacity:0}}
 .lbempty{padding:30px;border:2px dashed rgba(255,255,255,.3);border-radius:var(--r-l);color:#dfe3ff;text-align:center}
-@media(max-width:560px){.lrow{grid-template-columns:40px 36px minmax(0,1fr) auto;gap:9px;padding:8px 12px 8px 8px}.rank{width:36px;height:36px;font-size:18px;border-radius:11px}.lrow .av{width:36px;height:36px;font-size:14px}}
+@media(max-width:560px){.lrow{grid-template-columns:36px 44px minmax(0,1fr) auto;gap:9px;padding:8px 12px 8px 8px}.rank{width:36px;height:36px;font-size:18px;border-radius:11px}.lrow .av{width:44px;height:44px;font-size:14px;border-radius:12px}}
 @media(prefers-reduced-motion:reduce){.lrow,.lrow .fill{transition:none}.lrow.ok,.lrow.no,.delta{animation:none}}
 
 /* podium */
@@ -345,29 +359,30 @@ p{margin:0}
 
 <!-- ============ CLASS: room (projector). Students join the class, the teacher picks games ============ -->
 <main id="lobby" class="board" hidden>
-  <div class="wrap">
+  <div class="wrap roomwrap">
     <header class="bar"><span class="mark"><i aria-hidden="true"></i>EduGames</span><span class="sp"></span><button class="endbtn" type="button" id="closeClass">End class</button></header>
-    <div class="room">
-      <div class="joinbox">
-        <div class="qr" id="qr" role="img" aria-label="QR code to join the class"><span class="wait">Opening the class…</span></div>
-        <div class="code" id="code">·····</div>
-        <p class="joinhint">Scan to join, or open <b id="joinUrl"></b> and type the code.</p>
-        <p class="roomnote" id="lobbyNote"></p>
-      </div>
-      <div>
-        <section class="sect">
-          <h2>Students <em id="joinedN">0</em></h2>
-          <div class="chips" id="chips"><span class="wait">Waiting for students to scan the code…</span></div>
-        </section>
-        <section class="sect">
-          <h2>Pick a game</h2>
-          <p class="sub" id="roomSub">Choose the topic and settings, then start it on every student's device at once.</p>
-          <div class="roomgames" id="roomGames"></div>
-        </section>
-      </div>
-    </div>
+    <section class="joinbar" aria-label="How to join">
+      <div class="jtext"><span>Join at</span><b id="joinUrl"></b></div>
+      <div class="jcode"><span>Class code</span><div class="code" id="code">·····</div></div>
+      <button class="qr" id="qr" type="button" aria-label="Show the QR code larger"><span class="wait">Opening…</span></button>
+    </section>
+    <p class="roomnote" id="lobbyNote"></p>
+    <section class="players" aria-live="polite">
+      <h2><em id="joinedN">0</em> <span id="joinedL">students</span></h2>
+      <div class="ptiles" id="chips"></div>
+    </section>
+    <section class="dock">
+      <h2>Pick a game</h2>
+      <p class="sub" id="roomSub"></p>
+      <div class="roomgames" id="roomGames"></div>
+    </section>
   </div>
 </main>
+<div class="qrbig" id="qrBig" hidden role="dialog" aria-label="QR code to join the class">
+  <div class="qrbox" id="qrBigBox"></div>
+  <div class="code" id="qrBigCode"></div>
+  <p>Tap anywhere to close</p>
+</div>
 
 <!-- ============ CLASS: live leaderboard ============ -->
 <main id="liveScr" class="board" hidden>
@@ -628,8 +643,12 @@ function openClass(tries=0){
     $('lobbyNote').textContent=err.type==='browser-incompatible'?'This browser can\'t run class mode. Use a current Chrome, Safari, Edge or Firefox.'
       :`Couldn't open the class (${err.type}). Something on this device or network is blocking the connection service (0.peerjs.com): usually an ad or tracker blocker extension, a VPN, or a firewall. Turn it off for this page or use another browser, then reload.`})}
 function joinLink(){const u=new URL('./',location.href);u.hash='join='+session.code;if(Q.get('peer'))u.search='?peer='+Q.get('peer');return u.href}
-function drawQR(){const q=qrcode(0,'M');q.addData(joinLink());q.make();$('qr').innerHTML=q.createSvgTag({cellSize:6,margin:0,scalable:true});
-  $('code').textContent=session.code;const u=new URL('./',location.href);$('joinUrl').textContent=u.host+u.pathname}
+function drawQR(){const q=qrcode(0,'M');q.addData(joinLink());q.make();const svg=q.createSvgTag({cellSize:6,margin:0,scalable:true});
+  $('qr').innerHTML=svg;$('qrBigBox').innerHTML=svg;$('code').textContent=session.code;$('qrBigCode').textContent=session.code;
+  const u=new URL('./',location.href),jb=$('joinUrl');jb.textContent='';(u.host+u.pathname).replace(/\/$/,'').split('/').forEach((part,i)=>{if(i){jb.append('/',document.createElement('wbr'))}jb.append(part)})}
+$('qr').onclick=()=>{if($('qr').querySelector('svg'))$('qrBig').hidden=false};
+$('qrBig').onclick=()=>$('qrBig').hidden=true;
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('qrBig').hidden=true});
 function renderRoomGames(){const box=$('roomGames');box.innerHTML='';
   if(!GAMES.length){box.append(el('p','sub','Loading games…'));return}
   GAMES.forEach(g=>{const b=el('button','game');b.type='button';b.style.setProperty('--c',g.color||'#2b3990');
@@ -637,8 +656,14 @@ function renderRoomGames(){const box=$('roomGames');box.innerHTML='';
     b.append(ic,el('span',null,g.name));b.onclick=()=>openSetup(g);box.append(b)})}
 function paintLobby(){if(!session)return;
   const names=[...conns.keys()],on=names.filter(n=>online(conns.get(n))).length;$('joinedN').textContent=on;
-  const chips=$('chips');chips.innerHTML='';if(!names.length)chips.append(el('span','wait','Waiting for students to scan the code…'));
-  names.forEach(n=>{const c=el('span','chip');c.append(avatar(n),document.createTextNode(n));if(!online(conns.get(n)))c.classList.add('off');chips.append(c)});
+  $('joinedL').textContent=on===1?'student':'students';
+  const box=$('chips'),have=new Map([...box.querySelectorAll('.ptile')].map(t=>[t.dataset.n,t]));
+  box.querySelector('.pwait')?.remove();
+  if(!names.length){box.innerHTML='';const w=el('div','pwait');w.innerHTML='<div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>';w.append(el('span',null,'Waiting for students to join…'));box.append(w)}
+  have.forEach((t,n)=>{if(!conns.has(n))t.remove()});
+  names.forEach(n=>{let t=have.get(n);if(!t){t=el('div','ptile');t.dataset.n=n;t.append(avatar(n),el('span',null,n));box.append(t)}
+    else{const a=t.querySelector('.av');const nv=avatar(n);if(a.innerHTML!==nv.innerHTML)a.replaceWith(nv)}
+    t.classList.toggle('off',!online(conns.get(n)))});
   $('roomSub').textContent=session.rounds.length?`${session.rounds.length} round${session.rounds.length===1?'':'s'} played. Pick the next game; everyone in the class gets it automatically.`:'Choose the topic and settings, then start it on every student\'s device at once.';
   if(!$('setup').hidden&&mode==='class')renderSetup()}
 function uniqueName(n,conn){n=(n||'Student').trim().slice(0,24)||'Student';
