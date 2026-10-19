@@ -137,7 +137,7 @@ p{margin:0}
 .chips .wait{color:#c8cff5;font-size:18px;align-self:center}
 .av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:800;color:#fff;background:hsl(var(--hue) 62% 46%);flex:none}
 .av.pic{background:none;border-radius:26%;overflow:hidden}
-.av svg{width:100%;height:100%;display:block}
+.av svg,.av img{width:100%;height:100%;display:block;object-fit:cover}
 .chip .av.pic{border-radius:50%}
 @keyframes pop{from{transform:scale(.4);opacity:0}}
 @media(prefers-reduced-motion:reduce){.chip{animation:none}}
@@ -253,11 +253,13 @@ p{margin:0}
 .err{color:var(--bad);font-weight:700}
 .avpick{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
 .avpick button{border:0;padding:0;background:none;border-radius:28%;aspect-ratio:1;outline:3px solid transparent;outline-offset:2px;transition:transform .12s}
-.avpick button svg{width:100%;height:100%;display:block}
+.avpick button{overflow:hidden}
+.avpick button svg,.avpick button img{width:100%;height:100%;display:block;object-fit:cover}
 .avpick button[aria-pressed=true]{outline-color:var(--board);transform:scale(1.06)}
 .avpick button:active{transform:scale(.94)}
 .meav{width:110px;height:110px}
-.meav svg{width:100%;height:100%;display:block}
+.meav{border-radius:26%;overflow:hidden}
+.meav svg,.meav img{width:100%;height:100%;display:block;object-fit:cover}
 @media(prefers-reduced-motion:reduce){.avpick button{transition:none}}
 .wait{display:grid;gap:10px;justify-items:center;text-align:center}
 .wait .big{font-size:40px;font-weight:800;font-variation-settings:'opsz' 96,'wdth' 80}
@@ -590,76 +592,12 @@ const AVATARS=[
   <path d="M18 50 Q34 40 50 50 Q66 40 82 50 Q74 62 60 58 Q50 54 40 58 Q26 62 18 50Z" fill="#2f3240"/>${eye(37,51,3.8)+eye(63,51,3.8)}
   <ellipse cx="50" cy="68" rx="12" ry="9" fill="${AVC.white}"/><ellipse cx="50" cy="64" rx="5" ry="3.8" fill="${AVC.ink}"/>${smile(71,4)}`},
 ];
-/* ---- expressive cats: one smooth base, many faces ---- */
-function catSVG(o){
-  const fur=o.fur,dark=o.dark,inner=o.inner||'#ffb7c5',ink='#2a2335',eyeC=o.eye||'#3a2c1f';
-  const ear=(m)=>`<path d="M${50-m*30} 48 C${50-m*33} 30 ${50-m*28} 16 ${50-m*21} 11 C${50-m*12} 15 ${50-m*6} 22 ${50-m*2} 30 Z" fill="${fur}"/>
-    <path d="M${50-m*25} 38 C${50-m*27} 28 ${50-m*24} 21 ${50-m*20} 18 C${50-m*14} 21 ${50-m*10} 26 ${50-m*8} 31 Z" fill="${inner}"/>`;
-  let s=ear(1)+ear(-1);
-  // head: soft rounded shape with a little cheek fluff
-  s+=`<path d="M50 27 C68 27 83 37 83 57 C83 62 86 66 84 69 C80 82 67 89 50 89 C33 89 20 82 16 69 C14 66 17 62 17 57 C17 37 32 27 50 27 Z" fill="${fur}"/>`;
-  if(o.stripes)s+=`<g fill="none" stroke="${dark}" stroke-width="3.6" stroke-linecap="round"><path d="M50 29 L50 38 M42 30 L44 37 M58 30 L56 37 M19 58 L28 59 M20 66 L29 64 M81 58 L72 59 M80 66 L71 64"/></g>`;
-  if(o.patch)s+=`<path d="M50 27 C38 27 27 32 22 42 C30 44 38 40 44 33 C46 30 48 28 50 27Z" fill="${o.patch}"/>`;
-  if(o.mask)s+=`<ellipse cx="50" cy="66" rx="20" ry="16" fill="${o.mask}"/>`;
-  if(o.muzzle)s+=`<path d="M50 54 C58 54 66 60 68 68 C69 78 60 85 50 85 C40 85 31 78 32 68 C34 60 42 54 50 54Z" fill="${o.muzzle}"/>`;
-  s+=`<ellipse cx="50" cy="86" rx="22" ry="3" fill="#000" opacity=".06"/>`;
-  // eyes
-  const E={
-   normal:()=>[37,63].map(x=>`<ellipse cx="${x}" cy="55" rx="5.6" ry="6.6" fill="${eyeC}"/><ellipse cx="${x}" cy="55.6" rx="2.6" ry="5" fill="${ink}"/><circle cx="${x+1.8}" cy="52.4" r="1.7" fill="#fff"/>`).join(''),
-   happy:()=>`<path d="M31 56 Q37 48 43 56 M57 56 Q63 48 69 56" fill="none" stroke="${ink}" stroke-width="3.4" stroke-linecap="round"/>`,
-   sleepy:()=>`<path d="M31 55 Q37 60 43 55 M57 55 Q63 60 69 55" fill="none" stroke="${ink}" stroke-width="3.2" stroke-linecap="round"/>`,
-   angry:()=>[37,63].map((x,i)=>`<ellipse cx="${x}" cy="56.5" rx="5.4" ry="5" fill="${eyeC}"/><ellipse cx="${x}" cy="57" rx="2.4" ry="4" fill="${ink}"/><path d="M${x-7} ${i?52:49} L${x+7} ${i?49:52} L${x+7} ${i?46:46} L${x-7} ${i?46:46}Z" fill="${fur}"/>`).join('')+`<path d="M30 46 L44 51 M70 46 L56 51" stroke="${ink}" stroke-width="3.6" stroke-linecap="round"/>`,
-   wide:()=>[37,63].map(x=>`<circle cx="${x}" cy="54" r="7.4" fill="#fff"/><circle cx="${x}" cy="54" r="3" fill="${ink}"/><circle cx="${x+1}" cy="53" r="1" fill="#fff"/>`).join(''),
-   heart:()=>[37,63].map(x=>`<path d="M${x} 61 C${x-9} 55 ${x-7} 47 ${x-2.4} 49 C${x-1} 49.6 ${x} 51 ${x} 51 C${x} 51 ${x+1} 49.6 ${x+2.4} 49 C${x+7} 47 ${x+9} 55 ${x} 61Z" fill="#ff3d6e"/><circle cx="${x-2.6}" cy="52" r="1.3" fill="#fff"/>`).join(''),
-   crazy:()=>`<circle cx="36" cy="54" r="8" fill="#fff"/><circle cx="64" cy="55" r="5.4" fill="#fff"/><path d="M36 54 m-1 0 a1 1 0 1 1 2 0 a3 3 0 1 1 -5 -1 a5 5 0 1 1 8 4" fill="none" stroke="${ink}" stroke-width="1.8" stroke-linecap="round"/><circle cx="65.5" cy="56.5" r="2.6" fill="${ink}"/>`,
-   lidded:()=>[37,63].map(x=>`<ellipse cx="${x}" cy="56" rx="5.8" ry="5.4" fill="${eyeC}"/><ellipse cx="${x}" cy="56.6" rx="2.4" ry="4.2" fill="${ink}"/><path d="M${x-7} 56 Q${x} 49 ${x+7} 56 L${x+7} 48 L${x-7} 48Z" fill="${fur}"/><path d="M${x-6.5} 55.4 Q${x} 51.6 ${x+6.5} 55.4" fill="none" stroke="${ink}" stroke-width="2.4" stroke-linecap="round"/>`).join(''),
-   side:()=>[37,63].map(x=>`<ellipse cx="${x}" cy="56" rx="5.4" ry="6" fill="${eyeC}"/><ellipse cx="${x+2.4}" cy="57" rx="2.4" ry="4.2" fill="${ink}"/><circle cx="${x+3.6}" cy="54" r="1.4" fill="#fff"/>`).join(''),
-  };
-  s+=(E[o.eyes]||E.normal)();
-  if(o.brow==='raise')s+=`<path d="M57 44 Q63 40 70 44" fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"/><path d="M31 48 L43 48" stroke="${ink}" stroke-width="3" stroke-linecap="round"/>`;
-  // blush
-  if(o.blush)s+=`<ellipse cx="27" cy="66" rx="6.4" ry="4" fill="#ff7d96" opacity="${o.blush}"/><ellipse cx="73" cy="66" rx="6.4" ry="4" fill="#ff7d96" opacity="${o.blush}"/>`;
-  // nose
-  s+=`<path d="M46.4 63.2 Q50 61.4 53.6 63.2 Q51.8 66.4 50 66.8 Q48.2 66.4 46.4 63.2Z" fill="${o.nose||'#ff8fa6'}"/>`;
-  // mouth
-  const M={
-   w:`<path d="M43 69 Q46.5 73 50 68.4 Q53.5 73 57 69" fill="none" stroke="${ink}" stroke-width="2.6" stroke-linecap="round"/>`,
-   grin:`<path d="M40 68 Q50 70 60 68 Q58 80 50 80 Q42 80 40 68Z" fill="${ink}"/><path d="M44 75.6 Q50 72 56 75.6 Q54 79.6 50 79.6 Q46 79.6 44 75.6Z" fill="#ff7a90"/>`,
-   frown:`<path d="M42 74 Q50 67 58 74" fill="none" stroke="${ink}" stroke-width="2.8" stroke-linecap="round"/><path d="M45.5 69.6 L46.6 73 M54.5 69.6 L53.4 73" stroke="#fff" stroke-width="2" stroke-linecap="round"/>`,
-   o:`<ellipse cx="50" cy="73" rx="4.4" ry="5.4" fill="${ink}"/><ellipse cx="50" cy="75.4" rx="2.6" ry="2.2" fill="#ff7a90"/>`,
-   smirk:`<path d="M44 70 Q51 72 57 66.6" fill="none" stroke="${ink}" stroke-width="2.6" stroke-linecap="round"/>`,
-   tongue:`<path d="M42 68.6 Q50 75 58 68.6" fill="none" stroke="${ink}" stroke-width="2.6" stroke-linecap="round"/><path d="M50 71 Q51 80 56 79 Q60 77 57.6 69.4 Q54 72 50 71Z" fill="#ff6f8c"/>`,
-   wavy:`<path d="M44 70 Q47 68 50 70 Q53 72 56 70" fill="none" stroke="${ink}" stroke-width="2.4" stroke-linecap="round"/>`,
-   calm:`<path d="M45 69 Q50 72.6 55 69" fill="none" stroke="${ink}" stroke-width="2.6" stroke-linecap="round"/>`,
-  };
-  s+=M[o.mouth]||M.w;
-  // whiskers
-  s+=`<g stroke="${o.whisk||'#fff'}" stroke-width="1.6" stroke-linecap="round" opacity=".9"><path d="M13 62 L28 65 M13 70 L28 69 M87 62 L72 65 M87 70 L72 69"/></g>`;
-  // extras
-  if(o.zzz)s+=`<text x="70" y="30" font-family="Arial,sans-serif" font-weight="900" font-size="15" fill="#fff">z</text><text x="80" y="20" font-family="Arial,sans-serif" font-weight="900" font-size="10" fill="#fff" opacity=".8">z</text>`;
-  if(o.glasses)s+=`<g fill="none" stroke="${ink}" stroke-width="2.6"><circle cx="37" cy="55" r="10"/><circle cx="63" cy="55" r="10"/><path d="M47 54 Q50 51.6 53 54 M27 53 L19 50 M73 53 L81 50"/></g><path d="M31 49.6 L35 47.6" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".7"/><path d="M57 49.6 L61 47.6" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".7"/>`;
-  if(o.tie)s+=`<path d="M30 100 L36 86 L50 92 L64 86 L70 100Z" fill="#fff"/><path d="M36 86 L44 98 L50 92Z M64 86 L56 98 L50 92Z" fill="#e8eaf2"/><path d="M47 92 L53 92 L54.6 95 L52 100 L48 100 L45.4 95Z" fill="${o.tie}"/>`;
-  if(o.earring)s+=`<circle cx="23" cy="46" r="3.2" fill="none" stroke="#ffcf3d" stroke-width="2.2"/>`;
-  if(o.sweat)s+=`<path d="M77 40 Q81 46 79 49 Q76 51 74.6 48 Q74.6 45 77 40Z" fill="#8fd8ff"/>`;
-  if(o.anger)s+=`<path d="M73 30 l3 4 l4 -3 M80 36 l-4 3 l3 4" fill="none" stroke="#ff3d3d" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`;
-  if(o.sparkle)s+=`<path d="M78 24 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 l5 -2Z" fill="#fff"/>`;
-  return s}
-const CATS=[
- {id:'cat-happy',name:'Happy cat',bg:'#ff8a3d',c:{fur:'#ffb35c',dark:'#e08a33',eyes:'happy',mouth:'grin',blush:.6,stripes:1}},
- {id:'cat-business',name:'Business cat',bg:'#4f6bed',c:{fur:'#8d93a8',dark:'#6c7186',eyes:'normal',eye:'#7bc96f',mouth:'calm',tie:'#e5484d'}},
- {id:'cat-smart',name:'Smart cat',bg:'#2fb872',c:{fur:'#f4ede3',dark:'#d8ccbc',eyes:'normal',eye:'#5aa9e6',mouth:'smirk',glasses:1,whisk:'#c8bba9',patch:'#e9a25b'}},
- {id:'cat-crazy',name:'Crazy cat',bg:'#ffcf3d',c:{fur:'#fbf6ef',dark:'#2a2335',eyes:'crazy',mouth:'tongue',patch:'#ef9a46',whisk:'#d8cfc3',sweat:1}},
- {id:'cat-angry',name:'Angry cat',bg:'#e5484d',c:{fur:'#e57a3c',dark:'#b9542a',eyes:'angry',eye:'#ffd23f',mouth:'frown',stripes:1,anger:1}},
- {id:'cat-bold',name:'Bold cat',bg:'#7b5cff',c:{fur:'#2e2b3d',dark:'#1d1b28',inner:'#6c5a7a',eyes:'lidded',eye:'#ffd23f',mouth:'smirk',brow:'raise',nose:'#6c5a7a',whisk:'#8f89a6',earring:1,sparkle:1}},
- {id:'cat-sleepy',name:'Sleepy cat',bg:'#38b6d8',c:{fur:'#c3b8d6',dark:'#a597bd',eyes:'sleepy',mouth:'calm',blush:.4,zzz:1}},
- {id:'cat-surprised',name:'Surprised cat',bg:'#f4a24c',c:{fur:'#f3e3cc',dark:'#7a5843',mask:'#8a6450',eyes:'wide',mouth:'o',nose:'#4a3528',whisk:'#e8d6bd'}},
- {id:'cat-love',name:'Cat in love',bg:'#ff6b8a',c:{fur:'#fbf6ef',dark:'#e7ddd0',eyes:'heart',mouth:'w',blush:.7,whisk:'#d8cfc3'}},
- {id:'cat-shy',name:'Shy cat',bg:'#2b9a8f',c:{fur:'#2e2b3d',dark:'#1d1b28',inner:'#6c5a7a',muzzle:'#fbf6ef',eyes:'side',eye:'#9be36d',mouth:'wavy',blush:.75,whisk:'#c9c3dc'}},
-].map(k=>({id:k.id,name:k.name,bg:k.bg,svg:catSVG(k.c)}));
-
+/* ---- illustrated cats: compressed images in avatars/ (320 px WebP) ---- */
+const CATS=[['party','Party cat'],['sleepy','Sleepy cat'],['sassy','Sassy cat'],['cheeky','Cheeky cat'],['strawberry','Strawberry cat'],['angry','Angry cat'],['hungry','Hungry cat'],
+  ['cool','Cool cat'],['fancy','Fancy cat'],['artist','Artist cat'],['cosy','Cosy cat'],['star','Movie star cat'],['dj','DJ cat']].map(([k,n])=>({id:'cat-'+k,name:n,img:'avatars/cat-'+k+'.webp'}));
 AVATARS.unshift(...CATS);
 const AVMAP=Object.fromEntries(AVATARS.map(a=>[a.id,a]));
-const avatarSVG=id=>{const a=AVMAP[id];if(!a)return '';return `<svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="${a.bg}"/>${a.svg}</svg>`};
+const avatarSVG=id=>{const a=AVMAP[id];if(!a)return '';if(a.img)return `<img src="${new URL(a.img,location.href).href}" alt="" decoding="async" draggable="false">`;return `<svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="${a.bg}"/>${a.svg}</svg>`};
 const randomAvatar=()=>AVATARS[Math.floor(Math.random()*AVATARS.length)].id;
 
 /* =====================================================================
