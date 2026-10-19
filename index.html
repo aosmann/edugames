@@ -251,8 +251,26 @@ p{margin:0}
 .field input{width:100%;min-width:0;border:2px solid var(--line);border-radius:var(--r-m);padding:14px 16px;font-size:22px;font-weight:700;background:var(--paper)}
 .field input.codein{letter-spacing:.2em;text-transform:uppercase;font-variant-numeric:tabular-nums}
 .err{color:var(--bad);font-weight:700}
-.avpick{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
-.avpick button{border:0;padding:0;background:none;border-radius:28%;aspect-ratio:1;outline:3px solid transparent;outline-offset:2px;transition:transform .12s}
+.me{display:grid;justify-items:center;gap:6px;margin:4px 0 2px}
+.mepic{position:relative;width:112px;height:112px;border:0;padding:0;background:none;border-radius:50%}
+.mepic>span{display:block;width:100%;height:100%;border-radius:50%;overflow:hidden;box-shadow:0 0 0 4px var(--card),0 0 0 6px var(--line)}
+.mepic img{width:100%;height:100%;object-fit:cover;display:block}
+.mepic i{position:absolute;right:0;bottom:2px;width:36px;height:36px;border-radius:50%;background:var(--board);color:#fff;display:grid;place-items:center;box-shadow:0 0 0 3px var(--card)}
+.mepic i svg{width:17px;height:17px}
+.mepic:active>span{transform:scale(.96)}
+.mehint{font-size:14px;color:var(--ink2);font-weight:700}
+.sheetbg{position:fixed;inset:0;z-index:50;background:rgba(24,32,61,.45);display:grid;align-items:end;justify-items:center}
+@media(min-width:600px){.sheetbg{align-items:center}}
+.avsheet{width:min(100%,460px);max-height:90dvh;overflow:auto;background:var(--card);border-radius:var(--r-l) var(--r-l) 0 0;padding:18px 18px max(18px,env(safe-area-inset-bottom));display:grid;gap:16px;animation:sheetUp .25s cubic-bezier(.2,.8,.2,1)}
+@media(min-width:600px){.avsheet{border-radius:var(--r-l)}}
+@keyframes sheetUp{from{transform:translateY(30px);opacity:0}}
+@media(prefers-reduced-motion:reduce){.avsheet{animation:none}}
+.avhead{display:flex;align-items:center;justify-content:space-between}
+.avhead h2{font-size:22px;font-weight:800}
+.avpick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.avpick .dice{background:#eef0f7;color:var(--board);display:grid;place-items:center}
+.avpick .dice svg{width:46%;height:46%}
+.avpick button{border:0;padding:0;background:none;border-radius:50%;aspect-ratio:1;outline:3px solid transparent;outline-offset:3px;transition:transform .12s}
 .avpick button{overflow:hidden}
 .avpick button svg,.avpick button img{width:100%;height:100%;display:block;object-fit:cover}
 .avpick button[aria-pressed=true]{outline-color:var(--board);transform:scale(1.06)}
@@ -410,9 +428,13 @@ p{margin:0}
   <form class="panel" id="joinForm" autocomplete="off">
     <h1>Join a class</h1>
     <p>Your teacher shows the code on the board.</p>
+    <div class="me">
+      <button type="button" class="mepic" id="jPic" aria-label="Change your avatar"><span id="jPicImg"></span>
+        <i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></i></button>
+      <span class="mehint">Tap to change</span>
+    </div>
     <label class="field">Class code<input class="codein" id="jCode" maxlength="5" inputmode="text" autocapitalize="characters" required></label>
     <label class="field">Your name<input id="jName" maxlength="24" required placeholder="First name"></label>
-    <div class="field"><span>Your avatar</span><div class="avpick" id="jAv" role="radiogroup" aria-label="Pick an avatar"></div></div>
     <p class="err" id="jErr" hidden></p>
     <button class="cta class" type="submit" id="jBtn">Join</button>
     <button class="link" type="button" data-nav="home" style="justify-self:center">Back to games</button>
@@ -428,6 +450,13 @@ p{margin:0}
     <p class="err" id="wErr" hidden></p>
   </div>
 </main>
+
+<div class="sheetbg" id="avSheet" hidden>
+  <div class="avsheet" role="dialog" aria-modal="true" aria-labelledby="avT">
+    <div class="avhead"><h2 id="avT">Pick your avatar</h2><button type="button" class="link" id="avDone">Done</button></div>
+    <div class="avpick" id="jAv" role="radiogroup" aria-label="Avatars"></div>
+  </div>
+</div>
 
 <div class="toast" id="toast" hidden role="status"></div>
 
@@ -551,53 +580,13 @@ window.addEventListener('message',e=>{if(e.source!==$('frame').contentWindow)ret
 /* =====================================================================
    AVATARS — 16 original flat animal faces, drawn as SVG (viewBox 0 0 100 100)
    ===================================================================== */
-const AVC={ink:'#1f2033',white:'#fffaf2'};
-const eye=(x,y,r=4.4)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${AVC.ink}"/><circle cx="${x+1.5}" cy="${y-1.6}" r="${r*.34}" fill="#fff"/>`;
-const eyes=(y,dx=12,r)=>eye(50-dx,y,r)+eye(50+dx,y,r);
-const blush=(y,dx=22,c='#ff8fa3')=>`<circle cx="${50-dx}" cy="${y}" r="5" fill="${c}" opacity=".55"/><circle cx="${50+dx}" cy="${y}" r="5" fill="${c}" opacity=".55"/>`;
-const smile=(y,w=7,c=AVC.ink)=>`<path d="M${50-w} ${y} Q50 ${y+w*.9} ${50+w} ${y}" fill="none" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`;
-const AVATARS=[
- {id:'fox',name:'Fox',bg:'#4f6bed',svg:`<path d="M20 44 L28 12 L46 32Z M80 44 L72 12 L54 32Z" fill="#ff8a3d"/><path d="M26 38 L30 22 L40 33Z M74 38 L70 22 L60 33Z" fill="${AVC.white}"/>
-  <path d="M16 46 Q50 22 84 46 Q80 76 50 88 Q20 76 16 46Z" fill="#ff8a3d"/><path d="M24 60 Q50 50 76 60 Q66 82 50 88 Q34 82 24 60Z" fill="${AVC.white}"/>${eyes(52,13)}<ellipse cx="50" cy="70" rx="5" ry="4" fill="${AVC.ink}"/>`},
- {id:'panda',name:'Panda',bg:'#2fb872',svg:`<circle cx="26" cy="28" r="11" fill="${AVC.ink}"/><circle cx="74" cy="28" r="11" fill="${AVC.ink}"/><circle cx="50" cy="56" r="34" fill="${AVC.white}"/>
-  <ellipse cx="36" cy="54" rx="9" ry="12" transform="rotate(-24 36 54)" fill="${AVC.ink}"/><ellipse cx="64" cy="54" rx="9" ry="12" transform="rotate(24 64 54)" fill="${AVC.ink}"/>
-  <circle cx="37" cy="53" r="3.6" fill="#fff"/><circle cx="63" cy="53" r="3.6" fill="#fff"/><ellipse cx="50" cy="68" rx="5.5" ry="4" fill="${AVC.ink}"/>${smile(74,5)}`},
- {id:'frog',name:'Frog',bg:'#ffcf3d',svg:`<circle cx="31" cy="36" r="14" fill="#3dbb6b"/><circle cx="69" cy="36" r="14" fill="#3dbb6b"/><ellipse cx="50" cy="62" rx="38" ry="27" fill="#3dbb6b"/>
-  <circle cx="31" cy="35" r="9" fill="#fff"/><circle cx="69" cy="35" r="9" fill="#fff"/>${eye(31,36,5)+eye(69,36,5)}<path d="M28 64 Q50 84 72 64" fill="none" stroke="${AVC.ink}" stroke-width="3.5" stroke-linecap="round"/>${blush(68,30)}`},
- {id:'owl',name:'Owl',bg:'#38b6d8',svg:`<path d="M18 42 Q18 18 34 24 L50 30 L66 24 Q82 18 82 42 L82 70 Q82 92 50 92 Q18 92 18 70Z" fill="#8a5a3c"/>
-  <circle cx="36" cy="52" r="15" fill="#f3e2c7"/><circle cx="64" cy="52" r="15" fill="#f3e2c7"/>${eye(36,52,7)+eye(64,52,7)}<path d="M45 64 L55 64 L50 74Z" fill="#ffb02e"/>
-  <path d="M38 82 l4 -4 l4 4 M54 82 l4 -4 l4 4" fill="none" stroke="#c99a6e" stroke-width="2.5" stroke-linecap="round"/>`},
- {id:'bear',name:'Bear',bg:'#ff6b8a',svg:`<circle cx="25" cy="30" r="12" fill="#9a6544"/><circle cx="75" cy="30" r="12" fill="#9a6544"/><circle cx="25" cy="30" r="6" fill="#c99673"/><circle cx="75" cy="30" r="6" fill="#c99673"/>
-  <circle cx="50" cy="56" r="34" fill="#9a6544"/><ellipse cx="50" cy="69" rx="16" ry="12" fill="#e6c49c"/>${eyes(51,13)}<ellipse cx="50" cy="63" rx="6" ry="4.5" fill="${AVC.ink}"/>${smile(71,5)}`},
- {id:'rabbit',name:'Rabbit',bg:'#7b5cff',svg:`<ellipse cx="38" cy="26" rx="9" ry="22" fill="${AVC.white}"/><ellipse cx="62" cy="26" rx="9" ry="22" fill="${AVC.white}"/><ellipse cx="38" cy="27" rx="4.5" ry="15" fill="#ffb3c4"/><ellipse cx="62" cy="27" rx="4.5" ry="15" fill="#ffb3c4"/>
-  <circle cx="50" cy="64" r="28" fill="${AVC.white}"/>${eyes(60,11)}<path d="M46 68 L54 68 L50 72Z" fill="#ff7a98"/><rect x="47" y="74" width="6" height="6" rx="1.5" fill="#fff" stroke="#d9d2c8" stroke-width="1.5"/>${blush(70,19)}`},
- {id:'penguin',name:'Penguin',bg:'#f4a24c',svg:`<circle cx="50" cy="54" r="35" fill="#26304a"/><circle cx="40" cy="58" r="15" fill="${AVC.white}"/><circle cx="60" cy="58" r="15" fill="${AVC.white}"/><ellipse cx="50" cy="70" rx="19" ry="15" fill="${AVC.white}"/>
-  ${eyes(55,10)}<ellipse cx="50" cy="66" rx="7.5" ry="4.5" fill="#ff9a1f"/>${blush(66,20)}`},
- {id:'tiger',name:'Tiger',bg:'#2b9a8f',svg:`<circle cx="25" cy="29" r="11" fill="#ff9a2e"/><circle cx="75" cy="29" r="11" fill="#ff9a2e"/><circle cx="25" cy="29" r="5.5" fill="${AVC.white}"/><circle cx="75" cy="29" r="5.5" fill="${AVC.white}"/>
-  <ellipse cx="50" cy="56" rx="36" ry="33" fill="#ff9a2e"/><g stroke="${AVC.ink}" stroke-width="4" stroke-linecap="round"><path d="M50 25 L50 36 M40 27 L43 36 M60 27 L57 36 M15 52 L26 54 M16 63 L27 61 M85 52 L74 54 M84 63 L73 61"/></g>
-  <ellipse cx="43" cy="69" rx="10" ry="8" fill="${AVC.white}"/><ellipse cx="57" cy="69" rx="10" ry="8" fill="${AVC.white}"/>${eyes(50,13)}<path d="M45 62 L55 62 L50 68Z" fill="#ff6b8a"/>`},
- {id:'koala',name:'Koala',bg:'#ffcf3d',svg:`<circle cx="21" cy="38" r="17" fill="#9aa3b5"/><circle cx="79" cy="38" r="17" fill="#9aa3b5"/><circle cx="21" cy="38" r="10" fill="#ecdfe6"/><circle cx="79" cy="38" r="10" fill="#ecdfe6"/>
-  <circle cx="50" cy="57" r="31" fill="#aeb6c7"/>${eyes(52,13)}<ellipse cx="50" cy="64" rx="8.5" ry="11" fill="#3b3348"/>${blush(68,22)}`},
- {id:'lion',name:'Lion',bg:'#7b5cff',svg:`<g fill="#c8742c">${Array.from({length:12},(_,i)=>{const a=i/12*Math.PI*2;return `<circle cx="${(50+Math.cos(a)*30).toFixed(1)}" cy="${(55+Math.sin(a)*30).toFixed(1)}" r="13"/>`}).join('')}</g>
-  <circle cx="50" cy="56" r="27" fill="#ffbe55"/><circle cx="31" cy="35" r="7" fill="#ffbe55"/><circle cx="69" cy="35" r="7" fill="#ffbe55"/><ellipse cx="50" cy="67" rx="13" ry="10" fill="#ffe2a6"/>
-  ${eyes(52,10)}<path d="M45 62 L55 62 L50 67Z" fill="#6b3a1e"/>${smile(71,4.5)}`},
- {id:'dog',name:'Dog',bg:'#38b6d8',svg:`<ellipse cx="50" cy="55" rx="29" ry="31" fill="#e8c18f"/><ellipse cx="22" cy="50" rx="10" ry="21" transform="rotate(16 22 50)" fill="#8a5a3c"/><ellipse cx="78" cy="50" rx="10" ry="21" transform="rotate(-16 78 50)" fill="#8a5a3c"/>
-  <circle cx="62" cy="49" r="10" fill="#c48e5c"/><ellipse cx="50" cy="69" rx="14" ry="11" fill="#fff4e2"/>${eyes(50,12)}<ellipse cx="50" cy="63" rx="6.5" ry="5" fill="${AVC.ink}"/><ellipse cx="50" cy="77" rx="4.5" ry="5.5" fill="#ff7a98"/>`},
- {id:'chick',name:'Chick',bg:'#ff6b8a',svg:`<path d="M44 22 Q48 10 52 20 Q56 8 58 22" fill="none" stroke="#ffb800" stroke-width="4" stroke-linecap="round"/><circle cx="50" cy="56" r="34" fill="#ffd84d"/>
-  ${eyes(50,12)}<path d="M43 58 L57 58 L50 67Z" fill="#ff8a1f"/>${blush(62,22,'#ff7a5a')}`},
- {id:'monkey',name:'Monkey',bg:'#f4a24c',svg:`<circle cx="17" cy="54" r="12" fill="#8a5a3c"/><circle cx="83" cy="54" r="12" fill="#8a5a3c"/><circle cx="17" cy="54" r="6.5" fill="#f0c9a0"/><circle cx="83" cy="54" r="6.5" fill="#f0c9a0"/>
-  <circle cx="50" cy="52" r="33" fill="#8a5a3c"/><circle cx="41" cy="50" r="12" fill="#f0c9a0"/><circle cx="59" cy="50" r="12" fill="#f0c9a0"/><ellipse cx="50" cy="66" rx="21" ry="15" fill="#f0c9a0"/>
-  ${eyes(50,9)}<circle cx="47" cy="63" r="1.8" fill="${AVC.ink}"/><circle cx="53" cy="63" r="1.8" fill="${AVC.ink}"/>${smile(70,7)}`},
- {id:'raccoon',name:'Raccoon',bg:'#2b9a8f',svg:`<path d="M20 42 L27 16 L44 32Z M80 42 L73 16 L56 32Z" fill="#7d8494"/><ellipse cx="50" cy="57" rx="34" ry="30" fill="#9aa0ad"/>
-  <path d="M18 50 Q34 40 50 50 Q66 40 82 50 Q74 62 60 58 Q50 54 40 58 Q26 62 18 50Z" fill="#2f3240"/>${eye(37,51,3.8)+eye(63,51,3.8)}
-  <ellipse cx="50" cy="68" rx="12" ry="9" fill="${AVC.white}"/><ellipse cx="50" cy="64" rx="5" ry="3.8" fill="${AVC.ink}"/>${smile(71,4)}`},
-];
+const AVATARS=[];
 /* ---- illustrated cats: compressed images in avatars/ (320 px WebP) ---- */
 const CATS=[['party','Party cat'],['sleepy','Sleepy cat'],['sassy','Sassy cat'],['cheeky','Cheeky cat'],['strawberry','Strawberry cat'],['angry','Angry cat'],['hungry','Hungry cat'],
   ['cool','Cool cat'],['fancy','Fancy cat'],['artist','Artist cat'],['cosy','Cosy cat'],['star','Movie star cat'],['dj','DJ cat']].map(([k,n])=>({id:'cat-'+k,name:n,img:'avatars/cat-'+k+'.webp'}));
 AVATARS.unshift(...CATS);
 const AVMAP=Object.fromEntries(AVATARS.map(a=>[a.id,a]));
-const avatarSVG=id=>{const a=AVMAP[id];if(!a)return '';if(a.img)return `<img src="${new URL(a.img,location.href).href}" alt="" decoding="async" draggable="false">`;return `<svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="${a.bg}"/>${a.svg}</svg>`};
+const avatarSVG=id=>{const a=AVMAP[id];return a?`<img src="${new URL(a.img,location.href).href}" alt="" decoding="async" draggable="false">`:''};
 const randomAvatar=()=>AVATARS[Math.floor(Math.random()*AVATARS.length)].id;
 
 /* =====================================================================
@@ -747,8 +736,17 @@ window.addEventListener('beforeunload',e=>{if(session&&[...conns.values()].some(
    ===================================================================== */
 let student=null;
 let myAvatar=AVMAP[store.get('edu-avatar','')]?store.get('edu-avatar',''):randomAvatar();
-function paintAvPick(){const box=$('jAv');box.innerHTML='';AVATARS.forEach(a=>{const b=el('button');b.type='button';b.setAttribute('role','radio');b.setAttribute('aria-label',a.name);
-  b.setAttribute('aria-pressed',a.id===myAvatar);b.setAttribute('aria-checked',a.id===myAvatar);b.innerHTML=avatarSVG(a.id);b.onclick=()=>{myAvatar=a.id;paintAvPick()};box.append(b)})}
+function paintAvPick(){$('jPicImg').innerHTML=avatarSVG(myAvatar);$('jPic').setAttribute('aria-label',`Your avatar: ${(AVMAP[myAvatar]||{}).name||''}. Tap to change`);
+  const box=$('jAv');box.innerHTML='';AVATARS.forEach(a=>{const b=el('button');b.type='button';b.setAttribute('role','radio');b.setAttribute('aria-label',a.name);
+  b.setAttribute('aria-pressed',a.id===myAvatar);b.setAttribute('aria-checked',a.id===myAvatar);b.innerHTML=avatarSVG(a.id);b.onclick=()=>{myAvatar=a.id;paintAvPick();closeAvSheet()};box.append(b)});
+  const r=el('button','dice');r.type='button';r.setAttribute('aria-label','Surprise me: pick a random avatar');r.title='Surprise me';
+  r.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="9" cy="9" r="1.3" fill="currentColor"/><circle cx="15" cy="15" r="1.3" fill="currentColor"/><circle cx="15" cy="9" r="1.3" fill="currentColor"/><circle cx="9" cy="15" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></svg>';
+  r.onclick=()=>{let n;do{n=randomAvatar()}while(n===myAvatar&&AVATARS.length>1);myAvatar=n;paintAvPick();closeAvSheet()};box.append(r)}
+function openAvSheet(){$('avSheet').hidden=false;const cur=$('jAv').querySelector('[aria-pressed=true]');(cur||$('avDone')).focus()}
+function closeAvSheet(){$('avSheet').hidden=true;$('jPic').focus()}
+$('jPic').onclick=openAvSheet;$('avDone').onclick=closeAvSheet;
+$('avSheet').addEventListener('click',e=>{if(e.target===$('avSheet'))closeAvSheet()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('avSheet').hidden)closeAvSheet()});
 function openJoin(code){show('join');paintAvPick();$('jErr').hidden=true;$('jCode').value=(code||'').toUpperCase();$('jName').value=store.get('edu-player','');
   (code?$('jName'):$('jCode')).focus()}
 $('joinForm').onsubmit=e=>{e.preventDefault();const code=$('jCode').value.trim().toUpperCase(),name=$('jName').value.trim();
