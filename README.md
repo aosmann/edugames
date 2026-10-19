@@ -3,7 +3,7 @@
 The portal for the educational games: **https://aosmann.github.io/edugames/**
 
 - **Play**: pick a game, topic and settings, and play on your own.
-- **Class**: pick a game and settings, show the QR code on the board. Students join from their own phone or tablet with a name, you start the round, and every result comes back to your device live.
+- **Class**: the Class tab opens a class room with a QR code. Students join the class once, from their own phone or tablet, with a name. The teacher picks a game and its settings, and it starts on every student's device at once; when the round ends they return to the room for the next game. A live leaderboard shows ranks, streaks and every answer as it happens, and a podium closes each round.
 - **Reports**: filter results by game, session, day or student and export to Excel (with a "Missed questions" sheet) or CSV.
 
 ## How games get here
