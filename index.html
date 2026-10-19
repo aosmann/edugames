@@ -136,6 +136,9 @@ p{margin:0}
 .chip.off{opacity:.45}
 .chips .wait{color:#c8cff5;font-size:18px;align-self:center}
 .av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:800;color:#fff;background:hsl(var(--hue) 62% 46%);flex:none}
+.av.pic{background:none;border-radius:26%;overflow:hidden}
+.av svg{width:100%;height:100%;display:block}
+.chip .av.pic{border-radius:50%}
 @keyframes pop{from{transform:scale(.4);opacity:0}}
 @media(prefers-reduced-motion:reduce){.chip{animation:none}}
 .roomgames{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:22px 16px;max-width:720px}
@@ -195,7 +198,7 @@ p{margin:0}
 .steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:end;width:100%}
 .step{display:grid;gap:10px;justify-items:center;animation:up .7s cubic-bezier(.2,.9,.3,1.2) both}
 .step:nth-child(1){animation-delay:.35s}.step:nth-child(2){animation-delay:.7s}.step:nth-child(3){animation-delay:0s}
-.step .av{width:clamp(56px,8vw,84px);height:clamp(56px,8vw,84px);font-size:clamp(20px,3vw,30px);box-shadow:0 0 0 4px #fff}
+.step .av{width:clamp(64px,10vw,104px);height:clamp(64px,10vw,104px);font-size:clamp(20px,3vw,30px);box-shadow:0 0 0 4px #fff}
 .step strong{font-size:clamp(18px,2.4vw,26px);font-weight:800;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .step .blk{width:100%;border-radius:18px 18px 6px 6px;display:grid;place-items:center;align-content:center;gap:2px;font-weight:800;color:var(--ink)}
 .step .blk b{font-size:clamp(34px,5vw,58px);line-height:1}
@@ -248,6 +251,14 @@ p{margin:0}
 .field input{width:100%;min-width:0;border:2px solid var(--line);border-radius:var(--r-m);padding:14px 16px;font-size:22px;font-weight:700;background:var(--paper)}
 .field input.codein{letter-spacing:.2em;text-transform:uppercase;font-variant-numeric:tabular-nums}
 .err{color:var(--bad);font-weight:700}
+.avpick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.avpick button{border:0;padding:0;background:none;border-radius:28%;aspect-ratio:1;outline:3px solid transparent;outline-offset:2px;transition:transform .12s}
+.avpick button svg{width:100%;height:100%;display:block}
+.avpick button[aria-pressed=true]{outline-color:var(--board);transform:scale(1.06)}
+.avpick button:active{transform:scale(.94)}
+.meav{width:110px;height:110px}
+.meav svg{width:100%;height:100%;display:block}
+@media(prefers-reduced-motion:reduce){.avpick button{transition:none}}
 .wait{display:grid;gap:10px;justify-items:center;text-align:center}
 .wait .big{font-size:40px;font-weight:800;font-variation-settings:'opsz' 96,'wdth' 80}
 .dots{display:flex;gap:8px}
@@ -399,6 +410,7 @@ p{margin:0}
     <p>Your teacher shows the code on the board.</p>
     <label class="field">Class code<input class="codein" id="jCode" maxlength="5" inputmode="text" autocapitalize="characters" required></label>
     <label class="field">Your name<input id="jName" maxlength="24" required placeholder="First name"></label>
+    <div class="field"><span>Your avatar</span><div class="avpick" id="jAv" role="radiogroup" aria-label="Pick an avatar"></div></div>
     <p class="err" id="jErr" hidden></p>
     <button class="cta class" type="submit" id="jBtn">Join</button>
     <button class="link" type="button" data-nav="home" style="justify-self:center">Back to games</button>
@@ -407,6 +419,7 @@ p{margin:0}
 
 <main id="waitScr" class="solo" hidden>
   <div class="panel wait">
+    <div class="meav" id="wAv"></div>
     <div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
     <p class="big" id="wHi">You're in</p>
     <p id="wMsg">Waiting for your teacher to start the game.</p>
@@ -534,6 +547,59 @@ window.addEventListener('message',e=>{if(e.source!==$('frame').contentWindow)ret
 
 
 /* =====================================================================
+   AVATARS — 16 original flat animal faces, drawn as SVG (viewBox 0 0 100 100)
+   ===================================================================== */
+const AVC={ink:'#1f2033',white:'#fffaf2'};
+const eye=(x,y,r=4.4)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${AVC.ink}"/><circle cx="${x+1.5}" cy="${y-1.6}" r="${r*.34}" fill="#fff"/>`;
+const eyes=(y,dx=12,r)=>eye(50-dx,y,r)+eye(50+dx,y,r);
+const blush=(y,dx=22,c='#ff8fa3')=>`<circle cx="${50-dx}" cy="${y}" r="5" fill="${c}" opacity=".55"/><circle cx="${50+dx}" cy="${y}" r="5" fill="${c}" opacity=".55"/>`;
+const smile=(y,w=7,c=AVC.ink)=>`<path d="M${50-w} ${y} Q50 ${y+w*.9} ${50+w} ${y}" fill="none" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`;
+const AVATARS=[
+ {id:'fox',name:'Fox',bg:'#4f6bed',svg:`<path d="M20 44 L28 12 L46 32Z M80 44 L72 12 L54 32Z" fill="#ff8a3d"/><path d="M26 38 L30 22 L40 33Z M74 38 L70 22 L60 33Z" fill="${AVC.white}"/>
+  <path d="M16 46 Q50 22 84 46 Q80 76 50 88 Q20 76 16 46Z" fill="#ff8a3d"/><path d="M24 60 Q50 50 76 60 Q66 82 50 88 Q34 82 24 60Z" fill="${AVC.white}"/>${eyes(52,13)}<ellipse cx="50" cy="70" rx="5" ry="4" fill="${AVC.ink}"/>`},
+ {id:'panda',name:'Panda',bg:'#2fb872',svg:`<circle cx="26" cy="28" r="11" fill="${AVC.ink}"/><circle cx="74" cy="28" r="11" fill="${AVC.ink}"/><circle cx="50" cy="56" r="34" fill="${AVC.white}"/>
+  <ellipse cx="36" cy="54" rx="9" ry="12" transform="rotate(-24 36 54)" fill="${AVC.ink}"/><ellipse cx="64" cy="54" rx="9" ry="12" transform="rotate(24 64 54)" fill="${AVC.ink}"/>
+  <circle cx="37" cy="53" r="3.6" fill="#fff"/><circle cx="63" cy="53" r="3.6" fill="#fff"/><ellipse cx="50" cy="68" rx="5.5" ry="4" fill="${AVC.ink}"/>${smile(74,5)}`},
+ {id:'frog',name:'Frog',bg:'#ffcf3d',svg:`<circle cx="31" cy="36" r="14" fill="#3dbb6b"/><circle cx="69" cy="36" r="14" fill="#3dbb6b"/><ellipse cx="50" cy="62" rx="38" ry="27" fill="#3dbb6b"/>
+  <circle cx="31" cy="35" r="9" fill="#fff"/><circle cx="69" cy="35" r="9" fill="#fff"/>${eye(31,36,5)+eye(69,36,5)}<path d="M28 64 Q50 84 72 64" fill="none" stroke="${AVC.ink}" stroke-width="3.5" stroke-linecap="round"/>${blush(68,30)}`},
+ {id:'owl',name:'Owl',bg:'#38b6d8',svg:`<path d="M18 42 Q18 18 34 24 L50 30 L66 24 Q82 18 82 42 L82 70 Q82 92 50 92 Q18 92 18 70Z" fill="#8a5a3c"/>
+  <circle cx="36" cy="52" r="15" fill="#f3e2c7"/><circle cx="64" cy="52" r="15" fill="#f3e2c7"/>${eye(36,52,7)+eye(64,52,7)}<path d="M45 64 L55 64 L50 74Z" fill="#ffb02e"/>
+  <path d="M38 82 l4 -4 l4 4 M54 82 l4 -4 l4 4" fill="none" stroke="#c99a6e" stroke-width="2.5" stroke-linecap="round"/>`},
+ {id:'bear',name:'Bear',bg:'#ff6b8a',svg:`<circle cx="25" cy="30" r="12" fill="#9a6544"/><circle cx="75" cy="30" r="12" fill="#9a6544"/><circle cx="25" cy="30" r="6" fill="#c99673"/><circle cx="75" cy="30" r="6" fill="#c99673"/>
+  <circle cx="50" cy="56" r="34" fill="#9a6544"/><ellipse cx="50" cy="69" rx="16" ry="12" fill="#e6c49c"/>${eyes(51,13)}<ellipse cx="50" cy="63" rx="6" ry="4.5" fill="${AVC.ink}"/>${smile(71,5)}`},
+ {id:'rabbit',name:'Rabbit',bg:'#7b5cff',svg:`<ellipse cx="38" cy="26" rx="9" ry="22" fill="${AVC.white}"/><ellipse cx="62" cy="26" rx="9" ry="22" fill="${AVC.white}"/><ellipse cx="38" cy="27" rx="4.5" ry="15" fill="#ffb3c4"/><ellipse cx="62" cy="27" rx="4.5" ry="15" fill="#ffb3c4"/>
+  <circle cx="50" cy="64" r="28" fill="${AVC.white}"/>${eyes(60,11)}<path d="M46 68 L54 68 L50 72Z" fill="#ff7a98"/><rect x="47" y="74" width="6" height="6" rx="1.5" fill="#fff" stroke="#d9d2c8" stroke-width="1.5"/>${blush(70,19)}`},
+ {id:'penguin',name:'Penguin',bg:'#f4a24c',svg:`<circle cx="50" cy="54" r="35" fill="#26304a"/><circle cx="40" cy="58" r="15" fill="${AVC.white}"/><circle cx="60" cy="58" r="15" fill="${AVC.white}"/><ellipse cx="50" cy="70" rx="19" ry="15" fill="${AVC.white}"/>
+  ${eyes(55,10)}<ellipse cx="50" cy="66" rx="7.5" ry="4.5" fill="#ff9a1f"/>${blush(66,20)}`},
+ {id:'tiger',name:'Tiger',bg:'#2b9a8f',svg:`<circle cx="25" cy="29" r="11" fill="#ff9a2e"/><circle cx="75" cy="29" r="11" fill="#ff9a2e"/><circle cx="25" cy="29" r="5.5" fill="${AVC.white}"/><circle cx="75" cy="29" r="5.5" fill="${AVC.white}"/>
+  <ellipse cx="50" cy="56" rx="36" ry="33" fill="#ff9a2e"/><g stroke="${AVC.ink}" stroke-width="4" stroke-linecap="round"><path d="M50 25 L50 36 M40 27 L43 36 M60 27 L57 36 M15 52 L26 54 M16 63 L27 61 M85 52 L74 54 M84 63 L73 61"/></g>
+  <ellipse cx="43" cy="69" rx="10" ry="8" fill="${AVC.white}"/><ellipse cx="57" cy="69" rx="10" ry="8" fill="${AVC.white}"/>${eyes(50,13)}<path d="M45 62 L55 62 L50 68Z" fill="#ff6b8a"/>`},
+ {id:'koala',name:'Koala',bg:'#ffcf3d',svg:`<circle cx="21" cy="38" r="17" fill="#9aa3b5"/><circle cx="79" cy="38" r="17" fill="#9aa3b5"/><circle cx="21" cy="38" r="10" fill="#ecdfe6"/><circle cx="79" cy="38" r="10" fill="#ecdfe6"/>
+  <circle cx="50" cy="57" r="31" fill="#aeb6c7"/>${eyes(52,13)}<ellipse cx="50" cy="64" rx="8.5" ry="11" fill="#3b3348"/>${blush(68,22)}`},
+ {id:'cat',name:'Cat',bg:'#4f6bed',svg:`<path d="M20 44 L26 14 L44 30Z M80 44 L74 14 L56 30Z" fill="#8e95a8"/><path d="M26 36 L29 22 L38 30Z M74 36 L71 22 L62 30Z" fill="#ffb3c4"/>
+  <ellipse cx="50" cy="58" rx="33" ry="29" fill="#8e95a8"/>${eyes(54,13)}<path d="M46 63 L54 63 L50 67Z" fill="#ff7a98"/><path d="M43 70 Q47 74 50 68 Q53 74 57 70" fill="none" stroke="${AVC.ink}" stroke-width="2.6" stroke-linecap="round"/>
+  <g stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".85"><path d="M14 60 L30 63 M15 69 L30 68 M86 60 L70 63 M85 69 L70 68"/></g>`},
+ {id:'lion',name:'Lion',bg:'#7b5cff',svg:`<g fill="#c8742c">${Array.from({length:12},(_,i)=>{const a=i/12*Math.PI*2;return `<circle cx="${(50+Math.cos(a)*30).toFixed(1)}" cy="${(55+Math.sin(a)*30).toFixed(1)}" r="13"/>`}).join('')}</g>
+  <circle cx="50" cy="56" r="27" fill="#ffbe55"/><circle cx="31" cy="35" r="7" fill="#ffbe55"/><circle cx="69" cy="35" r="7" fill="#ffbe55"/><ellipse cx="50" cy="67" rx="13" ry="10" fill="#ffe2a6"/>
+  ${eyes(52,10)}<path d="M45 62 L55 62 L50 67Z" fill="#6b3a1e"/>${smile(71,4.5)}`},
+ {id:'dog',name:'Dog',bg:'#38b6d8',svg:`<ellipse cx="50" cy="55" rx="29" ry="31" fill="#e8c18f"/><ellipse cx="22" cy="50" rx="10" ry="21" transform="rotate(16 22 50)" fill="#8a5a3c"/><ellipse cx="78" cy="50" rx="10" ry="21" transform="rotate(-16 78 50)" fill="#8a5a3c"/>
+  <circle cx="62" cy="49" r="10" fill="#c48e5c"/><ellipse cx="50" cy="69" rx="14" ry="11" fill="#fff4e2"/>${eyes(50,12)}<ellipse cx="50" cy="63" rx="6.5" ry="5" fill="${AVC.ink}"/><ellipse cx="50" cy="77" rx="4.5" ry="5.5" fill="#ff7a98"/>`},
+ {id:'pig',name:'Pig',bg:'#2fb872',svg:`<path d="M20 40 L26 18 L42 32Z M80 40 L74 18 L58 32Z" fill="#ff8fab"/><circle cx="50" cy="56" r="33" fill="#ffadc0"/>
+  <ellipse cx="50" cy="65" rx="14" ry="10" fill="#ff8fab"/><ellipse cx="45" cy="65" rx="2.6" ry="3.6" fill="#b84a6a"/><ellipse cx="55" cy="65" rx="2.6" ry="3.6" fill="#b84a6a"/>${eyes(48,13)}`},
+ {id:'chick',name:'Chick',bg:'#ff6b8a',svg:`<path d="M44 22 Q48 10 52 20 Q56 8 58 22" fill="none" stroke="#ffb800" stroke-width="4" stroke-linecap="round"/><circle cx="50" cy="56" r="34" fill="#ffd84d"/>
+  ${eyes(50,12)}<path d="M43 58 L57 58 L50 67Z" fill="#ff8a1f"/>${blush(62,22,'#ff7a5a')}`},
+ {id:'monkey',name:'Monkey',bg:'#f4a24c',svg:`<circle cx="17" cy="54" r="12" fill="#8a5a3c"/><circle cx="83" cy="54" r="12" fill="#8a5a3c"/><circle cx="17" cy="54" r="6.5" fill="#f0c9a0"/><circle cx="83" cy="54" r="6.5" fill="#f0c9a0"/>
+  <circle cx="50" cy="52" r="33" fill="#8a5a3c"/><circle cx="41" cy="50" r="12" fill="#f0c9a0"/><circle cx="59" cy="50" r="12" fill="#f0c9a0"/><ellipse cx="50" cy="66" rx="21" ry="15" fill="#f0c9a0"/>
+  ${eyes(50,9)}<circle cx="47" cy="63" r="1.8" fill="${AVC.ink}"/><circle cx="53" cy="63" r="1.8" fill="${AVC.ink}"/>${smile(70,7)}`},
+ {id:'raccoon',name:'Raccoon',bg:'#2b9a8f',svg:`<path d="M20 42 L27 16 L44 32Z M80 42 L73 16 L56 32Z" fill="#7d8494"/><ellipse cx="50" cy="57" rx="34" ry="30" fill="#9aa0ad"/>
+  <path d="M18 50 Q34 40 50 50 Q66 40 82 50 Q74 62 60 58 Q50 54 40 58 Q26 62 18 50Z" fill="#2f3240"/>${eye(37,51,3.8)+eye(63,51,3.8)}
+  <ellipse cx="50" cy="68" rx="12" ry="9" fill="${AVC.white}"/><ellipse cx="50" cy="64" rx="5" ry="3.8" fill="${AVC.ink}"/>${smile(71,4)}`},
+];
+const AVMAP=Object.fromEntries(AVATARS.map(a=>[a.id,a]));
+const avatarSVG=id=>{const a=AVMAP[id];if(!a)return '';return `<svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="${a.bg}"/>${a.svg}</svg>`};
+const randomAvatar=()=>AVATARS[Math.floor(Math.random()*AVATARS.length)].id;
+
+/* =====================================================================
    CLASS — teacher side
    ===================================================================== */
 let session=null; // live class (teacher)
@@ -545,7 +611,8 @@ const newCode=()=>Array.from({length:5},()=>CODE_ABC[Math.floor(Math.random()*CO
 const online=c=>!!(c&&c.conn&&c.conn.open);
 const hueOf=n=>{let h=0;for(const ch of n)h=(h*31+ch.charCodeAt(0))%360;return h};
 const initials=n=>n.split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase()||'?';
-function avatar(n){const a=el('span','av',initials(n));a.style.setProperty('--hue',hueOf(n));a.setAttribute('aria-hidden','true');return a}
+function avatar(n){const id=(conns.get(n)||{}).avatar;const a=el('span','av'+(AVMAP[id]?' pic':''));a.setAttribute('aria-hidden','true');
+  if(AVMAP[id])a.innerHTML=avatarSVG(id);else{a.textContent=initials(n);a.style.setProperty('--hue',hueOf(n))}return a}
 const fmtClock=s=>`${Math.floor(s/60)}:${String(Math.max(0,Math.floor(s%60))).padStart(2,'0')}`;
 const settingLine=r=>`${r.subjectName} · ${LEVELS[r.values.level]||''}${r.values.time?' · '+(r.values.time>=120?r.values.time/60+' min':r.values.time+' sec'):''}`;
 
@@ -588,7 +655,7 @@ function uniqueName(n,conn){n=(n||'Student').trim().slice(0,24)||'Student';
   const cur=conns.get(n);if(!cur||!online(cur)||cur.conn===conn)return n;let i=2;while(online(conns.get(`${n} ${i}`)))i++;return `${n} ${i}`}
 function onStudent(conn){let name=null;
   conn.on('data',m=>{if(!m||typeof m!=='object')return;
-    if(m.t==='hello'){name=uniqueName(String(m.name||''),conn);const prev=conns.get(name)||{status:'waiting',score:0,right:0,asked:0,streak:0};prev.conn=conn;conns.set(name,prev);
+    if(m.t==='hello'){name=uniqueName(String(m.name||''),conn);const prev=conns.get(name)||{status:'waiting',score:0,right:0,asked:0,streak:0};prev.conn=conn;prev.avatar=AVMAP[m.avatar]?m.avatar:(prev.avatar||randomAvatar());conns.set(name,prev);
       if(!session.players.includes(name))session.players.push(name);
       conn.send({t:'welcome',name,code:session.code});
       if(round&&!round.closed&&!(round.results||[]).some(x=>x.player===name)){Object.assign(prev,{status:'playing',score:0,right:0,asked:0,streak:0});conn.send({t:'start',round:pub(round)})}
@@ -678,12 +745,15 @@ window.addEventListener('beforeunload',e=>{if(session&&[...conns.values()].some(
    CLASS — student side
    ===================================================================== */
 let student=null;
-function openJoin(code){show('join');$('jErr').hidden=true;$('jCode').value=(code||'').toUpperCase();$('jName').value=store.get('edu-player','');
+let myAvatar=AVMAP[store.get('edu-avatar','')]?store.get('edu-avatar',''):randomAvatar();
+function paintAvPick(){const box=$('jAv');box.innerHTML='';AVATARS.forEach(a=>{const b=el('button');b.type='button';b.setAttribute('role','radio');b.setAttribute('aria-label',a.name);
+  b.setAttribute('aria-pressed',a.id===myAvatar);b.setAttribute('aria-checked',a.id===myAvatar);b.innerHTML=avatarSVG(a.id);b.onclick=()=>{myAvatar=a.id;paintAvPick()};box.append(b)})}
+function openJoin(code){show('join');paintAvPick();$('jErr').hidden=true;$('jCode').value=(code||'').toUpperCase();$('jName').value=store.get('edu-player','');
   (code?$('jName'):$('jCode')).focus()}
 $('joinForm').onsubmit=e=>{e.preventDefault();const code=$('jCode').value.trim().toUpperCase(),name=$('jName').value.trim();
   if(code.length!==5){return jErr('The class code has 5 characters.')}if(!name)return jErr('Type your name so your teacher knows who you are.');
   if(typeof Peer==='undefined')return jErr('Can\'t connect: check the internet connection, then reload this page.');
-  store.set('edu-player',name);$('jBtn').disabled=true;$('jBtn').textContent='Joining…';joinClass(code,name)};
+  store.set('edu-player',name);store.set('edu-avatar',myAvatar);$('wAv').innerHTML=avatarSVG(myAvatar);$('jBtn').disabled=true;$('jBtn').textContent='Joining…';joinClass(code,name)};
 function jErr(t){$('jErr').textContent=t;$('jErr').hidden=false}
 function joinClass(code,name){
   const me=new Peer(PEER_OPTS);let conn=null,opened=false,cur=null,tries=0;
@@ -691,7 +761,7 @@ function joinClass(code,name){
       if(m.type==='edu-progress')conn.send({t:'progress',round:cur.id,score:m.score,right:m.right,asked:m.asked});
       if(m.type==='edu-result'){conn.send({t:'result',round:cur.id,result:m.result});cur.sent=true}}};
   const connect=()=>{conn=me.connect(ROOM_PREFIX+code,{reliable:true});
-    conn.on('open',()=>{opened=true;tries=0;conn.send({t:'hello',name:student.name})});
+    conn.on('open',()=>{opened=true;tries=0;conn.send({t:'hello',name:student.name,avatar:myAvatar})});
     conn.on('data',m=>{if(!m)return;
       if(m.t==='welcome'){student.name=m.name;$('wHi').textContent=`You're in, ${m.name}`;$('wMsg').textContent='Waiting for your teacher to start the game.';$('wErr').hidden=true;if(!cur)show('waitScr')}
       if(m.t==='start'){cur=m.round;openStage(m.round.url,`${m.round.gameName} · ${m.round.topicName}`,student.name)}
