@@ -1,4 +1,8 @@
 {
   "about": "Fallback list. Games are normally found automatically: public repos tagged with the topic 'edugame' that have a game.json. Add a repo name here only if a game should show even when the GitHub API is unavailable.",
-  "games": ["lanefall", "stackfall"]
+  "games": [
+    "lanefall",
+    "stackfall",
+    "slicefall"
+  ]
 }
