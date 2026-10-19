@@ -50,13 +50,13 @@ p{margin:0}
 .intro p{color:var(--ink2);max-width:52ch;font-size:17px}
 
 /* ---------- game shelf: app icons ---------- */
-.shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:26px 14px;padding:6px 0 48px;max-width:760px}
-@media(min-width:700px){.shelf{grid-template-columns:repeat(auto-fill,minmax(136px,1fr));gap:34px 22px}}
+.shelf{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px 18px;padding:8px 0 56px;max-width:900px}
+@media(min-width:620px){.shelf{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:40px 28px}}
 .game{display:grid;justify-items:center;gap:10px;border:0;background:none;padding:0;text-align:center;-webkit-tap-highlight-color:transparent}
-.game .ic{width:100%;max-width:120px;aspect-ratio:1;border-radius:23%;overflow:hidden;background:var(--c);
-  box-shadow:0 1px 0 rgba(24,32,61,.08),0 8px 18px -8px rgba(24,32,61,.45);transition:transform .15s}
+.game .ic{width:100%;max-width:220px;aspect-ratio:1;border-radius:23%;overflow:hidden;background:var(--c);
+  box-shadow:0 1px 0 rgba(24,32,61,.08),0 14px 28px -12px rgba(24,32,61,.5);transition:transform .15s}
 .game img{display:block;width:100%;height:100%;object-fit:cover}
-.game span{font-weight:700;font-size:16px;line-height:1.2}
+.game span{font-weight:800;font-size:clamp(18px,2.4vw,22px);line-height:1.2;letter-spacing:-.01em}
 .game:hover .ic{transform:translateY(-2px)}
 .game:active .ic{transform:scale(.95)}
 @media(prefers-reduced-motion:reduce){.game .ic{transition:none}}
@@ -95,9 +95,14 @@ p{margin:0}
 .note{font-size:14px;color:var(--ink2);margin-top:10px}
 
 /* ---------- full screen game ---------- */
-.stage{position:fixed;inset:0;background:#000;z-index:20}
-.stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
-.stage .exit{position:absolute;left:50%;transform:translateX(-50%);top:max(10px,env(safe-area-inset-top));box-shadow:0 2px 10px rgba(0,0,0,.25);border:0;border-radius:999px;padding:7px 14px;font-weight:700;font-size:14px;background:rgba(255,255,255,.9);color:var(--ink);z-index:2}
+.stage{position:fixed;inset:0;background:#000;z-index:20;display:grid;grid-template-rows:auto 1fr}
+.stagebar{display:flex;align-items:center;gap:10px;padding:8px 12px;padding-top:max(8px,env(safe-area-inset-top));background:var(--ink);color:#fff}
+.stagebar .home{display:flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:8px 16px 8px 10px;background:#fff;color:var(--ink);font-weight:800;font-size:16px}
+.stagebar .home svg{width:18px;height:18px}
+.stagebar .ttl{font-weight:700;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.stagebar .sp{flex:1}
+.stagebar .tag{font-weight:800;color:var(--marker);font-variant-numeric:tabular-nums;letter-spacing:.06em}
+.stage iframe{width:100%;height:100%;border:0;display:block;background:#000}
 
 /* ---------- class: board (projector) ---------- */
 .board{background:var(--board);color:#fff;min-height:100dvh}
@@ -239,8 +244,11 @@ p{margin:0}
 
 <!-- ============ GAME STAGE ============ -->
 <div class="stage" id="stage" hidden>
+  <div class="stagebar">
+    <button class="home" type="button" id="exitBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Home</button>
+    <span class="ttl" id="stageT"></span><span class="sp"></span><span class="tag" id="stageTag"></span>
+  </div>
   <iframe id="frame" title="Game" allow="autoplay; fullscreen"></iframe>
-  <button class="exit" type="button" id="exitBtn">Exit game</button>
 </div>
 
 <!-- ============ CLASS: lobby (projector) ============ -->
@@ -365,7 +373,7 @@ let mode='play';
 function setMode(m){mode=m;document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===m));
   if(m==='reports'){renderReports();show('reports');return}
   $('introT').textContent=m==='class'?'Pick a game for your class.':'Pick a game and play on your own.';
-  $('introP').textContent=m==='class'?'Students join from their own phone or tablet with a QR code. You choose the topic and settings, they play, you get the report.':'Every game uses the same subjects and topics, from irregular verbs to binary numbers.';
+  $('introP').textContent=m==='class'?'Students join from their own phone or tablet with a QR code. You choose the topic and settings, they play, you get the report.':'Tap a game to start playing.';
   renderShelf();show('home')}
 document.addEventListener('click',e=>{const m=e.target.closest('[data-mode]');if(m)return setMode(m.dataset.mode);
   const n=e.target.closest('[data-nav]');if(n){if(n.dataset.nav==='join')openJoin();else setMode(mode==='reports'?'play':mode)}});
@@ -391,7 +399,7 @@ function renderShelf(){const box=$('shelf');box.innerHTML='';
   if(!GAMES.length){box.append(el('div','empty','No games found yet. A game appears here once its repository has the "edugame" topic and a game.json.'));return}
   GAMES.forEach(g=>{const b=el('button','game');b.type='button';b.title=g.pitch||g.name;b.style.setProperty('--c',g.color||'#2b3990');
     const ic=el('span','ic');const im=el('img');im.src=g.base+(g.icon||'icon-512.png');im.alt='';ic.append(im);
-    b.append(ic,el('span',null,g.name));b.onclick=()=>openSetup(g);box.append(b)})}
+    b.append(ic,el('span',null,g.name));b.onclick=()=>mode==='class'?openSetup(g):openStage(g.base,g.name);box.append(b)})}
 
 /* topics come from the game's own questions.js (window.EduQ) */
 const BANKS={};
@@ -437,16 +445,16 @@ function gameURL(r,lock){const u=new URL(r.base);u.searchParams.set('topic',r.to
 
 /* ---------------- solo play ---------------- */
 /* the Exit button appears once a run has ended (pause → Quit ends a run early), so it never covers game controls */
-function openStage(url){$('frame').src=url;$('exitBtn').hidden=true;$('stage').hidden=false}
-function closeStage(){$('stage').hidden=true;$('frame').src='about:blank'}
-function playSolo(){openStage(gameURL(roundFromSel(),false))}
-$('exitBtn').onclick=()=>{closeStage();if(student)show('waitScr');else show('setup')};
+function openStage(url,title,tag){$('frame').src=url;$('stageT').textContent=title||'';$('stageTag').textContent=tag||'';$('exitBtn').hidden=!!student;$('stage').hidden=false;document.body.style.overflow='hidden'}
+function closeStage(){$('stage').hidden=true;$('frame').src='about:blank';document.body.style.overflow=''}
+function playSolo(){const r=roundFromSel();openStage(gameURL(r,false),r.gameName)}
+$('exitBtn').onclick=()=>{closeStage();if(student)show('waitScr');else setMode('play')};
 
 /* messages from the game frame */
 window.addEventListener('message',e=>{if(e.source!==$('frame').contentWindow)return;const m=e.data||{};
   if(student)student.fromGame(m);
-  else if(m.type==='edu-result')setTimeout(()=>$('exitBtn').hidden=false,1200)});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('stage').hidden&&!student&&!$('exitBtn').hidden)$('exitBtn').click()});
+});
+
 
 /* =====================================================================
    CLASS — teacher side
@@ -466,14 +474,16 @@ function openClass(firstRound,tries=0){
   const code=newCode();
   session={id:'s'+Date.now().toString(36),code,startedAt:new Date().toISOString(),rounds:[],players:[],pending:firstRound};
   show('lobby');paintLobby();$('lobbyNote').textContent='Opening the class…';
-  peer=new Peer(ROOM_PREFIX+code,PEER_OPTS);
-  peer.on('open',()=>{$('lobbyNote').textContent='';drawQR();saveSession();paintLobby()});
+  peer=new Peer(ROOM_PREFIX+code,PEER_OPTS);const thisPeer=peer;
+  const slow=setTimeout(()=>{if(thisPeer.open||peer!==thisPeer)return;$('lobbyNote').textContent='Still connecting… If this doesn\'t finish in a few seconds, something on this device or network is blocking the connection service (0.peerjs.com): a browser extension such as an ad or tracker blocker, a VPN, or a school firewall. Try turning those off for this page, or another browser.'},8000);
+  peer.on('open',()=>{clearTimeout(slow);$('lobbyNote').textContent='';drawQR();saveSession();paintLobby()});
   peer.on('connection',onStudent);
   peer.on('disconnected',()=>{try{peer.reconnect()}catch(e){}});
   peer.on('error',err=>{
     if(err.type==='unavailable-id'&&tries<4){peer.destroy();openClass(firstRound,tries+1);return}
-    if(['network','server-error','socket-error','socket-closed','browser-incompatible'].includes(err.type))
-      $('lobbyNote').textContent='Can\'t reach the connection service. Check that this device is online, then close the class and open it again.'})}
+    clearTimeout(slow);console.warn('EduGames class error',err.type,err);
+    $('lobbyNote').textContent=err.type==='browser-incompatible'?'This browser can\'t run class mode. Use a current Chrome, Safari, Edge or Firefox.'
+      :`Couldn't open the class (${err.type}). Something on this device or network is blocking the connection service (0.peerjs.com): often an ad or tracker blocker, a VPN, or a firewall. Turn it off for this page or try another browser, then close the class and open it again.`})}
 function joinLink(){const u=new URL('./',location.href);u.hash='join='+session.code;if(Q.get('peer'))u.search='?peer='+Q.get('peer');return u.href}
 function drawQR(){const q=qrcode(0,'M');q.addData(joinLink());q.make();$('qr').innerHTML=q.createSvgTag({cellSize:6,margin:0,scalable:true});
   $('code').textContent=session.code;const u=new URL('./',location.href);$('joinUrl').textContent=u.host+u.pathname}
@@ -554,7 +564,7 @@ function joinClass(code,name){
     conn.on('open',()=>{opened=true;tries=0;conn.send({t:'hello',name:student.name})});
     conn.on('data',m=>{if(!m)return;
       if(m.t==='welcome'){student.name=m.name;$('wHi').textContent=`You're in, ${m.name}`;$('wMsg').textContent='Waiting for your teacher to start the game.';$('wErr').hidden=true;if(!cur)show('waitScr')}
-      if(m.t==='start'){cur=m.round;openStage(m.round.url)}
+      if(m.t==='start'){cur=m.round;openStage(m.round.url,`${m.round.gameName} · ${m.round.topicName}`,student.name)}
       if(m.t==='stop'){if(cur&&!cur.sent){/* round ended before finishing */}cur=null;closeStage();$('wMsg').textContent='Round over. Wait for the next one.';show('waitScr')}
       if(m.t==='bye'){cur=null;closeStage();show('waitScr');$('wHi').textContent='Class finished';$('wMsg').textContent='Thanks for playing. You can close this page.';try{me.destroy()}catch(e){}}});
     conn.on('close',()=>{if(!opened)return;setTimeout(retry,1500)})};
