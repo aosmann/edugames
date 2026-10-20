@@ -116,16 +116,16 @@ p{margin:0}
 .dd.big .ddph{font-size:19px}
 .dd.big .ddlist{max-height:min(420px,62vh)}
 /* game switcher banner */
-.dd.game .ddbtn{min-height:0;padding:14px 18px 14px 14px;border-radius:var(--r-l);background:color-mix(in srgb,var(--gc,#2b3990) 11%,var(--card));box-shadow:0 1px 0 var(--line)}
-.dd.game .ddbtn[aria-expanded=true]{box-shadow:inset 0 0 0 2px var(--board)}
-.dd.game .ddbtn .gi{width:76px;height:76px;border-radius:20px}
-.dd.game .ddbtn .tx strong{font-size:clamp(26px,3.4vw,36px);letter-spacing:-.03em;font-weight:800}
-.dd.game .ddbtn .tx span{font-size:16px}
-.dd.game .chev{width:auto;height:auto;display:flex;align-items:center;gap:6px;font-weight:800;font-size:14px;color:var(--ink);background:var(--card);border-radius:999px;padding:7px 10px 7px 14px;box-shadow:0 1px 0 var(--line)}
-.dd.game .chev svg{width:18px;height:18px}
-.dd.game .ddbtn[aria-expanded=true] .chev{transform:none}
-.dd.game .ddbtn[aria-expanded=true] .chev svg{transform:rotate(180deg)}
-@media(max-width:560px){.dd.game .ddbtn .gi{width:56px;height:56px;border-radius:16px}.dd.game .chev b{display:none}.dd.game .chev{padding:7px}}
+.dd.gamedd .ddbtn{min-height:0;padding:14px 18px 14px 14px;border-radius:var(--r-l);background:color-mix(in srgb,var(--gc,#2b3990) 11%,var(--card));box-shadow:0 1px 0 var(--line)}
+.dd.gamedd .ddbtn[aria-expanded=true]{box-shadow:inset 0 0 0 2px var(--board)}
+.dd.gamedd .ddbtn .gi{width:76px;height:76px;border-radius:20px}
+.dd.gamedd .ddbtn .tx strong{font-size:clamp(26px,3.4vw,36px);letter-spacing:-.03em;font-weight:800}
+.dd.gamedd .ddbtn .tx span{font-size:16px}
+.dd.gamedd .chev{width:auto;height:auto;display:flex;align-items:center;gap:6px;font-weight:800;font-size:14px;color:var(--ink);background:var(--card);border-radius:999px;padding:7px 10px 7px 14px;box-shadow:0 1px 0 var(--line)}
+.dd.gamedd .chev svg{width:18px;height:18px}
+.dd.gamedd .ddbtn[aria-expanded=true] .chev{transform:none}
+.dd.gamedd .ddbtn[aria-expanded=true] .chev svg{transform:rotate(180deg)}
+@media(max-width:560px){.dd.gamedd .ddbtn .gi{width:56px;height:56px;border-radius:16px}.dd.gamedd .chev b{display:none}.dd.gamedd .chev{padding:7px}}
 .summary{position:sticky;top:16px;display:grid;gap:16px}
 .sumtop{display:grid;gap:8px;padding-bottom:14px;border-bottom:1px solid var(--line)}
 .sumrow{display:flex;align-items:center;gap:12px}
@@ -153,6 +153,7 @@ p{margin:0}
   max-height:min(380px,60vh);overflow:auto;box-shadow:0 0 0 1px var(--line),0 22px 44px -14px rgba(24,32,61,.4);animation:ddIn .14s ease-out}
 @keyframes ddIn{from{opacity:0;transform:translateY(-4px)}}
 @media(prefers-reduced-motion:reduce){.ddlist{animation:none}.ddbtn .chev{transition:none}}
+.ddlist li img{flex:none}
 .ddlist li{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:13px;cursor:pointer;outline:0}
 .ddlist li:hover,.ddlist li:focus{background:#eef1f8}
 .ddlist li[aria-selected=true]{background:color-mix(in srgb,var(--board) 9%,#fff)}
@@ -184,9 +185,11 @@ p{margin:0}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
 /* ---------- full screen game ---------- */
-.stage{position:fixed;inset:0;background:#000;z-index:20;display:grid;grid-template-rows:auto 1fr}
-.stagebar{display:flex;align-items:center;gap:10px;padding:8px 12px;padding-top:max(8px,env(safe-area-inset-top));background:var(--ink);color:#fff}
-.stagebar .home{display:flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:8px 16px 8px 10px;background:#fff;color:var(--ink);font-weight:800;font-size:16px}
+.stage{position:fixed;left:0;right:0;top:0;height:100%;height:100dvh;background:#000;z-index:20;display:grid;grid-template-rows:auto minmax(0,1fr);overscroll-behavior:none}
+.stage.bare{grid-template-rows:minmax(0,1fr)}
+.stage.bare .stagebar{display:none}
+.stagebar{display:flex;align-items:center;gap:10px;padding:6px 10px;padding-top:max(6px,env(safe-area-inset-top));background:var(--ink);color:#fff}
+.stagebar .home{display:flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:6px 14px 6px 8px;background:#fff;color:var(--ink);font-weight:800;font-size:16px}
 .stagebar .home svg{width:18px;height:18px}
 .stagebar .ttl{font-weight:700;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .stagebar .sp{flex:1}
@@ -431,7 +434,7 @@ p{margin:0}
   <div class="wrap setup">
     <header class="top"><a class="mark" href="./"><i aria-hidden="true"></i>EduGames</a><span class="sp"></span><span class="tag" id="sTag" hidden></span><button class="back" type="button" data-nav="home" id="sBack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span>All games</span></button></header>
     <h1 class="sr" id="lGame">Game</h1>
-    <div class="dd game" id="ddGame"></div>
+    <div class="dd gamedd" id="ddGame"></div>
     <div class="cols">
       <div class="pick">
         <section class="pcard" id="cSubj"><h2 class="stept" id="lSubj"><b>1</b>Subject<span id="nSubj"></span></h2><div class="dd big" id="ddSubj"></div></section>
@@ -661,7 +664,7 @@ function dropdown(host,{placeholder,options,value,onChange,disabled,render,label
   if(label)btn.setAttribute('aria-labelledby',label+' '+host.id+'-v');btn.disabled=!!disabled;
   const cur=options.find(o=>o.value===value),face=el('span');face.id=host.id+'-v';face.style.cssText='display:flex;align-items:center;gap:12px;min-width:0';
   if(cur)face.append(...render(cur,true));else{face.className='ddph';face.append(el('span','ddblank'),el('span',null,placeholder))}
-  const ch=el('span','chev');ch.innerHTML=(host.classList.contains('game')?'<b>Change game</b>':'')+CHEV;btn.append(face,ch);
+  const ch=el('span','chev');ch.innerHTML=(host.classList.contains('gamedd')?'<b>Change game</b>':'')+CHEV;btn.append(face,ch);
   const list=el('ul','ddlist');list.setAttribute('role','listbox');list.hidden=true;
   const close=()=>{list.hidden=true;btn.setAttribute('aria-expanded','false')};
   options.forEach(o=>{const li=el('li');li.setAttribute('role','option');li.setAttribute('aria-selected',o.value===value);li.tabIndex=-1;
@@ -737,7 +740,8 @@ function gameURL(r,lock){const u=new URL(r.base);u.searchParams.set('topic',r.to
 
 /* ---------------- solo play ---------------- */
 /* the Exit button appears once a run has ended (pause → Quit ends a run early), so it never covers game controls */
-function openStage(url,title,tag){$('frame').src=url;$('stageT').textContent=title||'';$('stageTag').textContent=tag||'';$('exitBtn').hidden=!!student;$('stage').hidden=false;document.body.style.overflow='hidden'}
+/* students get the game full screen (no bar); solo players get a slim Home bar */
+function openStage(url,title,tag){$('frame').src=url;$('stageT').textContent=title||'';$('stageTag').textContent=tag||'';$('exitBtn').hidden=!!student;$('stage').classList.toggle('bare',!!student);$('stage').hidden=false;document.body.style.overflow='hidden'}
 function closeStage(){$('stage').hidden=true;$('frame').src='about:blank';document.body.style.overflow=''}
 function playSolo(){const r=roundFromSel();openStage(gameURL(r,false),r.gameName)}
 $('exitBtn').onclick=()=>{closeStage();if(student)show('waitScr');else setMode('play')};
