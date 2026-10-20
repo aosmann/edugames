@@ -100,12 +100,41 @@ p{margin:0}
 .setup{display:grid;gap:18px;padding-block:6px 48px}
 .setup>*,.reports>*,.live>*{min-width:0}
 .top .tag{font-weight:800;font-size:14px;color:#fff;background:var(--board);border-radius:999px;padding:6px 12px;white-space:nowrap}
-.rcard{justify-self:center;width:min(100%,640px);display:grid;gap:18px;background:var(--card);border-radius:var(--r-l);padding:clamp(18px,3vw,30px);
-  box-shadow:0 1px 0 var(--line),0 24px 48px -32px rgba(24,32,61,.45)}
-.rhead h1{font-size:clamp(26px,3.2vw,34px);font-weight:800;letter-spacing:-.03em}
-.rhead p{color:var(--ink2);margin-top:4px}
-.fld{display:grid;gap:7px}
-.fld>label{font-size:14px;font-weight:800;color:var(--ink2)}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,360px);gap:22px;align-items:start}
+@media(max-width:860px){.cols{grid-template-columns:1fr}}
+.pick{display:grid;gap:16px;min-width:0}
+.pcard{background:var(--card);border-radius:var(--r-l);padding:18px;box-shadow:0 1px 0 var(--line),0 18px 40px -30px rgba(24,32,61,.45);display:grid;gap:12px}
+.stept{display:flex;align-items:center;gap:10px;font-size:19px;font-weight:800;letter-spacing:-.01em}
+.stept b{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:15px;background:var(--ink);color:#fff}
+.stept span{margin-left:auto;font-size:14px;font-weight:700;color:var(--ink2)}
+.pcard.done .stept b{background:var(--good)}
+.dd.big .ddbtn{min-height:84px;padding:12px 16px 12px 12px;border-radius:20px}
+.dd.big .sic,.dd.big .ddblank{width:56px;height:56px;border-radius:16px}
+.dd.big .sic svg{width:30px;height:30px}
+.dd.big .ddbtn .tx strong{font-size:21px;letter-spacing:-.01em}
+.dd.big .ddbtn .tx span{font-size:15px}
+.dd.big .ddph{font-size:19px}
+.dd.big .ddlist{max-height:min(420px,62vh)}
+/* game switcher banner */
+.dd.game .ddbtn{min-height:0;padding:14px 18px 14px 14px;border-radius:var(--r-l);background:color-mix(in srgb,var(--gc,#2b3990) 11%,var(--card));box-shadow:0 1px 0 var(--line)}
+.dd.game .ddbtn[aria-expanded=true]{box-shadow:inset 0 0 0 2px var(--board)}
+.dd.game .ddbtn .gi{width:76px;height:76px;border-radius:20px}
+.dd.game .ddbtn .tx strong{font-size:clamp(26px,3.4vw,36px);letter-spacing:-.03em;font-weight:800}
+.dd.game .ddbtn .tx span{font-size:16px}
+.dd.game .chev{width:auto;height:auto;display:flex;align-items:center;gap:6px;font-weight:800;font-size:14px;color:var(--ink);background:var(--card);border-radius:999px;padding:7px 10px 7px 14px;box-shadow:0 1px 0 var(--line)}
+.dd.game .chev svg{width:18px;height:18px}
+.dd.game .ddbtn[aria-expanded=true] .chev{transform:none}
+.dd.game .ddbtn[aria-expanded=true] .chev svg{transform:rotate(180deg)}
+@media(max-width:560px){.dd.game .ddbtn .gi{width:56px;height:56px;border-radius:16px}.dd.game .chev b{display:none}.dd.game .chev{padding:7px}}
+.summary{position:sticky;top:16px;display:grid;gap:16px}
+.sumtop{display:grid;gap:8px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.sumrow{display:flex;align-items:center;gap:12px}
+.sumrow small{display:block;font-size:13px;font-weight:700;color:var(--ink2)}
+.sumrow strong{display:block;font-size:21px;font-weight:800;line-height:1.15;letter-spacing:-.01em}
+.sumtop p{font-size:14px;color:var(--ink2)}
+.sumtop .ddblank{width:44px;height:44px}
+@media(max-width:860px){.summary{position:static}#setup .wrap{padding-bottom:96px}
+  #sGo{position:fixed;left:16px;right:16px;bottom:max(14px,env(safe-area-inset-bottom));width:auto;z-index:5;box-shadow:inset 0 -4px 0 rgba(0,0,0,.2),0 10px 30px -8px rgba(24,32,61,.5)}}
 .dd{position:relative}
 .ddbtn{width:100%;min-height:66px;display:flex;align-items:center;gap:12px;padding:10px 14px 10px 10px;border:0;border-radius:18px;background:var(--paper);text-align:left;
   box-shadow:inset 0 0 0 1.5px var(--line);transition:box-shadow .15s}
@@ -137,7 +166,6 @@ p{margin:0}
 .lvl i{width:8px;height:8px;border-radius:50%;background:var(--line)}
 .lvl i.on{background:color-mix(in srgb,var(--h,var(--board)) 70%,#18203d)}
 .lvl b{font-weight:700;margin-left:4px;min-width:4.6em}
-.opts{display:grid;gap:4px;padding-top:4px;border-top:1px solid var(--line)}
 .opts:empty{display:none}
 .sec-t{font-size:14px;font-weight:800;color:var(--ink2);margin:10px 0 7px}
 .seg{display:flex;gap:4px;padding:4px;background:#e9ecf6;border-radius:var(--r-m)}
@@ -152,6 +180,8 @@ p{margin:0}
 .cta:disabled{opacity:.45;cursor:not-allowed}
 .cta:active:not(:disabled){transform:translateY(1px)}
 .note{font-size:14px;color:var(--ink2)}
+.note:empty{display:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
 /* ---------- full screen game ---------- */
 .stage{position:fixed;inset:0;background:#000;z-index:20;display:grid;grid-template-rows:auto 1fr}
@@ -400,16 +430,21 @@ p{margin:0}
 <main id="setup" hidden>
   <div class="wrap setup">
     <header class="top"><a class="mark" href="./"><i aria-hidden="true"></i>EduGames</a><span class="sp"></span><span class="tag" id="sTag" hidden></span><button class="back" type="button" data-nav="home" id="sBack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span>All games</span></button></header>
-    <section class="rcard" aria-labelledby="sT">
-      <div class="rhead"><h1 id="sT">Set up the round</h1><p id="sSub">Pick a game, a subject and a topic.</p></div>
-      <div class="fld"><label id="lGame">Game</label><div class="dd" id="ddGame"></div></div>
-      <div class="fld"><label id="lSubj">Subject</label><div class="dd" id="ddSubj"></div></div>
-      <div class="fld"><label id="lTop">Topic</label><div class="dd" id="ddTop"></div></div>
-      <div class="opts" id="sSettings"></div>
-      <div class="ready" id="sReady" hidden></div>
-      <button class="cta" type="button" id="sGo" disabled>Start</button>
-      <p class="note" id="sNote"></p>
-    </section>
+    <h1 class="sr" id="lGame">Game</h1>
+    <div class="dd game" id="ddGame"></div>
+    <div class="cols">
+      <div class="pick">
+        <section class="pcard" id="cSubj"><h2 class="stept" id="lSubj"><b>1</b>Subject<span id="nSubj"></span></h2><div class="dd big" id="ddSubj"></div></section>
+        <section class="pcard" id="cTop"><h2 class="stept" id="lTop"><b>2</b>Topic<span id="nTop"></span></h2><div class="dd big" id="ddTop"></div></section>
+      </div>
+      <aside class="panel summary" aria-label="Round">
+        <div class="sumtop" id="sSum"></div>
+        <div class="opts" id="sSettings"></div>
+        <div class="ready" id="sReady" hidden></div>
+        <button class="cta" type="button" id="sGo" disabled>Start</button>
+        <p class="note" id="sNote"></p>
+      </aside>
+    </div>
   </div>
 </main>
 
@@ -626,7 +661,7 @@ function dropdown(host,{placeholder,options,value,onChange,disabled,render,label
   if(label)btn.setAttribute('aria-labelledby',label+' '+host.id+'-v');btn.disabled=!!disabled;
   const cur=options.find(o=>o.value===value),face=el('span');face.id=host.id+'-v';face.style.cssText='display:flex;align-items:center;gap:12px;min-width:0';
   if(cur)face.append(...render(cur,true));else{face.className='ddph';face.append(el('span','ddblank'),el('span',null,placeholder))}
-  const ch=el('span','chev');ch.innerHTML=CHEV;btn.append(face,ch);
+  const ch=el('span','chev');ch.innerHTML=(host.classList.contains('game')?'<b>Change game</b>':'')+CHEV;btn.append(face,ch);
   const list=el('ul','ddlist');list.setAttribute('role','listbox');list.hidden=true;
   const close=()=>{list.hidden=true;btn.setAttribute('aria-expanded','false')};
   options.forEach(o=>{const li=el('li');li.setAttribute('role','option');li.setAttribute('aria-selected',o.value===value);li.tabIndex=-1;
@@ -652,7 +687,7 @@ async function openSetup(g){
 async function switchGame(g,first){
   const keepS=sel.subject,keepT=sel.topic;sel.game=g;sel.bank=null;
   if(!first){const last=store.get('edu-portal-last-'+g.id,{});sel.values=Object.assign({},last.values);sel.picked=Object.assign({},last.picked)}
-  document.querySelector('#setup .rcard').style.setProperty('--gc',g.color||'#2b3990');renderSetup();
+  document.querySelector('#setup .setup').style.setProperty('--gc',g.color||'#2b3990');renderSetup();
   try{const b=await loadBank(g);if(sel.game!==g)return;sel.bank=b;
     const sj=b.find(x=>x.id===keepS);sel.subject=sj?keepS:null;sel.topic=sj&&sj.topics.some(t=>t.id===keepT)?keepT:null}
   catch(e){sel.bank=[];sel.err=true}
@@ -666,6 +701,11 @@ function renderSetup(){const g=sel.game,B=sel.bank,s=curSub(),t=curTop();
     onChange:id=>switchGame(GAMES.find(x=>x.id===id)),
     render:o=>{const im=el('img','gi');im.src=o.g.base+(o.g.icon||'icon-512.png');im.alt='';return[im,txt(o.g.name,o.g.pitch||'')]}});
   const hue=s&&B?(B.hue||{})[s.id]||'#8a93b8':'#8a93b8';$('ddTop').style.setProperty('--h',hue);
+  $('cSubj').classList.toggle('done',!!s);$('cTop').classList.toggle('done',!!t);
+  $('nSubj').textContent=B&&B.length?`${B.length} subjects`:'';$('nTop').textContent=s?`${s.name} · ${s.topics.length}`:'';
+  const sum=$('sSum');sum.innerHTML='';const row=el('div','sumrow'),rt=el('div');
+  if(t&&B){rt.append(el('small',null,s.name),el('strong',null,t.name));row.append(subjIcon(B,s.id),rt);sum.append(row,el('p',null,t.bl))}
+  else{rt.append(el('small',null,g.name),el('strong',null,s?'Now pick a topic':'Pick a subject and topic'));row.append(el('span','ddblank'),rt);sum.append(row)}
   if(!B||sel.err){const m=sel.err?'Couldn\'t load this game\'s topics. Check the connection.':'Loading…';
     dropdown($('ddSubj'),{label:'lSubj',placeholder:m,options:[],disabled:true,render:()=>[]});dropdown($('ddTop'),{label:'lTop',placeholder:'Choose a subject first',options:[],disabled:true,render:()=>[]});
     $('sSettings').innerHTML='';paintGo();return}
@@ -687,9 +727,8 @@ function paintGo(){if(!sel||$('setup').hidden)return;const t=curTop(),go=$('sGo'
   if(mode==='class'){const on=[...conns.entries()].filter(([,c])=>online(c));go.className='cta go';
     go.textContent=!t?'Choose a topic to start':on.length?`Start for everyone (${on.length})`:'Start for everyone';
     rd.hidden=!on.length;rd.innerHTML='';if(on.length){const st=el('span','stack');on.slice(0,5).forEach(([n])=>st.append(avatar(n)));rd.append(st,el('span',null,`${on.length} student${on.length===1?'':'s'} ready`))}
-    $('sSub').textContent=session?`Everyone in class ${session.code} gets this round at once.`:'Pick a game, a subject and a topic.';
     $('sNote').textContent=!t?'':on.length?'Anyone who joins later gets this round too.':'Nobody has joined yet. You can still start; students who join later get this round.'}
-  else{rd.hidden=true;go.className='cta';go.textContent=t?`Play · ${t.name}`:'Choose a topic to play';$('sSub').textContent='Pick a game, a subject and a topic.';$('sNote').textContent=t?'Your results are saved on this device and show up in Reports.':''}}
+  else{rd.hidden=true;go.className='cta';go.textContent=t?`Play · ${t.name}`:'Choose a topic to play';$('sNote').textContent=t?'Your results are saved on this device and show up in Reports.':''}}
 $('sGo').onclick=()=>{if(!curTop())return;if(mode==='class'&&session)startRound(roundFromSel());else playSolo()};
 function roundFromSel(){const g=sel.game,s=curSub(),t=curTop();
   return{id:'r'+Date.now().toString(36),game:g.id,gameName:g.name,base:g.base,subject:s.id,subjectName:s.name,topic:t.id,topicName:t.name,
