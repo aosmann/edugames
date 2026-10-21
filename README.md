@@ -17,3 +17,8 @@ To build a new game, follow [CONTRACT.md](CONTRACT.md).
 There are no accounts and no server database. In class mode the teacher's browser and the students' browsers connect directly (WebRTC, using the free PeerJS service only to introduce them). Results are saved only in the teacher's browser (`localStorage`), and a student's name only in their own browser. Clearing the browser data removes them, so export reports you want to keep.
 
 Class mode needs an internet connection. A few school networks block direct device-to-device connections; if students can't join on one network, try a phone hotspot to check.
+
+## Credits
+
+Country, capital and continent data: [mledoze/countries](https://github.com/mledoze/countries), Open Database License (ODbL 1.0).  
+Flags: [flag-icons](https://github.com/lipis/flag-icons), MIT licence, compressed into `flags/`.

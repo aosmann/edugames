@@ -170,6 +170,9 @@ p{margin:0}
 .opts:empty{display:none}
 .sec-t{font-size:14px;font-weight:800;color:var(--ink2);margin:10px 0 7px}
 .seg{display:flex;gap:4px;padding:4px;background:#e9ecf6;border-radius:var(--r-m)}
+.regchips{display:flex;flex-wrap:wrap;gap:6px}
+.regchips button{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:8px 12px;font-weight:700;font-size:14px;color:var(--ink2)}
+.regchips button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
 .seg button{flex:1;border:0;background:none;border-radius:12px;padding:10px 6px;font-weight:700;color:var(--ink2)}
 .seg button[aria-pressed=true]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(24,32,61,.12)}
 .ready{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px}
@@ -649,7 +652,8 @@ const BANKS={};
 function loadBank(g){if(BANKS[g.id])return Promise.resolve(BANKS[g.id]);
   return new Promise((res,rej)=>{const prev=window.EduQ;delete window.EduQ;const s=document.createElement('script');s.src=g.base+'questions.js';
     s.onload=()=>{const E=window.EduQ;window.EduQ=prev;if(!E)return rej(new Error('no bank'));
-      const B=E.SUBJECTS.map(s=>({id:s.id,name:s.name,topics:s.topics.map(t=>({id:t.id,name:t.name,bl:t.bl,d:t.d}))}));B.icon=E.SICON||{};B.hue=E.SHUE||{};BANKS[g.id]=B;res(B)};
+      const B=E.SUBJECTS.map(s=>({id:s.id,name:s.name,topics:s.topics.map(t=>({id:t.id,name:t.name,bl:t.bl,d:t.d,regions:!!t.regions}))}));B.icon=E.SICON||{};B.hue=E.SHUE||{};
+      B.regions=E.REGIONS||null;B.getRegions=E.getRegions||null;B.setRegions=E.setRegions||null;B.regionLabel=E.regionLabel||null;BANKS[g.id]=B;res(B)};
     s.onerror=()=>{window.EduQ=prev;rej(new Error('bank failed'))};document.head.append(s)})}
 
 /* ---------------- setup ---------------- */
@@ -707,7 +711,7 @@ function renderSetup(){const g=sel.game,B=sel.bank,s=curSub(),t=curTop();
   $('cSubj').classList.toggle('done',!!s);$('cTop').classList.toggle('done',!!t);
   $('nSubj').textContent=B&&B.length?`${B.length} subjects`:'';$('nTop').textContent=s?`${s.name} · ${s.topics.length}`:'';
   const sum=$('sSum');sum.innerHTML='';const row=el('div','sumrow'),rt=el('div');
-  if(t&&B){rt.append(el('small',null,s.name),el('strong',null,t.name));row.append(subjIcon(B,s.id),rt);sum.append(row,el('p',null,t.bl))}
+  if(t&&B){rt.append(el('small',null,s.name),el('strong',null,t.name));row.append(subjIcon(B,s.id),rt);sum.append(row,el('p',null,t.regions&&B.regionLabel&&B.getRegions?B.regionLabel(B.getRegions(t.id)):t.bl))}
   else{rt.append(el('small',null,g.name),el('strong',null,s?'Now pick a topic':'Pick a subject and topic'));row.append(el('span','ddblank'),rt);sum.append(row)}
   if(!B||sel.err){const m=sel.err?'Couldn\'t load this game\'s topics. Check the connection.':'Loading…';
     dropdown($('ddSubj'),{label:'lSubj',placeholder:m,options:[],disabled:true,render:()=>[]});dropdown($('ddTop'),{label:'lTop',placeholder:'Choose a subject first',options:[],disabled:true,render:()=>[]});
@@ -718,7 +722,13 @@ function renderSetup(){const g=sel.game,B=sel.bank,s=curSub(),t=curTop();
   dropdown($('ddTop'),{label:'lTop',placeholder:s?'Choose a topic':'Choose a subject first',disabled:!s,value:sel.topic,options:s?s.topics.map(x=>({value:x.id,x})):[],
     onChange:id=>{sel.topic=id;renderSetup()},
     render:(o,inBtn)=>{const lv=(sel.picked[o.x.id]||{}).level||o.x.d;return inBtn?[subjIcon(B,s.id),txt(o.x.name,o.x.bl)]:[txt(o.x.name,o.x.bl),lvlDots(lv)]}});
-  const box=$('sSettings');box.innerHTML='';
+  const box=$('sSettings');box.innerHTML='';delete sel.values.regions;
+  if(t&&t.regions&&B.regions&&B.getRegions){const cur=B.getRegions(t.id),all=cur.length===B.regions.length;if(!all)sel.values.regions=cur.join(',');
+    const lab=el('div','sec-t','Continents');lab.id='st-regions';box.append(lab);const row=el('div','regchips');row.setAttribute('role','group');row.setAttribute('aria-labelledby','st-regions');
+    const set=list=>{B.setRegions(t.id,list);renderSetup()};
+    const chip=(id,name,on)=>{const b=el('button',null,name);b.type='button';b.setAttribute('aria-pressed',on);
+      b.onclick=()=>{if(id==='all')return set(B.regions.map(r=>r.id));if(all)return set([id]);const nx=cur.includes(id)?cur.filter(x=>x!==id):cur.concat(id);set(nx.length?nx:B.regions.map(r=>r.id))};return b};
+    row.append(chip('all','All',all));B.regions.forEach(r=>row.append(chip(r.id,r.name,!all&&cur.includes(r.id))));box.append(row)}
   if(t)(g.settings||[]).forEach(st=>{let v=sel.values[st.key];
     const auto=st.default==='topic'&&st.key==='level';if(auto)v=(sel.picked[t.id]||{})[st.key];
     if(v==null||!st.options.some(o=>o[0]===v))v=auto?t.d:st.default;sel.values[st.key]=v;
@@ -735,6 +745,7 @@ function paintGo(){if(!sel||$('setup').hidden)return;const t=curTop(),go=$('sGo'
 $('sGo').onclick=()=>{if(!curTop())return;if(mode==='class'&&session)startRound(roundFromSel());else playSolo()};
 function roundFromSel(){const g=sel.game,s=curSub(),t=curTop();
   return{id:'r'+Date.now().toString(36),game:g.id,gameName:g.name,base:g.base,subject:s.id,subjectName:s.name,topic:t.id,topicName:t.name,
+    regionsLabel:t.regions&&sel.bank.regionLabel?sel.bank.regionLabel(sel.values.regions?sel.values.regions.split(','):null):'',
     values:Object.assign({},sel.values),label:`${g.name} · ${t.name} · ${LEVELS[sel.values.level]||''}${sel.values.time?' · '+(sel.values.time>=120?sel.values.time/60+' min':sel.values.time+' sec'):''}`}}
 function gameURL(r,lock){const u=new URL(r.base);u.searchParams.set('topic',r.topic);Object.entries(r.values).forEach(([k,v])=>u.searchParams.set(k,v));if(lock)u.searchParams.set('lock','1');return u.href}
 
@@ -779,7 +790,7 @@ const initials=n=>n.split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join(''
 function avatar(n){const id=(conns.get(n)||{}).avatar;const a=el('span','av'+(AVMAP[id]?' pic':''));a.setAttribute('aria-hidden','true');
   if(AVMAP[id])a.innerHTML=avatarSVG(id);else{a.textContent=initials(n);a.style.setProperty('--hue',hueOf(n))}return a}
 const fmtClock=s=>`${Math.floor(s/60)}:${String(Math.max(0,Math.floor(s%60))).padStart(2,'0')}`;
-const settingLine=r=>`${r.subjectName} · ${LEVELS[r.values.level]||''}${r.values.time?' · '+(r.values.time>=120?r.values.time/60+' min':r.values.time+' sec'):''}`;
+const settingLine=r=>`${r.subjectName}${r.regionsLabel?' · '+r.regionsLabel:''} · ${LEVELS[r.values.level]||''}${r.values.time?' · '+(r.values.time>=120?r.values.time/60+' min':r.values.time+' sec'):''}`;
 
 /* Class tab = the class room. It opens straight away; students join the class, not a game. */
 function enterClass(){if(session){show(round&&!round.closed?'liveScr':'lobby');paintLobby();paintLive();return}openClass()}
@@ -841,7 +852,7 @@ function onStudent(conn){let name=null;
       if(dA>0){s.streak=dR>0?(s.streak||0)+dR:0;s.flash=dR>0?'ok':'no';s.delta=dS}
       Object.assign(s,{status:'playing',score:m.score||0,right:m.right||0,asked:m.asked||0});paintLive()}
     if(m.t==='result'&&round&&m.round===round.id&&m.result){
-      const res=Object.assign({},m.result,{player:name,receivedAt:new Date().toISOString()});
+      const res=Object.assign({},m.result,{player:name,receivedAt:new Date().toISOString()});if(round.regionsLabel&&!res.regionsLabel)res.regionsLabel=round.regionsLabel;
       round.results=(round.results||[]).filter(x=>x.player!==name);round.results.push(res);saveSession();
       Object.assign(s,{status:'done',score:res.score||0,right:res.right||0,asked:res.asked||0});paintLive();
       const playing=[...conns.values()].filter(c=>online(c)&&c.status==='playing').length;
@@ -969,7 +980,7 @@ function allRows(){const rows=[];
   if($('fSolo').checked)store.get('edu-results',[]).forEach(x=>rows.push(row(x,{session:'Solo',sessionId:'solo',player:'Me'})));
   return rows.sort((a,b)=>b.at.localeCompare(a.at))}
 function row(x,ctx){const g=GAMES.find(g=>g.id===x.game);return{at:x.at||x.receivedAt,session:ctx.session,sessionId:ctx.sessionId,student:ctx.player,
-  game:x.game,gameName:g?g.name:(x.game||''),subject:x.subject,topic:x.topic,topicName:x.topicName||x.topic,level:LEVELS[x.level]||x.level||'',
+  game:x.game,gameName:g?g.name:(x.game||''),subject:x.subject,topic:x.topic,topicName:(x.topicName||x.topic)+(x.regionsLabel&&x.regionsLabel!=='All continents'?` · ${x.regionsLabel}`:''),level:LEVELS[x.level]||x.level||'',
   score:x.score??0,right:x.right??0,asked:x.asked??0,pct:x.asked?Math.round((x.right||0)/x.asked*100):0,bestStreak:x.bestStreak??0,
   seconds:x.timeUsed??x.duration??'',missed:x.missed||[]}}
 function filtered(){const g=$('fGame').value,s=$('fSession').value,f=$('fFrom').value,t=$('fTo').value,n=$('fStudent').value.trim().toLowerCase();

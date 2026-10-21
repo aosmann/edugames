@@ -46,16 +46,32 @@ Any game that follows this page shows up in the EduGames portal by itself, can b
 The portal opens the game as:
 
 ```
-https://aosmann.github.io/<repo>/?topic=<topicId>&level=<1-3>&<otherKey>=<value>&lock=1
+https://aosmann.github.io/<repo>/?topic=<topicId>&level=<1-3>&<otherKey>=<value>&regions=eu,as&lock=1
 ```
+
+`regions` is only sent for topics with continents (Geography: Capitals, Guess the flag); no `regions` means all continents.
 
 When `topic` is present the game must:
 
 1. Select that topic (find its subject in `EduQ.SUBJECTS`), apply `level` and any other settings from `game.json`, and **start the run straight away**: no subject/topic menu.
 2. Not save these settings over the player's own preferences.
-3. When `lock=1` (class mode): hide replay and "choose another topic" on the end screen, ignore restart shortcuts, and show "Result sent to your teacher." instead.
+3. Pass the continents to the bank: `EduQ.stream(topic, level, {regions: EduQ.parseRegions(params.get('regions'))})`.
+4. When `lock=1` (class mode): hide replay and "choose another topic" on the end screen, ignore restart shortcuts, and show "Result sent to your teacher." instead.
 
 Without `topic` the game behaves exactly as on its own.
+
+### Continents in the game's own menu
+
+Topics with `topic.regions === true` (Capitals, Guess the flag) are asked by continent. Under the topic list, show the bank's picker:
+
+```js
+const chips = EduQ.regionPicker(topic, {onChange: () => {/* refresh labels, records */}});
+if (chips) topicMenu.append(chips);
+```
+
+The choice is saved per topic on the device and shared by every EduGames game. `EduQ.stream(topic, level)` uses it automatically; `EduQ.regionLabel(list)` gives "Europe, Asia" or "All continents" for labels. Colours follow the menu text colour; set `--eq-on-bg` / `--eq-on-fg` on a parent to match the theme.
+
+The flag images live in `flags/<iso>.webp` next to `questions.js` (195 files, ~550 KB). Copy the folder with the bank and add it to the service worker so flags work offline.
 
 ## 4. Messages to the portal
 
@@ -91,7 +107,8 @@ The portal adds the student's name and session itself. Games never ask for a nam
 - [ ] Plays on a 390×844 phone and on a laptop, portrait first.
 - [ ] `?topic=times&level=3&lock=1` starts a Hard times-tables run at once, with no replay button at the end.
 - [ ] `edu-result` arrives with the fields above (test by opening the game inside the portal).
-- [ ] `questions.js` is identical to the other games' copy.
+- [ ] `questions.js` and the `flags/` folder are identical to the other games' copies.
+- [ ] Capitals / Guess the flag show the continent chips, and `?topic=flags&regions=af&lock=1` only shows African flags.
 - [ ] Service worker cache name bumped whenever files change.
 - [ ] `game.json` is valid JSON and `id` equals the repo name.
 
