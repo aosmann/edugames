@@ -71,6 +71,18 @@ if (chips) topicMenu.append(chips);
 
 The choice is saved per topic on the device and shared by every EduGames game. `EduQ.stream(topic, level)` uses it automatically; `EduQ.regionLabel(list)` gives "Europe, Asia" or "All continents" for labels. Colours follow the menu text colour; set `--eq-on-bg` / `--eq-on-fg` on a parent to match the theme.
 
+### Topics / Units tabs
+
+A subject can hold textbook units next to its topics (English: "Unit 1", book "Check it! A2"). A unit is an ordinary topic with `topic.unit = '<book>'`, so `?topic=en-u1` works like any topic. Units are left out of "Mix it up". In the game's own topic menu, show the bank's tabs and list only the active tab's topics:
+
+```js
+const tabs = EduQ.topicTabs(subject, topic, id => {cfg.topic = id; save(); renderTopics()});
+if (tabs) topicList.before(tabs);              // null when the subject has no units
+EduQ.topicsOf(subject, topic).forEach(addRow);  // instead of subject.topics
+```
+
+Count topics with `subject.topics.filter(t => !t.unit).length`. Unit questions carry a skill tag (`Q.tag`, e.g. "Prepositions of time") for the report.
+
 The flag images live in `flags/<iso>.webp` next to `questions.js` (195 files, ~550 KB). Copy the folder with the bank and add it to the service worker so flags work offline.
 
 ## 4. Messages to the portal
@@ -80,8 +92,16 @@ Post to `window.parent` (only when `window.parent !== window`), target `'*'`:
 | When | Message |
 |---|---|
 | Page loaded | `{type: 'edu-ready', game: '<id>'}` |
-| After every answer | `{type: 'edu-progress', game: '<id>', score, right, asked}` |
+| After every answer | `{type: 'edu-progress', game: '<id>', score, right, asked, last}` |
 | Run finished (time up, out of lives, or quit from pause) | `{type: 'edu-result', result}` |
+
+`last` is the answer just given, for the teacher's "most common mistakes" report:
+
+```js
+last: {q: Q.img ? 'This flag' : Q.q, img: Q.img || null, answer: Q.answer, picked: '<the answer they chose, or "missed">', ok: 1 /* or 0 */, tag: Q.tag || null}
+```
+
+The reference is the `lastAns` lines in every game: set `lastAns` when an answer is judged, and `toParent` attaches it to the next `edu-progress` and clears it.
 
 Also append every `result` to `localStorage['edu-results']` (keep the last 200).
 
@@ -108,6 +128,7 @@ The portal adds the student's name and session itself. Games never ask for a nam
 - [ ] `?topic=times&level=3&lock=1` starts a Hard times-tables run at once, with no replay button at the end.
 - [ ] `edu-result` arrives with the fields above (test by opening the game inside the portal).
 - [ ] `questions.js` and the `flags/` folder are identical to the other games' copies.
+- [ ] `edu-progress` carries `last` after every answer, and English shows the Topics / Units tabs.
 - [ ] Capitals / Guess the flag show the continent chips, and `?topic=flags&regions=af&lock=1` only shows African flags.
 - [ ] Service worker cache name bumped whenever files change.
 - [ ] `game.json` is valid JSON and `id` equals the repo name.

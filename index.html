@@ -170,6 +170,10 @@ p{margin:0}
 .opts:empty{display:none}
 .sec-t{font-size:14px;font-weight:800;color:var(--ink2);margin:10px 0 7px}
 .seg{display:flex;gap:4px;padding:4px;background:#e9ecf6;border-radius:var(--r-m)}
+.ttabs{display:flex;gap:4px;padding:4px;background:#e9ecf6;border-radius:999px;width:max-content;max-width:100%;margin-bottom:12px}
+.ttabs button{border:0;background:none;border-radius:999px;padding:10px 20px;font-weight:800;font-size:15px;color:var(--ink2)}
+.ttabs button[aria-selected=true]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(24,32,61,.14)}
+.ttabs[hidden]{display:none}
 .regchips{display:flex;flex-wrap:wrap;gap:6px}
 .regchips button{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:8px 12px;font-weight:700;font-size:14px;color:var(--ink2)}
 .regchips button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
@@ -347,6 +351,36 @@ p{margin:0}
 .reports th{font-size:13px;color:var(--ink2);font-weight:700;background:#f6f7fc;position:sticky;top:0}
 .reports td.n{text-align:right}
 .reports .none{padding:30px;text-align:center;color:var(--ink2)}
+
+/* insights: most missed questions, skills, students to help */
+.ins{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px;align-items:start}
+.ins[hidden]{display:none}
+.icard{background:var(--card);border-radius:var(--r-l);padding:18px 20px;box-shadow:0 1px 0 var(--line);display:grid;gap:12px;min-width:0}
+.icard.wide{grid-column:1/-1}
+.icard h3{font-size:18px;font-weight:800;letter-spacing:-.01em}
+.icard h3 small{display:block;font-size:13px;font-weight:600;color:var(--ink2);letter-spacing:0;margin-top:2px}
+.mq{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.mq li{display:grid;grid-template-columns:auto 1fr auto;gap:4px 14px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.mq li:first-child{border-top:0;padding-top:0}
+.mq .rk{grid-row:span 2;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:14px;background:#fde8e6;color:var(--bad)}
+.mq .qt{font-weight:800;font-size:16px;min-width:0;display:flex;align-items:center;gap:10px}
+.mq .qt img{width:42px;height:auto;border-radius:4px;box-shadow:0 0 0 1px var(--line);flex:none}
+.mq .qt span{min-width:0;overflow-wrap:anywhere}
+.mq .ct{grid-row:span 2;text-align:right;font-weight:800;font-size:20px;color:var(--bad);font-variant-numeric:tabular-nums;line-height:1.1}
+.mq .ct small{display:block;font-size:12px;font-weight:700;color:var(--ink2)}
+.mq .dt{font-size:14px;color:var(--ink2);min-width:0}
+.mq .dt b{color:var(--good)}
+.mq .dt i{font-style:normal;color:var(--bad);font-weight:700}
+.mq .who{grid-column:2/-1;font-size:13px;color:var(--ink2)}
+.bars{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.bars li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;font-size:15px}
+.bars li>span:first-child{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bars li>span:nth-child(2){font-weight:800;font-variant-numeric:tabular-nums}
+.bars .tr{grid-column:1/-1;height:10px;border-radius:99px;background:#eceff7;overflow:hidden}
+.bars .tr i{display:block;height:100%;border-radius:99px;background:var(--good)}
+.bars .tr i.mid{background:#e9a23b}.bars .tr i.low{background:var(--bad)}
+.bars small{grid-column:1/-1;font-size:13px;color:var(--ink2)}
+.inote{font-size:13px;color:var(--ink2)}
 .exp{display:flex;gap:10px;flex-wrap:wrap}
 .exp .cta,.exp .ghost{width:auto;flex:0 1 auto;padding:12px 18px;font-size:16px}
 @media(max-width:480px){.exp .cta,.exp .ghost{flex:1 1 0}}
@@ -441,7 +475,7 @@ p{margin:0}
     <div class="cols">
       <div class="pick">
         <section class="pcard" id="cSubj"><h2 class="stept" id="lSubj"><b>1</b>Subject<span id="nSubj"></span></h2><div class="dd big" id="ddSubj"></div></section>
-        <section class="pcard" id="cTop"><h2 class="stept" id="lTop"><b>2</b>Topic<span id="nTop"></span></h2><div class="dd big" id="ddTop"></div></section>
+        <section class="pcard" id="cTop"><h2 class="stept" id="lTop"><b>2</b>Topic<span id="nTop"></span></h2><div class="ttabs" id="tTabs" role="tablist" aria-label="Topics or units" hidden></div><div class="dd big" id="ddTop"></div></section>
       </div>
       <aside class="panel summary" aria-label="Round">
         <div class="sumtop" id="sSum"></div>
@@ -536,6 +570,7 @@ p{margin:0}
       <label class="check"><input type="checkbox" id="fSolo"> Include my own games</label>
     </div>
     <div class="sum" id="sum"></div>
+    <div class="ins" id="ins" hidden></div>
     <div class="exp">
       <button class="cta" type="button" id="expXlsx">Export Excel</button>
       <button class="ghost dark" type="button" id="expCsv">Export CSV</button>
@@ -652,7 +687,7 @@ const BANKS={};
 function loadBank(g){if(BANKS[g.id])return Promise.resolve(BANKS[g.id]);
   return new Promise((res,rej)=>{const prev=window.EduQ;delete window.EduQ;const s=document.createElement('script');s.src=g.base+'questions.js';
     s.onload=()=>{const E=window.EduQ;window.EduQ=prev;if(!E)return rej(new Error('no bank'));
-      const B=E.SUBJECTS.map(s=>({id:s.id,name:s.name,topics:s.topics.map(t=>({id:t.id,name:t.name,bl:t.bl,d:t.d,regions:!!t.regions}))}));B.icon=E.SICON||{};B.hue=E.SHUE||{};
+      const B=E.SUBJECTS.map(s=>({id:s.id,name:s.name,topics:s.topics.map(t=>({id:t.id,name:t.name,bl:t.bl,d:t.d,regions:!!t.regions,unit:t.unit||null}))}));B.icon=E.SICON||{};B.hue=E.SHUE||{};
       B.regions=E.REGIONS||null;B.getRegions=E.getRegions||null;B.setRegions=E.setRegions||null;B.regionLabel=E.regionLabel||null;BANKS[g.id]=B;res(B)};
     s.onerror=()=>{window.EduQ=prev;rej(new Error('bank failed'))};document.head.append(s)})}
 
@@ -709,7 +744,11 @@ function renderSetup(){const g=sel.game,B=sel.bank,s=curSub(),t=curTop();
     render:o=>{const im=el('img','gi');im.src=o.g.base+(o.g.icon||'icon-512.png');im.alt='';return[im,txt(o.g.name,o.g.pitch||'')]}});
   const hue=s&&B?(B.hue||{})[s.id]||'#8a93b8':'#8a93b8';$('ddTop').style.setProperty('--h',hue);
   $('cSubj').classList.toggle('done',!!s);$('cTop').classList.toggle('done',!!t);
-  $('nSubj').textContent=B&&B.length?`${B.length} subjects`:'';$('nTop').textContent=s?`${s.name} · ${s.topics.length}`:'';
+  $('nSubj').textContent=B&&B.length?`${B.length} subjects`:'';const hasU=!!(s&&s.topics.some(x=>x.unit)),tab=t?(t.unit?'units':'topics'):(hasU&&sel.ttab==='units'?'units':'topics');
+  const tList=s?s.topics.filter(x=>!hasU||!!x.unit===(tab==='units')):[];
+  {const tt=$('tTabs');tt.hidden=!hasU;tt.innerHTML='';if(hasU)[['topics','Topics'],['units','Units']].forEach(([id,name])=>{const b=el('button',null,name);b.type='button';b.setAttribute('role','tab');b.setAttribute('aria-selected',id===tab);
+    b.onclick=e=>{e.stopPropagation();if(id===tab)return;sel.ttab=id;sel.topic=null;renderSetup();setTimeout(()=>$('ddTop')._open&&$('ddTop')._open(),0)};tt.append(b)})}
+  $('nTop').textContent=s?`${s.name} · ${tList.length}`:'';
   const sum=$('sSum');sum.innerHTML='';const row=el('div','sumrow'),rt=el('div');
   if(t&&B){rt.append(el('small',null,s.name),el('strong',null,t.name));row.append(subjIcon(B,s.id),rt);sum.append(row,el('p',null,t.regions&&B.regionLabel&&B.getRegions?B.regionLabel(B.getRegions(t.id)):t.bl))}
   else{rt.append(el('small',null,g.name),el('strong',null,s?'Now pick a topic':'Pick a subject and topic'));row.append(el('span','ddblank'),rt);sum.append(row)}
@@ -718,8 +757,8 @@ function renderSetup(){const g=sel.game,B=sel.bank,s=curSub(),t=curTop();
     $('sSettings').innerHTML='';paintGo();return}
   dropdown($('ddSubj'),{label:'lSubj',placeholder:'Choose a subject',value:sel.subject,options:B.map(x=>({value:x.id,x})),
     onChange:id=>{sel.subject=id;sel.topic=null;renderSetup();setTimeout(()=>$('ddTop')._open&&$('ddTop')._open(),0)},
-    render:o=>[subjIcon(B,o.x.id),txt(o.x.name,`${o.x.topics.length} topics`)]});
-  dropdown($('ddTop'),{label:'lTop',placeholder:s?'Choose a topic':'Choose a subject first',disabled:!s,value:sel.topic,options:s?s.topics.map(x=>({value:x.id,x})):[],
+    render:o=>{const u=o.x.topics.filter(x=>x.unit).length;return[subjIcon(B,o.x.id),txt(o.x.name,`${o.x.topics.length-u} topics`+(u?` · ${u} unit${u>1?'s':''}`:''))]}});
+  dropdown($('ddTop'),{label:'lTop',placeholder:s?(tab==='units'?'Choose a unit':'Choose a topic'):'Choose a subject first',disabled:!s,value:sel.topic,options:tList.map(x=>({value:x.id,x})),
     onChange:id=>{sel.topic=id;renderSetup()},
     render:(o,inBtn)=>{const lv=(sel.picked[o.x.id]||{}).level||o.x.d;return inBtn?[subjIcon(B,s.id),txt(o.x.name,o.x.bl)]:[txt(o.x.name,o.x.bl),lvlDots(lv)]}});
   const box=$('sSettings');box.innerHTML='';delete sel.values.regions;
@@ -782,6 +821,7 @@ let session=null; // live class (teacher)
 const conns=new Map(); // name -> {conn, status, score, right, asked, streak, hue}
 let peer=null,round=null,clockT=null;
 const sessions=()=>store.get('edu-portal-sessions',[]);
+let saveT=null;const saveSoon=()=>{if(!saveT)saveT=setTimeout(()=>{saveT=null;saveSession()},2500)};
 function saveSession(){if(!session||!session.rounds.length)return;const all=sessions().filter(s=>s.id!==session.id);all.push(session);store.set('edu-portal-sessions',all.slice(-300))}
 const newCode=()=>Array.from({length:5},()=>CODE_ABC[Math.floor(Math.random()*CODE_ABC.length)]).join('');
 const online=c=>!!(c&&c.conn&&c.conn.open);
@@ -850,7 +890,10 @@ function onStudent(conn){let name=null;
     if(m.t==='progress'&&round&&m.round===round.id){
       const dA=(m.asked||0)-(s.asked||0),dR=(m.right||0)-(s.right||0),dS=(m.score||0)-(s.score||0);
       if(dA>0){s.streak=dR>0?(s.streak||0)+dR:0;s.flash=dR>0?'ok':'no';s.delta=dS}
-      Object.assign(s,{status:'playing',score:m.score||0,right:m.right||0,asked:m.asked||0});paintLive()}
+      Object.assign(s,{status:'playing',score:m.score||0,right:m.right||0,asked:m.asked||0});
+      if(m.last&&typeof m.last==='object'){const L=m.last,cut=v=>v==null?null:String(v).slice(0,160);round.log=round.log||[];
+        if(round.log.length<6000)round.log.push({p:name,q:cut(L.q),a:cut(L.answer),pk:cut(L.picked),ok:L.ok?1:0,img:cut(L.img),tag:cut(L.tag)});saveSoon()}
+      paintLive()}
     if(m.t==='result'&&round&&m.round===round.id&&m.result){
       const res=Object.assign({},m.result,{player:name,receivedAt:new Date().toISOString()});if(round.regionsLabel&&!res.regionsLabel)res.regionsLabel=round.regionsLabel;
       round.results=(round.results||[]).filter(x=>x.player!==name);round.results.push(res);saveSession();
@@ -904,7 +947,13 @@ function paintLive(){if(!round||$('liveScr').hidden)return;
     if(!dx&&!dy)return;r.li.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'none'}],{duration:450,easing:'cubic-bezier(.2,.8,.2,1)'})})}
 
 /* ---- end of a round: podium, then the class goes on ---- */
-function endRound(){if(!round||round.closed)return;round.closed=true;round.endedAt=new Date().toISOString();saveSession();clearInterval(clockT);paintClock();
+function endRound(){if(!round||round.closed)return;round.closed=true;round.endedAt=new Date().toISOString();
+  /* students still playing when the round ends keep what they did so far (marked partial) */
+  conns.forEach((c,n)=>{if(!(c.asked>0)||(round.results||[]).some(x=>x.player===n))return;
+    const mine=(round.log||[]).filter(e=>e.p===n&&!e.ok).map(e=>({q:e.q,answer:e.a,picked:e.pk,img:e.img}));
+    round.results.push({game:round.game,subject:round.subject,topic:round.topic,topicName:round.topicName,level:+((round.values||{}).level)||null,regionsLabel:round.regionsLabel,
+      score:c.score||0,right:c.right||0,asked:c.asked||0,missed:mine,partial:true,player:n,at:round.endedAt,receivedAt:round.endedAt})});
+  saveSession();clearInterval(clockT);paintClock();
   const ranked=[...conns.entries()].filter(([n])=>(round.results||[]).some(x=>x.player===n)||conns.get(n).asked>0).sort((a,b)=>(b[1].score||0)-(a[1].score||0)||(b[1].right||0)-(a[1].right||0));
   conns.forEach((c,n)=>{if(!online(c))return;const i=ranked.findIndex(x=>x[0]===n);c.conn.send({t:'stop',rank:i>=0?i+1:null,of:ranked.length,score:c.score||0})});
   const steps=$('steps');steps.innerHTML='';const order=[1,0,2];
@@ -953,7 +1002,7 @@ function jErr(t){$('jErr').textContent=t;$('jErr').hidden=false}
 function joinClass(code,name){
   const me=new Peer(PEER_OPTS);let conn=null,opened=false,cur=null,tries=0;
   student={code,name,me,fromGame(m){if(!conn||!cur)return;
-      if(m.type==='edu-progress')conn.send({t:'progress',round:cur.id,score:m.score,right:m.right,asked:m.asked});
+      if(m.type==='edu-progress')conn.send({t:'progress',round:cur.id,score:m.score,right:m.right,asked:m.asked,last:m.last||null});
       if(m.type==='edu-result'){conn.send({t:'result',round:cur.id,result:m.result});cur.sent=true}}};
   const connect=()=>{conn=me.connect(ROOM_PREFIX+code,{reliable:true});
     conn.on('open',()=>{opened=true;tries=0;conn.send({t:'hello',name:student.name,avatar:myAvatar})});
@@ -982,7 +1031,7 @@ function allRows(){const rows=[];
 function row(x,ctx){const g=GAMES.find(g=>g.id===x.game);return{at:x.at||x.receivedAt,session:ctx.session,sessionId:ctx.sessionId,student:ctx.player,
   game:x.game,gameName:g?g.name:(x.game||''),subject:x.subject,topic:x.topic,topicName:(x.topicName||x.topic)+(x.regionsLabel&&x.regionsLabel!=='All continents'?` · ${x.regionsLabel}`:''),level:LEVELS[x.level]||x.level||'',
   score:x.score??0,right:x.right??0,asked:x.asked??0,pct:x.asked?Math.round((x.right||0)/x.asked*100):0,bestStreak:x.bestStreak??0,
-  seconds:x.timeUsed??x.duration??'',missed:x.missed||[]}}
+  seconds:x.timeUsed??x.duration??'',missed:x.missed||[],log:ctx.round&&ctx.round.log?ctx.round.log.filter(e=>e.p===ctx.player):null}}
 function filtered(){const g=$('fGame').value,s=$('fSession').value,f=$('fFrom').value,t=$('fTo').value,n=$('fStudent').value.trim().toLowerCase();
   return allRows().filter(r=>(!g||r.game===g)&&(!s||r.sessionId===s)&&(!f||dayKey(r.at)>=f)&&(!t||dayKey(r.at)<=t)&&(!n||r.student.toLowerCase().includes(n)))}
 function renderReports(){
@@ -999,7 +1048,44 @@ function renderReports(){
     [r.score,`${r.right}/${r.asked}`,r.pct+'%',r.bestStreak].forEach(v=>tr.append(el('td','n',String(v))));tb.append(tr)});
   const st=new Set(rows.map(r=>r.student)),avg=rows.length?Math.round(rows.reduce((a,r)=>a+r.pct,0)/rows.length):0;
   const sum=$('sum');sum.innerHTML='';[[rows.length,'results'],[st.size,'students'],[avg+'%','average right']].forEach(([b,s])=>{const d=el('div');d.append(el('b',null,String(b)),el('span',null,s));sum.append(d)});
+  renderInsights(rows);
   $('expXlsx').disabled=$('expCsv').disabled=!rows.length}
+
+/* ---------- insights: what the class got wrong ---------- */
+function answersOf(rows){const out=[];rows.forEach(r=>{const g=GAMES.find(x=>x.id===r.game),base=g?g.base:'';
+  if(r.log&&r.log.length)r.log.forEach(e=>out.push({student:r.student,topic:r.topicName,base,q:e.q,a:e.a,pk:e.pk,ok:!!e.ok,img:e.img,tag:e.tag,full:true}));
+  else r.missed.forEach(m=>out.push({student:r.student,topic:r.topicName,base,q:m.q,a:m.answer,pk:m.picked,ok:false,img:m.img||null,tag:null,full:false}))});return out}
+const qLabel=x=>x.img?`Which flag? ${x.a}`:x.q;
+function questionStats(A){const Q=new Map();
+  A.forEach(x=>{const k=(x.img||x.q)+'|'+x.a;let o=Q.get(k);if(!o){o={x,n:0,w:0,full:0,picks:new Map(),who:new Set()};Q.set(k,o)}
+    o.n++;if(x.full)o.full++;if(!x.ok){o.w++;o.who.add(x.student);if(x.pk&&x.pk!=='missed')o.picks.set(x.pk,(o.picks.get(x.pk)||0)+1)}});
+  return[...Q.values()].filter(o=>o.w).sort((a,b)=>b.w-a.w||(b.w/b.n)-(a.w/a.n))}
+function groupStats(A,key){const G=new Map();A.filter(x=>x.full).forEach(x=>{const k=key(x);if(!k)return;const o=G.get(k)||{k,n:0,ok:0};o.n++;if(x.ok)o.ok++;G.set(k,o)});
+  return[...G.values()].map(o=>Object.assign(o,{pct:Math.round(o.ok/o.n*100)}))}
+function bar(label,pct,note){const li=el('li');li.append(el('span',null,label),el('span',null,pct+'%'));const tr=el('span','tr'),i=el('i',pct<50?'low':pct<75?'mid':null);i.style.width=Math.max(3,pct)+'%';tr.append(i);li.append(tr);if(note)li.append(el('small',null,note));return li}
+function renderInsights(rows){const box=$('ins');box.innerHTML='';const A=answersOf(rows);if(!A.length){box.hidden=true;return}box.hidden=false;
+  const full=A.some(x=>x.full);
+  /* most missed questions */
+  const top=questionStats(A).slice(0,8),c1=el('section','icard wide');
+  c1.append(Object.assign(el('h3',null,'Most missed questions'),{}));c1.querySelector('h3').append(el('small',null,'The questions most students got wrong, with the wrong answer they picked most'));
+  if(!top.length)c1.append(el('p','inote','No wrong answers here. Nice work, class.'));
+  const ul=el('ul','mq');top.forEach((o,i)=>{const li=el('li'),x=o.x;li.append(el('span','rk',String(i+1)));
+    const qt=el('span','qt');if(x.img&&x.base){const im=el('img');im.src=x.base+x.img;im.alt='';im.loading='lazy';qt.append(im)}qt.append(el('span',null,qLabel(x)));li.append(qt);
+    const ct=el('span','ct',o.full?Math.round(o.w/o.n*100)+'%':String(o.w));ct.append(el('small',null,o.full?`${o.w} of ${o.n} wrong`:`wrong`));li.append(ct);
+    const dt=el('span','dt');dt.append('Right: ',el('b',null,x.a));const pk=[...o.picks.entries()].sort((a,b)=>b[1]-a[1])[0];
+    if(pk){dt.append(' · Most picked: ',el('i',null,pk[0]));if(o.w>1)dt.append(` (${pk[1]})`)}li.append(dt);
+    const who=[...o.who];li.append(el('span','who',who.slice(0,5).join(', ')+(who.length>5?` +${who.length-5} more`:'')));ul.append(li)});
+  if(top.length)c1.append(ul);box.append(c1);
+  if(!full){box.append(el('p','inote','Skill and student breakdowns appear for class rounds played with the latest game versions.'));return}
+  /* skills (unit tags) or topics */
+  const tags=groupStats(A,x=>x.tag),byTopic=groupStats(A,x=>x.topic),G=(tags.length>1?tags:byTopic).sort((a,b)=>a.pct-b.pct);
+  if(G.length){const c2=el('section','icard'),h=el('h3',null,tags.length>1?'Skills':'Topics');h.append(el('small',null,'Share of right answers, weakest first'));c2.append(h);
+    const ul2=el('ul','bars');G.slice(0,10).forEach(o=>ul2.append(bar(o.k,o.pct,`${o.ok} of ${o.n} right`)));c2.append(ul2);box.append(c2)}
+  /* students to help */
+  const S=groupStats(A,x=>x.student).filter(o=>o.n>=3).sort((a,b)=>a.pct-b.pct);
+  if(S.length){const c3=el('section','icard'),h=el('h3',null,'Students who may need help');h.append(el('small',null,'Lowest share of right answers, with their weakest area'));c3.append(h);
+    const ul3=el('ul','bars');S.slice(0,6).forEach(o=>{const mine=A.filter(x=>x.full&&x.student===o.k),w=groupStats(mine,x=>x.tag||x.topic).filter(g=>g.n>=2&&g.pct<100).sort((a,b)=>a.pct-b.pct)[0];
+      ul3.append(bar(o.k,o.pct,`${o.ok} of ${o.n} right`+(w&&(tags.length>1||byTopic.length>1)?` · weakest: ${w.k} (${w.pct}%)`:'')))});c3.append(ul3);box.append(c3)}}
 ['fGame','fSession','fFrom','fTo','fStudent','fSolo'].forEach(id=>$(id).addEventListener('input',renderReports));
 
 const COLS=[['Date','d'],['Session','session'],['Student','student'],['Game','gameName'],['Subject','subject'],['Topic','topicName'],['Level','level'],['Score','score'],['Right','right'],['Asked','asked'],['% right','pct'],['Best streak','bestStreak'],['Seconds','seconds']];
@@ -1016,6 +1102,12 @@ $('expXlsx').onclick=async()=>{$('expXlsx').disabled=true;$('expXlsx').textConte
     const rows=filtered(),wb=XLSX.utils.book_new();
     const a=XLSX.utils.json_to_sheet(flat(rows));a['!cols']=COLS.map(([h])=>({wch:Math.max(10,h.length+2)}));XLSX.utils.book_append_sheet(wb,a,'Results');
     const m=missedRows(rows);if(m.length){const b=XLSX.utils.json_to_sheet(m);b['!cols']=[{wch:18},{wch:9},{wch:14},{wch:12},{wch:20},{wch:34},{wch:16},{wch:16}];XLSX.utils.book_append_sheet(wb,b,'Missed questions')}
+    const A=answersOf(rows),qs=questionStats(A);
+    if(qs.length){const c=XLSX.utils.json_to_sheet(qs.map(o=>({Question:qLabel(o.x),'Right answer':o.x.a,Skill:o.x.tag||o.x.topic,Wrong:o.w,Answered:o.full?o.n:'',
+      '% wrong':o.full?Math.round(o.w/o.n*100):'','Most picked wrong':([...o.picks.entries()].sort((a,b)=>b[1]-a[1])[0]||[''])[0],Students:[...o.who].join(', ')})));
+      c['!cols']=[{wch:36},{wch:16},{wch:22},{wch:7},{wch:9},{wch:8},{wch:18},{wch:40}];XLSX.utils.book_append_sheet(wb,c,'Common mistakes')}
+    const fa=A.filter(x=>x.full);if(fa.length){const d=XLSX.utils.json_to_sheet(fa.map(x=>({Student:x.student,Topic:x.topic,Skill:x.tag||'',Question:qLabel(x),'Right answer':x.a,'They picked':x.pk,Correct:x.ok?'yes':'no'})));
+      d['!cols']=[{wch:14},{wch:20},{wch:22},{wch:36},{wch:16},{wch:16},{wch:8}];XLSX.utils.book_append_sheet(wb,d,'All answers')}
     XLSX.writeFile(wb,fileName('xlsx'))}
   catch(e){xlsxP=null;toast('Couldn\'t prepare the Excel file. Check the connection, or export CSV instead.')}
   $('expXlsx').disabled=false;$('expXlsx').textContent='Export Excel'};
