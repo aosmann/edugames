@@ -260,6 +260,13 @@ p{margin:0}
 
 /* ---------- live leaderboard ---------- */
 .lbwrap{padding-block:8px 40px;display:grid;gap:18px}
+.race{display:grid;gap:12px}
+.race[hidden]{display:none}
+#specFrame{width:100%;aspect-ratio:16/9;max-height:68vh;border:0;border-radius:22px;background:#0b1030;box-shadow:0 20px 50px -24px rgba(0,0,0,.6)}
+.racebar{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap}
+.racebar .cta{width:auto;padding:14px 28px;font-size:19px}
+.racebar .meta{color:#c8cff5;font-size:16px}
+.racebar .sp{flex:1}
 .lbhead{display:flex;align-items:center;gap:14px 24px;flex-wrap:wrap}
 .lbhead h2{font-size:clamp(26px,3.6vw,44px);font-weight:800;letter-spacing:-.01em;font-variation-settings:'opsz' 96;letter-spacing:-.02em;line-height:1.05}
 .lbhead .meta{color:#c8cff5;font-size:17px}
@@ -535,6 +542,15 @@ p{margin:0}
       <div class="clock" id="liveClock" aria-live="off"></div>
       <button class="endbtn" type="button" id="endRound">End round</button>
     </div>
+    <section class="race" id="raceBox" hidden aria-label="Race track">
+      <iframe id="specFrame" title="Race track, live" allow="autoplay"></iframe>
+      <div class="racebar">
+        <button class="cta go" type="button" id="startRace">Start race</button>
+        <p class="meta" id="raceNote">Students wait on the grid until you start.</p>
+        <span class="sp"></span>
+        <button class="ghost" type="button" id="projRace">Open track on projector</button>
+      </div>
+    </section>
     <ol class="lb" id="lb" aria-label="Leaderboard"></ol>
   </div>
 </main>
@@ -785,13 +801,19 @@ $('sGo').onclick=()=>{if(!curTop())return;if(mode==='class'&&session)startRound(
 function roundFromSel(){const g=sel.game,s=curSub(),t=curTop();
   return{id:'r'+Date.now().toString(36),game:g.id,gameName:g.name,base:g.base,subject:s.id,subjectName:s.name,topic:t.id,topicName:t.name,
     regionsLabel:t.regions&&sel.bank.regionLabel?sel.bank.regionLabel(sel.values.regions?sel.values.regions.split(','):null):'',
+    race:mode==='class'&&g.multiplayer&&g.multiplayer.race?{seed:1}:null,
     values:Object.assign({},sel.values),label:`${g.name} · ${t.name} · ${LEVELS[sel.values.level]||''}${sel.values.time?' · '+(sel.values.time>=120?sel.values.time/60+' min':sel.values.time+' sec'):''}`}}
-function gameURL(r,lock){const u=new URL(r.base);u.searchParams.set('topic',r.topic);Object.entries(r.values).forEach(([k,v])=>u.searchParams.set(k,v));if(lock)u.searchParams.set('lock','1');return u.href}
+function gameURL(r,lock){const u=new URL(r.base);u.searchParams.set('topic',r.topic);Object.entries(r.values).forEach(([k,v])=>u.searchParams.set(k,v));if(lock)u.searchParams.set('lock','1');
+  if(lock&&r.race){u.searchParams.set('race','1');u.searchParams.set('seed',r.race.seed)}return u.href}
+/* race games (game.json multiplayer.race): one seed per round, a spectate view for the teacher */
+function specURL(r){const u=new URL(r.base);u.searchParams.set('spectate','1');u.searchParams.set('seed',r.race.seed);['laps','track'].forEach(k=>{if(r.values[k]!=null)u.searchParams.set(k,r.values[k])});return u.href}
+const avURL=id=>AVMAP[id]?new URL(AVMAP[id].img,location.href).href:null;
 
 /* ---------------- solo play ---------------- */
 /* the Exit button appears once a run has ended (pause → Quit ends a run early), so it never covers game controls */
 /* students get the game full screen (no bar); solo players get a slim Home bar */
 function openStage(url,title,tag){$('frame').src=url;$('stageT').textContent=title||'';$('stageTag').textContent=tag||'';$('exitBtn').hidden=!!student;$('stage').classList.toggle('bare',!!student);$('stage').hidden=false;document.body.style.overflow='hidden'}
+const toGame=m=>{try{$('frame').contentWindow.postMessage(m,'*')}catch(e){}};
 function closeStage(){$('stage').hidden=true;$('frame').src='about:blank';document.body.style.overflow=''}
 function playSolo(){const r=roundFromSel();openStage(gameURL(r,false),r.gameName)}
 $('exitBtn').onclick=()=>{closeStage();if(student)show('waitScr');else setMode('play')};
@@ -894,6 +916,7 @@ function onStudent(conn){let name=null;
       if(m.last&&typeof m.last==='object'){const L=m.last,cut=v=>v==null?null:String(v).slice(0,160);round.log=round.log||[];
         if(round.log.length<6000)round.log.push({p:name,q:cut(L.q),a:cut(L.answer),pk:cut(L.picked),ok:L.ok?1:0,img:cut(L.img),tag:cut(L.tag)});saveSoon()}
       paintLive()}
+    if(m.t==='kstate'&&round&&round.race&&m.round===round.id&&m.s&&typeof m.s==='object'){const k=m.s;s.k={d:+k.d||0,x:+k.x||0,lap:+k.lap||1,fin:!!k.fin,at:Date.now()};return}
     if(m.t==='result'&&round&&m.round===round.id&&m.result){
       const res=Object.assign({},m.result,{player:name,receivedAt:new Date().toISOString()});if(round.regionsLabel&&!res.regionsLabel)res.regionsLabel=round.regionsLabel;
       round.results=(round.results||[]).filter(x=>x.player!==name);round.results.push(res);saveSession();
@@ -901,13 +924,15 @@ function onStudent(conn){let name=null;
       const playing=[...conns.values()].filter(c=>online(c)&&c.status==='playing').length;
       if(!playing&&!round.closed)setTimeout(()=>{if(round&&!round.closed&&![...conns.values()].some(c=>online(c)&&c.status==='playing'))endRound()},1800)}});
   conn.on('close',()=>{if(name&&conns.get(name)&&conns.get(name).conn===conn){paintLobby();paintLive()}})}
-const pub=r=>({id:r.id,url:gameURL(r,true),gameName:r.gameName,topicName:r.topicName});
+const pub=r=>({id:r.id,url:gameURL(r,true),gameName:r.gameName,topicName:r.topicName,race:!!r.race,raceStarted:!!r.raceStarted});
 
 /* start a round on every connected device */
 function startRound(r){
   round=Object.assign({},r,{id:'r'+Date.now().toString(36),startedAt:new Date().toISOString(),results:[],closed:false});
+  if(round.race)round.race={seed:Math.random()*1e9|0};round.raceStarted=false;
   session.rounds.push(round);session.last=r;saveSession();
   conns.forEach(c=>{Object.assign(c,{status:'waiting',score:0,right:0,asked:0,streak:0,flash:null,delta:0});if(online(c)){c.status='playing';c.conn.send({t:'start',round:pub(round)})}});
+  conns.forEach(c=>{c.k=null});setupRace();
   $('podium').hidden=true;$('lb').innerHTML='';LB.clear();show('liveScr');paintLive();
   clearInterval(clockT);clockT=setInterval(paintClock,500);paintClock()}
 function paintClock(){if(!round)return;const el_=$('liveClock');
@@ -921,6 +946,20 @@ const LB=new Map();
 function lbRow(n){if(LB.has(n))return LB.get(n);const li=el('li','lrow');const fill=el('i','fill');
   const rk=el('span','rank'),who=el('div','who'),nm=el('strong',null,n),sub=el('span'),pts=el('span','pts','0');
   who.append(nm,sub);li.append(fill,rk,avatar(n),who,pts);const r={li,fill,rk,sub,pts};LB.set(n,r);return r}
+let raceT=null,projWin=null;
+const toSpec=m=>{try{$('specFrame').contentWindow.postMessage(m,'*')}catch(e){}try{if(projWin&&!projWin.closed)projWin.postMessage(m,'*')}catch(e){}};
+function setupRace(){clearInterval(raceT);raceT=null;const on=!!(round&&round.race);$('raceBox').hidden=!on;
+  if(!on){$('specFrame').src='about:blank';return}
+  $('specFrame').src=specURL(round);$('startRace').hidden=false;$('startRace').disabled=false;$('raceNote').textContent='Students wait on the grid until you start.';
+  if(projWin&&!projWin.closed)projWin.location.href=specURL(round);
+  raceT=setInterval(()=>{if(!round||!round.race){clearInterval(raceT);return}const now=Date.now(),peers=[];
+    conns.forEach((c,n)=>{if(c.k&&now-c.k.at<5000)peers.push({id:n,name:n,avatar:avURL(c.avatar),d:c.k.d,x:c.k.x,lap:c.k.lap,fin:!!c.k.fin})});
+    conns.forEach(c=>{if(online(c))try{c.conn.send({t:'kpeers',peers})}catch(e){}});toSpec({type:'edu-peers',peers})},166)}
+function stopRace(){clearInterval(raceT);raceT=null}
+$('startRace').onclick=()=>{if(!round||!round.race||round.raceStarted)return;round.raceStarted=true;
+  conns.forEach(c=>{if(online(c))c.conn.send({t:'kgo'})});toSpec({type:'edu-go'});$('startRace').hidden=true;$('raceNote').textContent='Race on! Late joiners start from the grid.'};
+$('projRace').onclick=()=>{if(!round||!round.race)return;projWin=window.open(specURL(round),'kartfall-track');
+  if(projWin&&round.raceStarted)setTimeout(()=>{try{projWin.postMessage({type:'edu-go'},'*')}catch(e){}},2500)};
 function paintLive(){if(!round||$('liveScr').hidden)return;
   $('liveCode').textContent=session.code;$('liveT').textContent=`${round.gameName} · ${round.topicName}`;$('liveMeta').textContent=settingLine(round);
   const list=[...conns.entries()].filter(([n,c])=>online(c)||c.status!=='waiting'||(round.results||[]).some(x=>x.player===n));
@@ -947,7 +986,7 @@ function paintLive(){if(!round||$('liveScr').hidden)return;
     if(!dx&&!dy)return;r.li.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'none'}],{duration:450,easing:'cubic-bezier(.2,.8,.2,1)'})})}
 
 /* ---- end of a round: podium, then the class goes on ---- */
-function endRound(){if(!round||round.closed)return;round.closed=true;round.endedAt=new Date().toISOString();
+function endRound(){if(!round||round.closed)return;round.closed=true;round.endedAt=new Date().toISOString();stopRace();
   /* students still playing when the round ends keep what they did so far (marked partial) */
   conns.forEach((c,n)=>{if(!(c.asked>0)||(round.results||[]).some(x=>x.player===n))return;
     const mine=(round.log||[]).filter(e=>e.p===n&&!e.ok).map(e=>({q:e.q,answer:e.a,picked:e.pk,img:e.img}));
@@ -964,7 +1003,7 @@ function endRound(){if(!round||round.closed)return;round.closed=true;round.ended
   $('podium').hidden=false;paintLive()}
 $('endRound').onclick=endRound;
 $('againRound').onclick=()=>{if(session&&session.last)startRound(session.last)};
-$('nextRound').onclick=()=>{$('podium').hidden=true;show('lobby');paintLobby()};
+$('nextRound').onclick=()=>{$('podium').hidden=true;stopRace();$('raceBox').hidden=true;$('specFrame').src='about:blank';show('lobby');paintLobby()};
 $('finishSession').onclick=()=>{$('podium').hidden=true;closeClass(true)};
 $('closeClass').onclick=()=>{if([...conns.values()].some(online)&&!confirm('End the class? Every student will be disconnected.'))return;closeClass(!!(session&&session.rounds.length))};
 function closeClass(toReport){if(!session)return setMode('play');
@@ -1003,12 +1042,18 @@ function joinClass(code,name){
   const me=new Peer(PEER_OPTS);let conn=null,opened=false,cur=null,tries=0;
   student={code,name,me,fromGame(m){if(!conn||!cur)return;
       if(m.type==='edu-progress')conn.send({t:'progress',round:cur.id,score:m.score,right:m.right,asked:m.asked,last:m.last||null});
+      if(m.type==='edu-state'&&cur.race&&m.state)conn.send({t:'kstate',round:cur.id,s:m.state});
+      if(m.type==='edu-ready'&&cur.race&&cur.raceStarted)toGame({type:'edu-go'});
       if(m.type==='edu-result'){conn.send({t:'result',round:cur.id,result:m.result});cur.sent=true}}};
   const connect=()=>{conn=me.connect(ROOM_PREFIX+code,{reliable:true});
     conn.on('open',()=>{opened=true;tries=0;conn.send({t:'hello',name:student.name,avatar:myAvatar})});
     conn.on('data',m=>{if(!m)return;
       if(m.t==='welcome'){student.name=m.name;$('wHi').textContent=`You're in, ${m.name}`;$('wMsg').textContent='Waiting for your teacher to start the game.';$('wErr').hidden=true;if(!cur)show('waitScr')}
-      if(m.t==='start'){cur=m.round;openStage(m.round.url,`${m.round.gameName} · ${m.round.topicName}`,student.name)}
+      if(m.t==='start'){cur=m.round;let url=m.round.url;
+        if(cur.race){const u=new URL(url);u.searchParams.set('me',student.name);const a=avURL(myAvatar);if(a)u.searchParams.set('avatar',a);url=u.href}
+        openStage(url,`${m.round.gameName} · ${m.round.topicName}`,student.name)}
+      if(m.t==='kpeers'&&cur&&cur.race)toGame({type:'edu-peers',peers:m.peers||[]});
+      if(m.t==='kgo'&&cur&&cur.race){cur.raceStarted=true;toGame({type:'edu-go'})}
       if(m.t==='stop'){cur=null;closeStage();const ord=n=>n+(n%10===1&&n%100!==11?'st':n%10===2&&n%100!==12?'nd':n%10===3&&n%100!==13?'rd':'th');
         $('wHi').textContent=m.rank?`You came ${ord(m.rank)} of ${m.of}`:'Round over';$('wMsg').textContent='Your teacher is picking the next game. Keep this page open.';show('waitScr')}
       if(m.t==='bye'){cur=null;closeStage();show('waitScr');$('wHi').textContent='Class finished';$('wMsg').textContent='Thanks for playing. You can close this page.';try{me.destroy()}catch(e){}}});
