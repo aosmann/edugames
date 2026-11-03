@@ -244,6 +244,33 @@ p{margin:0}
 .qrbox svg{width:100%;height:100%;display:block}
 .qrbig .code{font-size:clamp(48px,9vw,110px)}
 .qrbig p{color:#c8cff5}
+.roomcls{justify-self:center;display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;justify-content:center;color:#dfe4ff;font-weight:700}
+.roomcls select{min-width:min(100%,260px);border:0;border-radius:var(--r-m);padding:12px 14px;font-weight:800;font-size:16px;background:#fff;color:var(--ink)}
+.roomcls .ghost{padding:10px 14px}
+.missing{color:#c8cff5;font-weight:700;text-align:center;max-width:70ch}
+.ptile{position:relative}
+.ptile .kick{position:absolute;top:-8px;right:-8px;width:30px;height:30px;border-radius:50%;border:0;background:#fff;color:var(--bad);font-size:18px;font-weight:900;line-height:1;
+  box-shadow:0 2px 8px rgba(0,0,0,.3);opacity:0;transition:opacity .15s;cursor:pointer}
+.ptile:hover .kick,.ptile:focus-within .kick,.ptile .kick:focus-visible{opacity:1}
+@media(hover:none){.ptile .kick{opacity:1}}
+.names{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;max-height:60dvh;overflow:auto;padding:2px}
+.names button{border:2px solid var(--line);background:var(--card);border-radius:var(--r-m);padding:14px 12px;font-weight:800;font-size:17px;text-align:left;color:var(--ink)}
+.names button:hover:not(:disabled){border-color:var(--board)}
+.names button:disabled{opacity:.45;cursor:not-allowed}
+.names button small{display:block;font-size:12px;font-weight:700;color:var(--ink2)}
+#pickScr .panel{width:min(100%,640px)}
+.clssheet{width:min(100%,560px);align-self:center;border-radius:var(--r-l)}
+.clsinfo{font-size:14px;color:var(--ink2)}
+.clslist{display:grid;gap:8px}
+.clslist .ci{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r-m);background:var(--paper)}
+.clslist .ci b{font-size:18px}.clslist .ci span{color:var(--ink2);font-size:14px}.clslist .ci .sp{flex:1}
+.clslist .none{color:var(--ink2);font-size:15px}
+.clsform{display:grid;gap:12px}
+.clsform textarea{width:100%;min-width:0;border:2px solid var(--line);border-radius:var(--r-m);padding:12px 14px;font:inherit;font-size:16px;background:var(--paper);resize:vertical}
+.clsbtns{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.clsbtns .sp{flex:1}.clsbtns .cta{width:auto;padding:12px 18px;font-size:16px}
+.opts .seg.many{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.seg button b{display:block;font-weight:800}
+.seg button small{display:block;font-size:12px;font-weight:600;opacity:.8;margin-top:2px;line-height:1.25}
 .roomnote{color:#ffe28a;font-weight:700;text-align:center;max-width:60ch;justify-self:center}
 .roomnote:empty{display:none}
 .players{display:grid;gap:16px;justify-items:center;min-height:170px;align-content:start}
@@ -521,10 +548,16 @@ p{margin:0}
       <div class="jcode"><span>Class code</span><div class="code" id="code">·····</div></div>
       <button class="qr" id="qr" type="button" aria-label="Show the QR code larger"><span class="wait">Opening…</span></button>
     </section>
+    <div class="roomcls">
+      <label for="clsPick">Who can join</label>
+      <select id="clsPick"></select>
+      <button class="ghost" type="button" id="clsManage">Manage classes</button>
+    </div>
     <p class="roomnote" id="lobbyNote"></p>
     <section class="players" aria-live="polite">
       <h2><em id="joinedN">0</em> <span id="joinedL">students</span></h2>
       <div class="ptiles" id="chips"></div>
+      <p class="missing" id="missing" hidden></p>
     </section>
     <section class="dock">
       <h2>Pick a game</h2>
@@ -587,6 +620,7 @@ p{margin:0}
     <section class="intro" style="padding-bottom:6px"><h1>Reports</h1><p>Results stay on this device. Filter by game, day, session or student, then export.</p></section>
     <div class="panel filters">
       <label>Game<select id="fGame"></select></label>
+      <label>Class<select id="fClass"></select></label>
       <label>Session<select id="fSession"></select></label>
       <label>From<input type="date" id="fFrom"></label>
       <label>To<input type="date" id="fTo"></label>
@@ -621,6 +655,15 @@ p{margin:0}
   </form>
 </main>
 
+<main id="pickScr" class="solo" hidden>
+  <div class="panel">
+    <h1>Who are you?</h1>
+    <p id="pickSub">Tap your name.</p>
+    <p class="err" id="pickErr" hidden></p>
+    <div class="names" id="pickNames" role="list"></div>
+  </div>
+</main>
+
 <main id="waitScr" class="solo" hidden>
   <div class="panel wait">
     <div class="meav" id="wAv"></div>
@@ -635,6 +678,22 @@ p{margin:0}
   <div class="avsheet" role="dialog" aria-modal="true" aria-labelledby="avT">
     <div class="avhead"><h2 id="avT">Pick your avatar</h2><button type="button" class="link" id="avDone">Done</button></div>
     <div class="avpick" id="jAv" role="radiogroup" aria-label="Avatars"></div>
+  </div>
+</div>
+
+<div class="sheetbg" id="clsSheet" hidden>
+  <div class="avsheet clssheet" role="dialog" aria-modal="true" aria-labelledby="clsT">
+    <div class="avhead"><h2 id="clsT">Classes</h2><button type="button" class="link" id="clsDone">Done</button></div>
+    <p class="clsinfo">Saved only on this device, never online. Students in a class pick their name instead of typing it, so reports stay clean.</p>
+    <div id="clsList" class="clslist"></div>
+    <form id="clsForm" class="clsform" hidden>
+      <label class="field">Class name<input id="clsName" maxlength="30" required placeholder="e.g. 7A"></label>
+      <label class="field">Students, one per line<textarea id="clsNames" rows="10" required placeholder="Ana Popescu&#10;Matei Ionescu"></textarea></label>
+      <p class="err" id="clsErr" hidden></p>
+      <div class="clsbtns"><button class="cta class" type="submit">Save class</button><button class="ghost dark" type="button" id="clsCancel">Cancel</button><span class="sp"></span><button class="link" type="button" id="clsDel" hidden>Delete class</button></div>
+    </form>
+    <div class="clsbtns" id="clsTools"><button class="cta class" type="button" id="clsNew">New class</button><span class="sp"></span>
+      <button class="link" type="button" id="clsExport">Export</button><label class="link" style="cursor:pointer">Import<input type="file" id="clsImport" accept=".json,.txt,.csv" hidden></label></div>
   </div>
 </div>
 
@@ -674,7 +733,7 @@ const dayKey=d=>{const x=new Date(d);return `${x.getFullYear()}-${String(x.getMo
 function toast(t,ms=2600){const e=$('toast');e.textContent=t;e.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>e.hidden=true,ms)}
 
 /* ---------------- screens ---------------- */
-const SCREENS=['home','setup','lobby','liveScr','reports','join','waitScr'];
+const SCREENS=['home','setup','lobby','liveScr','reports','join','waitScr','pickScr'];
 function show(id){SCREENS.forEach(s=>$(s).hidden=s!==id);window.scrollTo(0,0)}
 let mode='play';
 function setMode(m){mode=m;document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===m));
@@ -806,8 +865,9 @@ function renderSetup(){const g=sel.game,B=sel.bank,s=curSub(),t=curTop();
     else if(v==null||!st.options.some(o=>o[0]===v))v=auto?t.d:st.default;
     sel.values[st.key]=v;
     const lab=el('div','sec-t',st.label);lab.id='st-'+st.key;box.append(lab);const seg=el('div','seg');seg.setAttribute('role','group');seg.setAttribute('aria-labelledby',lab.id);
-    st.options.forEach(([val,l])=>{const b=el('button',null,l);b.type='button';b.setAttribute('aria-pressed',!isC&&val===v);b.onclick=()=>{sel.values[st.key]=val;if(cu)sel.cust[st.key]=Object.assign({},sel.cust[st.key],{on:false});if(st.default==='topic')(sel.picked[t.id]=sel.picked[t.id]||{})[st.key]=val;renderSetup()};seg.append(b)});
-    if(cu){const b=el('button',null,cu.label||'Custom');b.type='button';b.setAttribute('aria-pressed',isC);b.onclick=()=>{sel.cust[st.key]=Object.assign({},sel.cust[st.key],{on:true});renderSetup()};seg.append(b)}
+    if(st.options.length+(cu?1:0)>3)seg.classList.add('many');
+    st.options.forEach(([val,l])=>{const b=el('button');{const [a,...rest]=String(l).split(' · ');b.append(el('b',null,a));if(rest.length)b.append(el('small',null,rest.join(' · ')))}b.type='button';b.setAttribute('aria-pressed',!isC&&val===v);b.onclick=()=>{sel.values[st.key]=val;if(cu)sel.cust[st.key]=Object.assign({},sel.cust[st.key],{on:false});if(st.default==='topic')(sel.picked[t.id]=sel.picked[t.id]||{})[st.key]=val;renderSetup()};seg.append(b)});
+    if(cu){const b=el('button');b.append(el('b',null,cu.label||'Custom'));b.type='button';b.setAttribute('aria-pressed',isC);b.onclick=()=>{sel.cust[st.key]=Object.assign({},sel.cust[st.key],{on:true});renderSetup()};seg.append(b)}
     box.append(seg);if(isC)box.append(custUI(st,cv))});
   paintGo();
   store.set('edu-portal-last-'+g.id,{values:sel.values,picked:sel.picked,cust:sel.cust})}
@@ -892,6 +952,7 @@ function openClass(tries=0,si=0){
   if(typeof Peer==='undefined'){$('lobbyNote').textContent='The class connection didn\'t load. Check that this device is online, then reload the page.';return}
   const code=newCode();
   session={id:'s'+Date.now().toString(36),code,startedAt:new Date().toISOString(),rounds:[],players:[]};
+  {const lc=classes().find(c=>c.id===store.get('edu-portal-lastclass',''));if(lc){session.classId=lc.id;session.className=lc.name}}
   $('code').textContent='·····';$('qr').innerHTML='<span class="wait">Opening the class…</span>';$('lobbyNote').textContent='';paintLobby();
   peer=new Peer(ROOM_PREFIX+code,SIGNALS[si]);const thisPeer=peer;let moved=false;
   const next=()=>{if(moved||thisPeer.open||si+1>=SIGNALS.length)return false;moved=true;clearTimeout(slow);try{thisPeer.destroy()}catch(e){}session=null;openClass(tries,si+1);return true};
@@ -908,7 +969,7 @@ function openClass(tries=0,si=0){
     $('qr').innerHTML='<span class="wait">No connection</span>';
     $('lobbyNote').textContent=err.type==='browser-incompatible'?'This browser can\'t run class mode. Use a current Chrome, Safari, Edge or Firefox.'
       :`Couldn't open the class (${err.type}). Something on this device or network is blocking the class connection: usually an ad or tracker blocker extension, a VPN, or a firewall. Turn it off for this page or use another browser, then reload.`})}
-function joinLink(){const u=new URL('./',location.href);u.hash='join='+session.code+(sigIdx?'&s='+sigIdx:'');if(Q.get('peer'))u.search='?peer='+Q.get('peer');return u.href}
+function joinLink(){const u=new URL('./',location.href);u.hash='join='+session.code+(sigIdx?'&s='+sigIdx:'')+(curRoster()?'&r=1':'');if(Q.get('peer'))u.search='?peer='+Q.get('peer');return u.href}
 function drawQR(){const q=qrcode(0,'M');q.addData(joinLink());q.make();const svg=q.createSvgTag({cellSize:6,margin:0,scalable:true});
   $('qr').innerHTML=svg;$('qrBigBox').innerHTML=svg;$('code').textContent=session.code;$('qrBigCode').textContent=session.code;
   const u=new URL('./',location.href),jb=$('joinUrl');jb.textContent='';(u.host+u.pathname).replace(/\/$/,'').split('/').forEach((part,i)=>{if(i){jb.append('/',document.createElement('wbr'))}jb.append(part)})}
@@ -920,28 +981,71 @@ function renderRoomGames(){const box=$('roomGames');box.innerHTML='';
   GAMES.forEach(g=>{const b=el('button','game');b.type='button';b.style.setProperty('--c',g.color||'#2b3990');
     const ic=el('span','ic');const im=el('img');im.src=g.base+(g.icon||'icon-512.png');im.alt='';ic.append(im);
     b.append(ic,el('span',null,g.name));b.onclick=()=>openSetup(g);box.append(b)})}
-function paintLobby(){if(!session)return;
+/* ---------------- class lists: saved only on the teacher's device ---------------- */
+const classes=()=>store.get('edu-portal-classes',[]);
+const saveClasses=l=>store.set('edu-portal-classes',l);
+const cleanNames=t=>{const seen=new Set();return String(t||'').split(/\r?\n|[,;\t]/).map(x=>x.trim().replace(/\s+/g,' ').slice(0,24)).filter(x=>{const k=x.toLowerCase();if(!x||seen.has(k))return false;seen.add(k);return true})};
+const curRoster=()=>session&&session.classId?classes().find(c=>c.id===session.classId)||null:null;
+function paintClsPick(){const sp=$('clsPick'),l=classes();sp.innerHTML='';sp.append(new Option('Anyone · students type their name',''));
+  l.forEach(c=>sp.append(new Option(`${c.name} · ${c.students.length} students`,c.id)));sp.value=session&&session.classId&&l.some(c=>c.id===session.classId)?session.classId:''}
+$('clsPick').onchange=()=>{if(!session)return;const c=classes().find(x=>x.id===$('clsPick').value)||null;session.classId=c?c.id:null;session.className=c?c.name:null;store.set('edu-portal-lastclass',session.classId||'');saveSession();
+  if(peer&&peer.open)drawQR();paintLobby()};
+let clsEdit=null;
+function openClsSheet(){$('clsSheet').hidden=false;showClsList()}
+function showClsList(){$('clsForm').hidden=true;$('clsTools').hidden=false;const box=$('clsList');box.hidden=false;box.innerHTML='';const l=classes();
+  if(!l.length)box.append(el('p','none','No classes yet. Add one with its students, then pick it above the class code.'));
+  l.forEach(c=>{const r=el('div','ci');r.append(el('b',null,c.name),el('span',null,`${c.students.length} students`),el('span','sp'));const e=el('button','link','Edit');e.type='button';e.onclick=()=>editCls(c);r.append(e);box.append(r)})}
+function editCls(c){clsEdit=c||null;$('clsList').hidden=true;$('clsTools').hidden=true;$('clsForm').hidden=false;$('clsErr').hidden=true;$('clsDel').hidden=!c;
+  $('clsName').value=c?c.name:'';$('clsNames').value=c?c.students.join('\n'):'';$('clsName').focus()}
+$('clsManage').onclick=openClsSheet;$('clsDone').onclick=()=>{$('clsSheet').hidden=true;paintClsPick();paintLobby()};
+$('clsSheet').addEventListener('click',e=>{if(e.target===$('clsSheet'))$('clsDone').click()});
+$('clsNew').onclick=()=>editCls(null);$('clsCancel').onclick=showClsList;
+$('clsForm').onsubmit=e=>{e.preventDefault();const name=$('clsName').value.trim().slice(0,30),st=cleanNames($('clsNames').value);
+  if(!name||!st.length){$('clsErr').textContent='Give the class a name and at least one student.';$('clsErr').hidden=false;return}
+  const l=classes();if(l.some(c=>c.name.toLowerCase()===name.toLowerCase()&&(!clsEdit||c.id!==clsEdit.id))){$('clsErr').textContent='There is already a class with that name.';$('clsErr').hidden=false;return}
+  if(clsEdit){const c=l.find(x=>x.id===clsEdit.id);if(c){c.name=name;c.students=st}}else l.push({id:'c'+Date.now().toString(36),name,students:st});
+  saveClasses(l);if(session&&clsEdit&&session.classId===clsEdit.id)session.className=name;showClsList();paintClsPick();paintLobby()};
+$('clsDel').onclick=()=>{if(!clsEdit||!confirm(`Delete the class ${clsEdit.name}? Its past results stay in Reports.`))return;saveClasses(classes().filter(c=>c.id!==clsEdit.id));
+  if(session&&session.classId===clsEdit.id){session.classId=null;session.className=null}showClsList();paintClsPick();paintLobby()};
+$('clsExport').onclick=()=>download(new Blob([JSON.stringify({edugamesClasses:1,classes:classes()},null,2)],{type:'application/json'}),`edugames-classes-${dayKey(Date.now())}.json`);
+$('clsImport').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const t=await f.text();let add=[];
+  try{const j=JSON.parse(t);add=(j.classes||j).filter(c=>c&&c.name&&Array.isArray(c.students)).map(c=>({name:String(c.name).slice(0,30),students:cleanNames(c.students.join('\n'))}))}
+  catch(x){/* plain text: one class per block, first line is the class name */add=t.split(/\r?\n\s*\r?\n/).map(b=>b.split(/\r?\n/).map(x=>x.trim()).filter(Boolean)).filter(b=>b.length>1).map(b=>({name:b[0].replace(/:$/,'').slice(0,30),students:cleanNames(b.slice(1).join('\n'))}))}
+  if(!add.length)return toast('No classes found in that file.');const l=classes();
+  add.forEach(c=>{const ex=l.find(x=>x.name.toLowerCase()===c.name.toLowerCase());if(ex)ex.students=c.students;else l.push(Object.assign({id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)},c))});
+  saveClasses(l);showClsList();paintClsPick();toast(`${add.length} class${add.length===1?'':'es'} imported`)};
+function kickStudent(n){const c=conns.get(n);if(!c||!confirm(`Remove ${n} from the class?`))return;
+  try{c.conn.send({t:'kicked'})}catch(e){}setTimeout(()=>{try{c.conn.close()}catch(e){}},300);
+  conns.delete(n);if(session&&!(session.rounds||[]).some(r=>(r.results||[]).some(x=>x.player===n)))session.players=session.players.filter(x=>x!==n);
+  LB.delete&&LB.delete(n);saveSession();paintLobby();paintLive()}
+function paintLobby(){if(!session)return;paintClsPick();
   const names=[...conns.keys()],on=names.filter(n=>online(conns.get(n))).length;$('joinedN').textContent=on;
   $('joinedL').textContent=on===1?'student':'students';
   const box=$('chips'),have=new Map([...box.querySelectorAll('.ptile')].map(t=>[t.dataset.n,t]));
   box.querySelector('.pwait')?.remove();
   if(!names.length){box.innerHTML='';const w=el('div','pwait');w.innerHTML='<div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>';w.append(el('span',null,'Waiting for students to join…'));box.append(w)}
   have.forEach((t,n)=>{if(!conns.has(n))t.remove()});
-  names.forEach(n=>{let t=have.get(n);if(!t){t=el('div','ptile');t.dataset.n=n;t.append(avatar(n),el('span',null,n));box.append(t)}
+  names.forEach(n=>{let t=have.get(n);if(!t){t=el('div','ptile');t.dataset.n=n;const k=el('button','kick','×');k.type='button';k.title=`Remove ${n}`;k.setAttribute('aria-label',`Remove ${n} from the class`);k.onclick=()=>kickStudent(n);t.append(avatar(n),el('span',null,n),k);box.append(t)}
     else{const a=t.querySelector('.av');const nv=avatar(n);if(a.innerHTML!==nv.innerHTML)a.replaceWith(nv)}
     t.classList.toggle('off',!online(conns.get(n)))});
+  {const R=curRoster(),ms=$('missing');if(R){const miss=R.students.filter(n=>!online(conns.get(n)));ms.hidden=false;ms.textContent=miss.length?`${R.name} · not here yet (${miss.length}): ${miss.join(', ')}`:`${R.name} · everyone is here`}else ms.hidden=true}
   $('roomSub').textContent=session.rounds.length?`${session.rounds.length} round${session.rounds.length===1?'':'s'} played. Pick the next game; everyone in the class gets it automatically.`:'Choose the topic and settings, then start it on every student\'s device at once.';
   if(!$('setup').hidden&&mode==='class')paintGo()}
 function uniqueName(n,conn){n=(n||'Student').trim().slice(0,24)||'Student';
   const cur=conns.get(n);if(!cur||!online(cur)||cur.conn===conn)return n;let i=2;while(online(conns.get(`${n} ${i}`)))i++;return `${n} ${i}`}
 function onStudent(conn){let name=null;
   conn.on('data',m=>{if(!m||typeof m!=='object')return;
-    if(m.t==='hello'){name=uniqueName(String(m.name||''),conn);const prev=conns.get(name)||{status:'waiting',score:0,right:0,asked:0,streak:0};prev.conn=conn;prev.avatar=AVMAP[m.avatar]?m.avatar:(prev.avatar||randomAvatar());conns.set(name,prev);
+    if(m.t==='hello'){const R=curRoster();
+      if(R){const want=String(m.name||'').trim().toLowerCase(),match=R.students.find(x=>x.toLowerCase()===want);
+        const taken=n=>{const c=conns.get(n);return!!(c&&online(c)&&c.conn!==conn)};
+        if(!match||taken(match)){conn.send({t:'pick',cls:R.name,names:R.students.map(n=>({n,taken:taken(n)})),msg:match?`${match} is already in the class. Pick your own name.`:(want?'Your name isn\'t on the class list. Pick it below.':'')});return}
+        name=match}
+      else name=uniqueName(String(m.name||''),conn);const prev=conns.get(name)||{status:'waiting',score:0,right:0,asked:0,streak:0};prev.conn=conn;prev.avatar=AVMAP[m.avatar]?m.avatar:(prev.avatar||randomAvatar());conns.set(name,prev);
       if(!session.players.includes(name))session.players.push(name);
       conn.send({t:'welcome',name,code:session.code});
       if(round&&!round.closed&&!(round.results||[]).some(x=>x.player===name)){Object.assign(prev,{status:'playing',score:0,right:0,asked:0,streak:0});conn.send({t:'start',round:pub(round)})}
       paintLobby();paintLive();return}
-    if(!name)return;const s=conns.get(name);
+    if(!name)return;const s=conns.get(name);if(!s)return;
     if(m.t==='progress'&&round&&m.round===round.id){
       const dA=(m.asked||0)-(s.asked||0),dR=(m.right||0)-(s.right||0),dS=(m.score||0)-(s.score||0);
       if(dA>0){s.streak=dR>0?(s.streak||0)+dR:0;s.flash=dR>0?'ok':'no';s.delta=dS}
@@ -1064,14 +1168,15 @@ function closeAvSheet(){$('avSheet').hidden=true;$('jPic').focus()}
 $('jPic').onclick=openAvSheet;$('avDone').onclick=closeAvSheet;
 $('avSheet').addEventListener('click',e=>{if(e.target===$('avSheet'))closeAvSheet()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('avSheet').hidden)closeAvSheet()});
-function openJoin(code){show('join');paintAvPick();$('jErr').hidden=true;$('jCode').value=(code||'').toUpperCase();$('jName').value=store.get('edu-player','');
+function openJoin(code){show('join');paintAvPick();$('jErr').hidden=true;$('jCode').value=(code||'').toUpperCase();$('jName').value=joinPick?'':store.get('edu-player','');
+  $('jName').required=!joinPick;$('jName').closest('label').hidden=joinPick;
   (code?$('jName'):$('jCode')).focus()}
 $('joinForm').onsubmit=e=>{e.preventDefault();const code=$('jCode').value.trim().toUpperCase(),name=$('jName').value.trim();
-  if(code.length!==5){return jErr('The class code has 5 characters.')}if(!name)return jErr('Type your name so your teacher knows who you are.');
+  if(code.length!==5){return jErr('The class code has 5 characters.')}if(!name&&!joinPick)return jErr('Type your name so your teacher knows who you are.');
   if(typeof Peer==='undefined')return jErr('Can\'t connect: check the internet connection, then reload this page.');
   store.set('edu-player',name);store.set('edu-avatar',myAvatar);$('wAv').innerHTML=avatarSVG(myAvatar);$('jBtn').disabled=true;$('jBtn').textContent='Joining…';joinClass(code,name,joinSig)};
 function jErr(t){$('jErr').textContent=t;$('jErr').hidden=false}
-let joinSig=0;
+let joinSig=0,joinPick=false;
 /* try the server the join link names first, then the others: the class is on exactly one of them */
 function joinClass(code,name,first=0,tried=[]){
   const si=tried.length?SIGNALS.findIndex((x,i)=>!tried.includes(i)):Math.min(first,SIGNALS.length-1);tried=tried.concat(si);
@@ -1086,6 +1191,10 @@ function joinClass(code,name,first=0,tried=[]){
   const connect=()=>{conn=me.connect(ROOM_PREFIX+code,{reliable:true});
     conn.on('open',()=>{opened=true;tries=0;conn.send({t:'hello',name:student.name,avatar:myAvatar})});
     conn.on('data',m=>{if(!m)return;
+      if(m.t==='pick'){show('pickScr');$('pickSub').textContent=`${m.cls} · tap your name`;$('pickErr').textContent=m.msg||'';$('pickErr').hidden=!m.msg;const box=$('pickNames');box.innerHTML='';
+        (m.names||[]).forEach(x=>{const b=el('button',null,x.n);b.type='button';b.setAttribute('role','listitem');if(x.taken){b.disabled=true;b.append(el('small',null,'already in'))}
+          b.onclick=()=>{box.querySelectorAll('button').forEach(y=>y.disabled=true);student.name=x.n;store.set('edu-player',x.n);conn.send({t:'hello',name:x.n,avatar:myAvatar})};box.append(b)});return}
+      if(m.t==='kicked'){cur=null;closeStage();opened=false;show('waitScr');$('wHi').textContent='You were removed from the class';$('wMsg').textContent='Ask your teacher if this was a mistake, then scan the code again.';$('wErr').hidden=true;try{me.destroy()}catch(e){}return}
       if(m.t==='welcome'){student.name=m.name;$('wHi').textContent=`You're in, ${m.name}`;$('wMsg').textContent='Waiting for your teacher to start the game.';$('wErr').hidden=true;if(!cur)show('waitScr')}
       if(m.t==='start'){cur=m.round;let url=m.round.url;
         if(cur.race){const u=new URL(url);u.searchParams.set('me',student.name);const a=avURL(myAvatar);if(a)u.searchParams.set('avatar',a);url=u.href}
@@ -1109,21 +1218,22 @@ function joinClass(code,name,first=0,tried=[]){
    REPORTS
    ===================================================================== */
 function allRows(){const rows=[];
-  sessions().forEach(s=>(s.rounds||[]).forEach(r=>(r.results||[]).forEach(x=>rows.push(row(x,{session:s.code,sessionId:s.id,round:r,player:x.player})))));
+  sessions().forEach(s=>(s.rounds||[]).forEach(r=>(r.results||[]).forEach(x=>rows.push(row(x,{session:s.code,sessionId:s.id,cls:s.className||'',round:r,player:x.player})))));
   if($('fSolo').checked)store.get('edu-results',[]).forEach(x=>rows.push(row(x,{session:'Solo',sessionId:'solo',player:'Me'})));
   return rows.sort((a,b)=>b.at.localeCompare(a.at))}
-function row(x,ctx){const g=GAMES.find(g=>g.id===x.game);return{at:x.at||x.receivedAt,session:ctx.session,sessionId:ctx.sessionId,student:ctx.player,
+function row(x,ctx){const g=GAMES.find(g=>g.id===x.game);return{at:x.at||x.receivedAt,session:ctx.session,sessionId:ctx.sessionId,cls:ctx.cls||'',student:ctx.player,
   game:x.game,gameName:g?g.name:(x.game||''),subject:x.subject,topic:x.topic,topicName:(x.topicName||x.topic)+(x.regionsLabel&&x.regionsLabel!=='All continents'?` · ${x.regionsLabel}`:''),level:LEVELS[x.level]||x.level||'',
   score:x.score??0,right:x.right??0,asked:x.asked??0,pct:x.asked?Math.round((x.right||0)/x.asked*100):0,bestStreak:x.bestStreak??0,
   seconds:x.timeUsed??x.duration??'',missed:x.missed||[],log:ctx.round&&ctx.round.log?ctx.round.log.filter(e=>e.p===ctx.player):null}}
-function filtered(){const g=$('fGame').value,s=$('fSession').value,f=$('fFrom').value,t=$('fTo').value,n=$('fStudent').value.trim().toLowerCase();
-  return allRows().filter(r=>(!g||r.game===g)&&(!s||r.sessionId===s)&&(!f||dayKey(r.at)>=f)&&(!t||dayKey(r.at)<=t)&&(!n||r.student.toLowerCase().includes(n)))}
+function filtered(){const g=$('fGame').value,s=$('fSession').value,c=$('fClass').value,f=$('fFrom').value,t=$('fTo').value,n=$('fStudent').value.trim().toLowerCase();
+  return allRows().filter(r=>(!g||r.game===g)&&(!s||r.sessionId===s)&&(!c||r.cls===c)&&(!f||dayKey(r.at)>=f)&&(!t||dayKey(r.at)<=t)&&(!n||r.student.toLowerCase().includes(n)))}
 function renderReports(){
   const gs=$('fGame'),gv=gs.value;gs.innerHTML='';gs.append(new Option('All games',''));
   const ids=new Set([...GAMES.map(g=>g.id),...sessions().flatMap(s=>(s.rounds||[]).map(r=>r.game))]);
   ids.forEach(id=>{const g=GAMES.find(x=>x.id===id);gs.append(new Option(g?g.name:id,id))});gs.value=gv;
   const ss=$('fSession'),sv=ss.value;ss.innerHTML='';ss.append(new Option('All sessions',''));
-  sessions().slice().reverse().forEach(s=>ss.append(new Option(`${fmtDate(s.startedAt)} · ${s.code} · ${(s.players||[]).length} students`,s.id)));
+  sessions().slice().reverse().forEach(s=>ss.append(new Option(`${fmtDate(s.startedAt)} · ${s.className?s.className+' · ':''}${s.code} · ${(s.players||[]).length} students`,s.id)));
+  {const cs=$('fClass'),cv=cs.value;cs.innerHTML='';cs.append(new Option('All classes',''));[...new Set(sessions().map(x=>x.className).filter(Boolean))].sort().forEach(c=>cs.append(new Option(c,c)));cs.value=[...cs.options].some(o=>o.value===cv)?cv:''}
   if($('fSolo').checked)ss.append(new Option('My own games','solo'));ss.value=[...ss.options].some(o=>o.value===sv)?sv:'';
   const rows=filtered(),tb=$('rBody');tb.innerHTML='';
   if(!rows.length){const tr=el('tr'),td=el('td','none',sessions().length?'No results match these filters.':'No class results yet. Run a class and the results show up here.');td.colSpan=10;tr.append(td);tb.append(tr)}
@@ -1170,9 +1280,9 @@ function renderInsights(rows){const box=$('ins');box.innerHTML='';const A=answer
   if(S.length){const c3=el('section','icard'),h=el('h3',null,'Students who may need help');h.append(el('small',null,'Lowest share of right answers, with their weakest area'));c3.append(h);
     const ul3=el('ul','bars');S.slice(0,6).forEach(o=>{const mine=A.filter(x=>x.full&&x.student===o.k),w=groupStats(mine,x=>x.tag||x.topic).filter(g=>g.n>=2&&g.pct<100).sort((a,b)=>a.pct-b.pct)[0];
       ul3.append(bar(o.k,o.pct,`${o.ok} of ${o.n} right`+(w&&(tags.length>1||byTopic.length>1)?` · weakest: ${w.k} (${w.pct}%)`:'')))});c3.append(ul3);box.append(c3)}}
-['fGame','fSession','fFrom','fTo','fStudent','fSolo'].forEach(id=>$(id).addEventListener('input',renderReports));
+['fGame','fClass','fSession','fFrom','fTo','fStudent','fSolo'].forEach(id=>$(id).addEventListener('input',renderReports));
 
-const COLS=[['Date','d'],['Session','session'],['Student','student'],['Game','gameName'],['Subject','subject'],['Topic','topicName'],['Level','level'],['Score','score'],['Right','right'],['Asked','asked'],['% right','pct'],['Best streak','bestStreak'],['Seconds','seconds']];
+const COLS=[['Date','d'],['Class','cls'],['Session','session'],['Student','student'],['Game','gameName'],['Subject','subject'],['Topic','topicName'],['Level','level'],['Score','score'],['Right','right'],['Asked','asked'],['% right','pct'],['Best streak','bestStreak'],['Seconds','seconds']];
 const flat=rows=>rows.map(r=>Object.fromEntries(COLS.map(([h,k])=>[h,k==='d'?new Date(r.at).toLocaleString():r[k]])));
 const missedRows=rows=>rows.flatMap(r=>r.missed.map(m=>({Date:new Date(r.at).toLocaleString(),Session:r.session,Student:r.student,Game:r.gameName,Topic:r.topicName,Question:m.q,'Right answer':m.answer,'They picked':m.picked})));
 function fileName(ext){const s=$('fSession').value,g=$('fGame').value;return `edugames-report${g?'-'+g:''}${s&&s!=='solo'?'-'+(sessions().find(x=>x.id===s)||{}).code:''}-${dayKey(Date.now())}.${ext}`}
@@ -1198,7 +1308,7 @@ $('expXlsx').onclick=async()=>{$('expXlsx').disabled=true;$('expXlsx').textConte
 
 /* ---------------- start ---------------- */
 renderHeroCats();
-const hj=location.hash.match(/join=([A-Z0-9]{5})/i);{const hs=location.hash.match(/[&#]s=(\d)/);joinSig=hs?+hs[1]:0}
+const hj=location.hash.match(/join=([A-Z0-9]{5})/i);{const hs=location.hash.match(/[&#]s=(\d)/);joinSig=hs?+hs[1]:0;joinPick=/[&#]r=1/.test(location.hash)}
 if(hj){openJoin(hj[1]);history.replaceState(null,'',location.pathname+location.search)}else setMode('play');
 discover();
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
