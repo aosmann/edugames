@@ -640,8 +640,8 @@ p{margin:0}
 
 <div class="toast" id="toast" hidden role="status"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="lib/peerjs.min.js"></script>
+<script src="lib/qrcode.js"></script>
 <script>
 'use strict';
 /* =====================================================================
@@ -659,7 +659,13 @@ const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=nu
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const Q=new URLSearchParams(location.search);
 const OWNER=Q.get('owner')||(location.hostname.endsWith('.github.io')?location.hostname.split('.')[0]:'aosmann');
-const PEER_OPTS=(()=>{const h=Q.get('peer');if(!h)return{debug:0};const [host,port]=h.split(':');return{host,port:+port||9000,path:'/',secure:false,debug:0}})();
+/* class connection servers, tried in order: our own (not on ad-blocker lists), then the public PeerJS cloud.
+   ?peer=host:port[,host:port] replaces the list (local testing). */
+const SIGNAL_HOST='';
+const SIGNALS=(()=>{const h=Q.get('peer');if(h)return h.split(',').map(x=>{const [host,port]=x.split(':');return{host,port:+port||9000,path:'/',secure:false,debug:0}});
+  const l=[];if(SIGNAL_HOST)l.push({host:SIGNAL_HOST,port:443,path:'/',secure:true,debug:0});l.push({debug:0});return l})();
+const NET_ERR=['network','server-error','socket-error','socket-closed','disconnected'];
+let sigIdx=0;
 const ROOM_PREFIX='edugames-v1-';
 const CODE_ABC='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const LEVELS={1:'Easy',2:'Medium',3:'Hard'};
@@ -881,26 +887,28 @@ const settingLine=r=>`${r.subjectName}${r.regionsLabel?' · '+r.regionsLabel:''}
 
 /* Class tab = the class room. It opens straight away; students join the class, not a game. */
 function enterClass(){if(session){show(round&&!round.closed?'liveScr':'lobby');paintLobby();paintLive();return}openClass()}
-function openClass(tries=0){
+function openClass(tries=0,si=0){
   show('lobby');renderRoomGames();
   if(typeof Peer==='undefined'){$('lobbyNote').textContent='The class connection didn\'t load. Check that this device is online, then reload the page.';return}
   const code=newCode();
   session={id:'s'+Date.now().toString(36),code,startedAt:new Date().toISOString(),rounds:[],players:[]};
   $('code').textContent='·····';$('qr').innerHTML='<span class="wait">Opening the class…</span>';$('lobbyNote').textContent='';paintLobby();
-  peer=new Peer(ROOM_PREFIX+code,PEER_OPTS);const thisPeer=peer;
-  const slow=setTimeout(()=>{if(thisPeer.open||peer!==thisPeer)return;$('lobbyNote').textContent='Still connecting… If the code doesn\'t appear in a few seconds, something on this device or network is blocking the connection service (0.peerjs.com): usually an ad or tracker blocker extension, a VPN, or a school firewall. Turn it off for this page, or use another browser.'},8000);
-  peer.on('open',()=>{clearTimeout(slow);$('lobbyNote').textContent='';drawQR();paintLobby()});
+  peer=new Peer(ROOM_PREFIX+code,SIGNALS[si]);const thisPeer=peer;let moved=false;
+  const next=()=>{if(moved||thisPeer.open||si+1>=SIGNALS.length)return false;moved=true;clearTimeout(slow);try{thisPeer.destroy()}catch(e){}session=null;openClass(tries,si+1);return true};
+  const slow=setTimeout(()=>{if(thisPeer.open||peer!==thisPeer)return;if(next())return;$('lobbyNote').textContent='Still connecting… If the code doesn\'t appear in a few seconds, something on this device or network is blocking the class connection: usually an ad or tracker blocker extension, a VPN, or a school firewall. Turn it off for this page, or use another browser.'},8000);
+  peer.on('open',()=>{clearTimeout(slow);sigIdx=si;$('lobbyNote').textContent='';drawQR();paintLobby()});
   peer.on('connection',onStudent);
   peer.on('disconnected',()=>{try{peer.reconnect()}catch(e){}});
   peer.on('error',err=>{
-    if(err.type==='unavailable-id'&&tries<4){peer.destroy();session=null;openClass(tries+1);return}
+    if(err.type==='unavailable-id'&&tries<4){moved=true;peer.destroy();session=null;openClass(tries+1,si);return}
+    if(!thisPeer.open&&NET_ERR.includes(err.type)&&next())return;
     if(err.type==='peer-unavailable')return;
     clearTimeout(slow);console.warn('EduGames class error',err.type,err);
     if(thisPeer.open&&['network','disconnected'].includes(err.type))return; // already open: PeerJS reconnects by itself
     $('qr').innerHTML='<span class="wait">No connection</span>';
     $('lobbyNote').textContent=err.type==='browser-incompatible'?'This browser can\'t run class mode. Use a current Chrome, Safari, Edge or Firefox.'
-      :`Couldn't open the class (${err.type}). Something on this device or network is blocking the connection service (0.peerjs.com): usually an ad or tracker blocker extension, a VPN, or a firewall. Turn it off for this page or use another browser, then reload.`})}
-function joinLink(){const u=new URL('./',location.href);u.hash='join='+session.code;if(Q.get('peer'))u.search='?peer='+Q.get('peer');return u.href}
+      :`Couldn't open the class (${err.type}). Something on this device or network is blocking the class connection: usually an ad or tracker blocker extension, a VPN, or a firewall. Turn it off for this page or use another browser, then reload.`})}
+function joinLink(){const u=new URL('./',location.href);u.hash='join='+session.code+(sigIdx?'&s='+sigIdx:'');if(Q.get('peer'))u.search='?peer='+Q.get('peer');return u.href}
 function drawQR(){const q=qrcode(0,'M');q.addData(joinLink());q.make();const svg=q.createSvgTag({cellSize:6,margin:0,scalable:true});
   $('qr').innerHTML=svg;$('qrBigBox').innerHTML=svg;$('code').textContent=session.code;$('qrBigCode').textContent=session.code;
   const u=new URL('./',location.href),jb=$('joinUrl');jb.textContent='';(u.host+u.pathname).replace(/\/$/,'').split('/').forEach((part,i)=>{if(i){jb.append('/',document.createElement('wbr'))}jb.append(part)})}
@@ -1061,10 +1069,15 @@ function openJoin(code){show('join');paintAvPick();$('jErr').hidden=true;$('jCod
 $('joinForm').onsubmit=e=>{e.preventDefault();const code=$('jCode').value.trim().toUpperCase(),name=$('jName').value.trim();
   if(code.length!==5){return jErr('The class code has 5 characters.')}if(!name)return jErr('Type your name so your teacher knows who you are.');
   if(typeof Peer==='undefined')return jErr('Can\'t connect: check the internet connection, then reload this page.');
-  store.set('edu-player',name);store.set('edu-avatar',myAvatar);$('wAv').innerHTML=avatarSVG(myAvatar);$('jBtn').disabled=true;$('jBtn').textContent='Joining…';joinClass(code,name)};
+  store.set('edu-player',name);store.set('edu-avatar',myAvatar);$('wAv').innerHTML=avatarSVG(myAvatar);$('jBtn').disabled=true;$('jBtn').textContent='Joining…';joinClass(code,name,joinSig)};
 function jErr(t){$('jErr').textContent=t;$('jErr').hidden=false}
-function joinClass(code,name){
-  const me=new Peer(PEER_OPTS);let conn=null,opened=false,cur=null,tries=0;
+let joinSig=0;
+/* try the server the join link names first, then the others: the class is on exactly one of them */
+function joinClass(code,name,first=0,tried=[]){
+  const si=tried.length?SIGNALS.findIndex((x,i)=>!tried.includes(i)):Math.min(first,SIGNALS.length-1);tried=tried.concat(si);
+  const more=()=>SIGNALS.some((x,i)=>!tried.includes(i));
+  const me=new Peer(SIGNALS[si]);let conn=null,opened=false,cur=null,tries=0,gone=false;
+  const other=()=>{if(opened||gone||!more())return false;gone=true;try{me.destroy()}catch(e){}joinClass(code,name,first,tried);return true};
   student={code,name,me,fromGame(m){if(!conn||!cur)return;
       if(m.type==='edu-progress')conn.send({t:'progress',round:cur.id,score:m.score,right:m.right,asked:m.asked,last:m.last||null});
       if(m.type==='edu-state'&&cur.race&&m.state)conn.send({t:'kstate',round:cur.id,s:m.state});
@@ -1087,8 +1100,9 @@ function joinClass(code,name){
     $('wErr').textContent='Reconnecting…';$('wErr').hidden=false;connect()};
   me.on('open',connect);
   me.on('error',err=>{$('jBtn').disabled=false;$('jBtn').textContent='Join';
-    if(err.type==='peer-unavailable'){if(!opened){show('join');jErr(`No open class with code ${code}. Check the code on the board.`);try{me.destroy()}catch(e){}}else retry()}
-    else if(!opened){show('join');jErr('Can\'t reach the class. Check the internet connection and try again.');try{me.destroy()}catch(e){}}});
+    if(gone)return;
+    if(err.type==='peer-unavailable'){if(!opened){if(other())return;show('join');jErr(`No open class with code ${code}. Check the code on the board.`);try{me.destroy()}catch(e){}}else retry()}
+    else if(!opened){if(NET_ERR.includes(err.type)&&other())return;show('join');jErr('Can\'t reach the class. Check the internet connection and try again.');try{me.destroy()}catch(e){}}});
   $('wHi').textContent='Joining…';$('wMsg').textContent='';show('waitScr')}
 
 /* =====================================================================
@@ -1184,7 +1198,7 @@ $('expXlsx').onclick=async()=>{$('expXlsx').disabled=true;$('expXlsx').textConte
 
 /* ---------------- start ---------------- */
 renderHeroCats();
-const hj=location.hash.match(/join=([A-Z0-9]{5})/i);
+const hj=location.hash.match(/join=([A-Z0-9]{5})/i);{const hs=location.hash.match(/[&#]s=(\d)/);joinSig=hs?+hs[1]:0}
 if(hj){openJoin(hj[1]);history.replaceState(null,'',location.pathname+location.search)}else setMode('play');
 discover();
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});

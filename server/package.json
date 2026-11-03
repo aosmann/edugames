@@ -1,0 +1,12 @@
+{
+  "name": "edugames-class",
+  "private": true,
+  "description": "EduGames class connection server (Cloudflare Worker)",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}
