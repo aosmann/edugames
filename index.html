@@ -170,6 +170,14 @@ p{margin:0}
 .opts:empty{display:none}
 .sec-t{font-size:14px;font-weight:800;color:var(--ink2);margin:10px 0 7px}
 .seg{display:flex;gap:4px;padding:4px;background:#e9ecf6;border-radius:var(--r-m)}
+.cust{display:flex;flex-wrap:wrap;gap:12px 18px;padding:12px 2px 4px}
+.cust .cf{display:grid;gap:6px;min-width:0}
+.cust .cl{font-size:13px;font-weight:700;color:var(--ink2)}
+.cust .seg{width:max-content}
+.stepper{display:flex;align-items:center;gap:2px;padding:4px;background:#e9ecf6;border-radius:999px;width:max-content}
+.stepper button{width:42px;height:42px;border:0;border-radius:999px;background:var(--card);font-size:22px;font-weight:800;color:var(--ink);box-shadow:0 1px 3px rgba(24,32,61,.12)}
+.stepper button:disabled{opacity:.35;box-shadow:none}
+.stepper output{min-width:4.6em;text-align:center;font-weight:800;font-size:17px;font-variant-numeric:tabular-nums}
 .ttabs{display:flex;gap:4px;padding:4px;background:#e9ecf6;border-radius:999px;width:max-content;max-width:100%;margin-bottom:12px}
 .ttabs button{border:0;background:none;border-radius:999px;padding:10px 20px;font-weight:800;font-size:15px;color:var(--ink2)}
 .ttabs button[aria-selected=true]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(24,32,61,.14)}
@@ -738,13 +746,13 @@ document.addEventListener('click',e=>{if(!e.target.closest('.dd'))closeAllDD()})
 
 async function openSetup(g){
   const last=store.get('edu-portal-last-'+g.id,{});
-  sel={game:g,subject:null,topic:null,bank:null,values:Object.assign({},last.values),picked:Object.assign({},last.picked)};
+  sel={game:g,subject:null,topic:null,bank:null,values:Object.assign({},last.values),picked:Object.assign({},last.picked),cust:Object.assign({},last.cust)};
   $('sBack').querySelector('span').textContent=mode==='class'?'Back to class':'All games';
   $('sTag').hidden=!(mode==='class'&&session);$('sTag').textContent=session?`Class ${session.code}`:'';
   show('setup');await switchGame(g,true)}
 async function switchGame(g,first){
   const keepS=sel.subject,keepT=sel.topic;sel.game=g;sel.bank=null;
-  if(!first){const last=store.get('edu-portal-last-'+g.id,{});sel.values=Object.assign({},last.values);sel.picked=Object.assign({},last.picked)}
+  if(!first){const last=store.get('edu-portal-last-'+g.id,{});sel.values=Object.assign({},last.values);sel.picked=Object.assign({},last.picked);sel.cust=Object.assign({},last.cust)}
   document.querySelector('#setup .setup').style.setProperty('--gc',g.color||'#2b3990');renderSetup();
   try{const b=await loadBank(g);if(sel.game!==g)return;sel.bank=b;
     const sj=b.find(x=>x.id===keepS);sel.subject=sj?keepS:null;sel.topic=sj&&sj.topics.some(t=>t.id===keepT)?keepT:null}
@@ -784,13 +792,30 @@ function renderSetup(){const g=sel.game,B=sel.bank,s=curSub(),t=curTop();
     const chip=(id,name,on)=>{const b=el('button',null,name);b.type='button';b.setAttribute('aria-pressed',on);
       b.onclick=()=>{if(id==='all')return set(B.regions.map(r=>r.id));if(all)return set([id]);const nx=cur.includes(id)?cur.filter(x=>x!==id):cur.concat(id);set(nx.length?nx:B.regions.map(r=>r.id))};return b};
     row.append(chip('all','All',all));B.regions.forEach(r=>row.append(chip(r.id,r.name,!all&&cur.includes(r.id))));box.append(row)}
-  if(t)(g.settings||[]).forEach(st=>{let v=sel.values[st.key];
+  if(t)(g.settings||[]).forEach(st=>{let v=sel.values[st.key];const cu=st.custom;sel.cust=sel.cust||{};
+    Object.keys(sel.values).forEach(k=>{if(k.startsWith(st.key+'_'))delete sel.values[k]});
+    const isC=!!(cu&&sel.cust[st.key]&&sel.cust[st.key].on);let cv=null;
     const auto=st.default==='topic'&&st.key==='level';if(auto)v=(sel.picked[t.id]||{})[st.key];
-    if(v==null||!st.options.some(o=>o[0]===v))v=auto?t.d:st.default;sel.values[st.key]=v;
+    if(isC){cv=custVals(cu,sel.cust[st.key].v);sel.cust[st.key].v=cv;v=custValue(cu,cv);if(!cu.format&&!cu.formats)cu.fields.forEach(f=>{sel.values[st.key+'_'+f.key]=cv[f.key]})}
+    else if(v==null||!st.options.some(o=>o[0]===v))v=auto?t.d:st.default;
+    sel.values[st.key]=v;
     const lab=el('div','sec-t',st.label);lab.id='st-'+st.key;box.append(lab);const seg=el('div','seg');seg.setAttribute('role','group');seg.setAttribute('aria-labelledby',lab.id);
-    st.options.forEach(([val,l])=>{const b=el('button',null,l);b.type='button';b.setAttribute('aria-pressed',val===v);b.onclick=()=>{sel.values[st.key]=val;if(st.default==='topic')(sel.picked[t.id]=sel.picked[t.id]||{})[st.key]=val;renderSetup()};seg.append(b)});box.append(seg)});
+    st.options.forEach(([val,l])=>{const b=el('button',null,l);b.type='button';b.setAttribute('aria-pressed',!isC&&val===v);b.onclick=()=>{sel.values[st.key]=val;if(cu)sel.cust[st.key]=Object.assign({},sel.cust[st.key],{on:false});if(st.default==='topic')(sel.picked[t.id]=sel.picked[t.id]||{})[st.key]=val;renderSetup()};seg.append(b)});
+    if(cu){const b=el('button',null,cu.label||'Custom');b.type='button';b.setAttribute('aria-pressed',isC);b.onclick=()=>{sel.cust[st.key]=Object.assign({},sel.cust[st.key],{on:true});renderSetup()};seg.append(b)}
+    box.append(seg);if(isC)box.append(custUI(st,cv))});
   paintGo();
-  store.set('edu-portal-last-'+g.id,{values:sel.values,picked:sel.picked})}
+  store.set('edu-portal-last-'+g.id,{values:sel.values,picked:sel.picked,cust:sel.cust})}
+/* custom setting values (game.json setting.custom): steppers and small choices */
+function custVals(cu,v){const o={};cu.fields.forEach(f=>{let x=v&&v[f.key]!=null?v[f.key]:f.default;
+  if(f.options){if(!f.options.some(op=>op[0]===x))x=f.options[0][0]}else{const st=f.step||1;x=Math.round((+x||0)/st)*st;x=Math.min(f.max,Math.max(f.min,x))}o[f.key]=x});return o}
+function custValue(cu,cv){const fmt=cu.formats?cu.formats[cv[cu.by]]:cu.format;if(!fmt)return 'custom';const r=fmt.replace(/\{(\w+)\}/g,(_,k)=>cv[k]);return /^\d+$/.test(r)?+r:r}
+function custUI(st,cv){const box=el('div','cust'),set=(k,x)=>{sel.cust[st.key].v=Object.assign({},cv,{[k]:x});renderSetup()};
+  st.custom.fields.forEach(f=>{if(f.if&&Object.entries(f.if).some(([k,x])=>cv[k]!==x))return;const w=el('div','cf');w.append(el('span','cl',f.label));
+    if(f.options){const sg=el('div','seg');f.options.forEach(([val,l])=>{const b=el('button',null,l);b.type='button';b.setAttribute('aria-pressed',cv[f.key]===val);b.onclick=()=>set(f.key,val);sg.append(b)});w.append(sg)}
+    else{const stp=f.step||1,r=el('div','stepper'),x=cv[f.key];
+      const mk=(t,d,lab)=>{const b=el('button',null,t);b.type='button';b.setAttribute('aria-label',`${lab} ${f.label.toLowerCase()}`);b.disabled=d<0?x<=f.min:x>=f.max;b.onclick=()=>set(f.key,Math.min(f.max,Math.max(f.min,x+d)));return b};
+      r.append(mk('−',-stp,'Less'),el('output',null,`${f.prefix||''}${x}${f.unit?' '+f.unit:''}`),mk('+',stp,'More'));w.append(r)}
+    box.append(w)});return box}
 function paintGo(){if(!sel||$('setup').hidden)return;const t=curTop(),go=$('sGo'),rd=$('sReady');go.disabled=!t;
   if(mode==='class'){const on=[...conns.entries()].filter(([,c])=>online(c));go.className='cta go';
     go.textContent=!t?'Choose a topic to start':on.length?`Start for everyone (${on.length})`:'Start for everyone';

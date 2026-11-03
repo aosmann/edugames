@@ -40,6 +40,7 @@ Any game that follows this page shows up in the EduGames portal by itself, can b
 - `color` is the tile colour. Pick one that is clearly different from the games already in the portal.
 - `settings`: every game has `level`. `"default": "topic"` means "use the topic's own difficulty". Add game-specific settings (like `time`) with plain values.
 - `score` is the word for the score ("floors", "points").
+- `custom` (optional, on a time-like setting) adds a **Custom** button with steppers in the portal. Either `format` / `formats` turn the fields into the setting's value (`"format": "{t}"` → `time=140`; Goalfall `"by": "kind", "formats": {"p": "p{np}", "t": "t{nt}"}` → `mode=p15`), or, without a format, the portal sends `<key>=custom` plus `<key>_<field>=<value>` (`clock=custom&clock_start=35&clock_plus=2&clock_minus=1`). Fields: `{key, label, min, max, step, default, unit?, prefix?}` or `{key, label, options: [[value, label], …]}`, optionally `if: {otherField: value}`. In the game's own menu use `EduQ.customRow(fields, values, onChange)` for the same steppers.
 
 ## 3. Opening the game with fixed settings
 
