@@ -661,7 +661,7 @@ const Q=new URLSearchParams(location.search);
 const OWNER=Q.get('owner')||(location.hostname.endsWith('.github.io')?location.hostname.split('.')[0]:'aosmann');
 /* class connection servers, tried in order: our own (not on ad-blocker lists), then the public PeerJS cloud.
    ?peer=host:port[,host:port] replaces the list (local testing). */
-const SIGNAL_HOST='';
+const SIGNAL_HOST='edugames-class.edugames.workers.dev';
 const SIGNALS=(()=>{const h=Q.get('peer');if(h)return h.split(',').map(x=>{const [host,port]=x.split(':');return{host,port:+port||9000,path:'/',secure:false,debug:0}});
   const l=[];if(SIGNAL_HOST)l.push({host:SIGNAL_HOST,port:443,path:'/',secure:true,debug:0});l.push({debug:0});return l})();
 const NET_ERR=['network','server-error','socket-error','socket-closed','disconnected'];
