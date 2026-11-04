@@ -1,0 +1,15 @@
+# Render blueprint for the EduGames class server (backup for networks that block Cloudflare's workers.dev)
+services:
+  - type: web
+    name: edugames-class
+    runtime: node
+    plan: free
+    rootDir: server-node
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: TEACHER_PIN
+        sync: false
+      - key: CLASSES_JSON
+        sync: false
