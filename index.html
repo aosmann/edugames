@@ -567,6 +567,36 @@ p{margin:0}
 .trow .tc{text-align:right}.trow .tc b{display:block;font-size:20px}.trow .tc span{font-size:12px;color:var(--ink2);font-weight:700}
 .trow .ta{display:flex;gap:6px}.trow .ta button{border:0;border-radius:10px;background:var(--paper);padding:9px 12px;font-weight:800;font-size:14px;color:var(--ink)}.trow .ta button.danger{color:var(--bad)}
 @media(max-width:620px){.trow{grid-template-columns:auto 1fr auto}.trow .ta{grid-column:1/-1;justify-content:flex-end}}
+.setlist{display:grid;gap:10px}
+.setcard{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;background:var(--card);border-radius:var(--r-m);padding:14px 16px;box-shadow:0 1px 0 var(--line)}
+.setcard .si{width:44px;height:44px;border-radius:12px;background:#fff1dc;color:#b86e00;display:grid;place-items:center;font-size:20px;font-weight:800}
+.setcard b{font-size:17px}.setcard small{display:block;color:var(--ink2);font-size:13px;margin-top:2px}
+.setcard .ta{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.setcard .ta button{border:0;border-radius:10px;background:var(--paper);padding:9px 12px;font-weight:800;font-size:14px;color:var(--ink)}.setcard .ta button.danger{color:var(--bad)}
+.setcard .badge{font-size:12px;font-weight:800;color:var(--good);background:#e3f6ec;border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:2px}
+@media(max-width:620px){.setcard{grid-template-columns:auto 1fr}.setcard .ta{grid-column:1/-1}}
+.sethead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 14px}.sethead h2{margin:0;font-size:20px;flex:1}
+.sethead .cta{width:auto;padding:12px 18px;font-size:16px;background:var(--board)}
+.edmeta{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px}
+.edmeta label,.edcls>span{display:grid;gap:6px;font-weight:700;font-size:14px;color:var(--ink2)}
+.edmeta input,.edmeta select{border:1.5px solid var(--line);border-radius:var(--r-m);padding:12px 14px;font-size:16px;font-weight:700;background:var(--card);color:var(--ink);width:100%;min-width:0}
+@media(max-width:720px){.edmeta{grid-template-columns:1fr 1fr}.edmeta label:first-child{grid-column:1/-1}}
+.edcls{margin-top:14px}.edrow{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.qrows{display:grid;gap:10px}
+.qrow{display:grid;grid-template-columns:28px 1fr;gap:10px;background:var(--card);border-radius:var(--r-m);padding:12px;box-shadow:0 1px 0 var(--line)}
+.qrow.bad{box-shadow:0 0 0 2px var(--bad)}.qrow .qn{font-weight:800;color:var(--ink2);padding-top:12px;text-align:center}
+.qrow .qf{display:grid;gap:8px}.qrow .qa{display:grid;grid-template-columns:repeat(4,1fr) auto;gap:8px}
+.qrow input{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;font-size:15px;font-weight:600;background:var(--card);color:var(--ink);width:100%;min-width:0}
+.qrow input.q{font-size:16px;font-weight:700}.qrow input.ok{border-color:var(--good);background:#f1fbf5}
+.qrow input.img{font-size:13px;font-weight:600}.qrow .qerr{color:var(--bad);font-size:13px;font-weight:700}.qrow .qerr:empty{display:none}
+.qrow .qx{border:0;background:var(--paper);border-radius:12px;width:42px;font-size:18px;color:var(--ink2)}
+@media(max-width:720px){.qrow .qa{grid-template-columns:1fr 1fr}.qrow .qx{grid-column:2;justify-self:end;height:42px}}
+.edbar{position:sticky;bottom:0;background:linear-gradient(transparent,var(--paper) 30%);padding:18px 0 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;z-index:5}
+.edbar .cta{width:auto;padding:13px 22px;font-size:17px;background:var(--board)}.edbar .sp{flex:1}.edbar .ghost2,.imp .ghost2{border:1.5px solid var(--line);background:var(--card);border-radius:var(--r-m);padding:12px 16px;font-weight:800;color:var(--ink)}
+.edbar .cnt{font-weight:700;color:var(--ink2)}
+.imp{display:grid;gap:10px}.imp textarea{border:1.5px solid var(--line);border-radius:var(--r-m);padding:12px 14px;font:600 15px/1.45 ui-monospace,Menlo,monospace;min-height:170px;background:var(--card);color:var(--ink);width:100%;resize:vertical}
+.imp .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.imp .cta{width:auto;padding:12px 18px;font-size:16px;background:var(--board)}
+.imp details{color:var(--ink2);font-size:14px}.imp details pre{background:var(--paper);border-radius:12px;padding:10px 12px;white-space:pre-wrap;font-size:13px}
+.impnote{font-weight:700;font-size:14px}.impnote.ok{color:var(--good)}.impnote.warn{color:#9a6700}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:var(--r-m);font-weight:700;z-index:40;max-width:calc(100% - 32px)}
 </style>
 </head>
@@ -754,6 +784,59 @@ p{margin:0}
 </main>
 
 <!-- ============ STUDENT: join ============ -->
+<!-- ============ MY QUESTIONS ============ -->
+<main id="sets" hidden>
+  <div class="wrap reports">
+    <header class="top"><a class="mark" href="./" aria-label="EduGames home"><i aria-hidden="true"></i>EduGames</a>
+      <nav class="modes" aria-label="Mode">
+        <button type="button" data-mode="play" aria-pressed="false">Play</button>
+        <button type="button" data-mode="class" aria-pressed="false">Class</button>
+        <button type="button" data-mode="reports" aria-pressed="false">Reports</button>
+      </nav>
+      <span class="sp"></span>
+      <button class="langbtn" type="button" data-lang data-noi18n aria-label="Language / Limba"></button>
+      <div class="acct" data-acct></div>
+    </header>
+    <div id="setsList">
+      <section class="intro" style="padding-bottom:6px"><h1>My questions</h1><p>Make your own question sets. They work in every game, on your own or with the class, and the results show up in Reports.</p></section>
+      <div class="sethead"><h2 id="mineH">Your sets</h2><button class="cta" type="button" id="newSet">New set</button></div>
+      <div class="setlist" id="mineList"></div>
+      <div class="sethead" id="sharedHead" hidden><h2>Shared by other teachers</h2></div>
+      <div class="setlist" id="sharedList"></div>
+    </div>
+    <div id="setEd" hidden>
+      <div class="sethead"><button class="link" type="button" id="edBack">‹ All sets</button></div>
+      <div class="tpanel">
+        <div class="edmeta">
+          <label>Name of the set<input id="edName" maxlength="80" placeholder="Biology · The cell"></label>
+          <label>Subject<input id="edSubj" list="edSubjL" maxlength="40" placeholder="Biology"><datalist id="edSubjL"></datalist></label>
+          <label>Language<select id="edLang"><option value="ro">Română</option><option value="en">English</option></select></label>
+        </div>
+        <div class="edcls"><span>For which classes</span><div class="regchips" id="edCls"></div></div>
+        <div class="edrow"><label class="check"><input type="checkbox" id="edShared"> Share with the other teachers</label></div>
+      </div>
+      <div class="tpanel imp" id="edImp">
+        <div class="row"><b style="flex:1">Add many at once</b><button class="ghost2" type="button" id="aiPrompt">Copy AI prompt</button><label class="ghost2" style="cursor:pointer">Open a file<input type="file" id="impFile" accept=".json,.csv,.txt,.tsv,text/plain,application/json,text/csv" hidden></label></div>
+        <textarea id="impText" spellcheck="false" placeholder="Paste questions here: from Word, Excel, Google Sheets, or the answer of an AI (ChatGPT, Gemini, Claude)."></textarea>
+        <details><summary>Which formats work?</summary><pre>1) One question per block, * marks the right answer:
+What is the powerhouse of the cell?
+* Mitochondria
+Nucleus
+Ribosome
+
+2) A table from Excel or Sheets (copy the rows, paste here):
+Question | Right answer | Wrong | Wrong | Wrong
+
+3) A JSON file, CSV file, or "A) B) C) … Answer: B" from an AI.</pre></details>
+        <div class="row"><button class="cta" type="button" id="impGo">Add these questions</button><span class="impnote" id="impNote"></span></div>
+      </div>
+      <div class="sethead"><h2><span id="edCount">0</span> <span id="edCountL">questions</span></h2></div>
+      <div class="qrows" id="qRows"></div>
+      <div class="edbar"><button class="ghost2" type="button" id="addQ">+ Add a question</button><span class="sp"></span><span class="cnt" id="edState"></span><button class="cta" type="button" id="edSave">Save</button></div>
+    </div>
+  </div>
+</main>
+
 <!-- ============ TEACHERS (admin) ============ -->
 <main id="teachers" hidden>
   <div class="wrap reports">
@@ -900,7 +983,7 @@ function paintLang(){document.querySelectorAll('[data-lang]').forEach(b=>{b.inne
 document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{I18N.set(I18N.lang==='ro'?'en':'ro');paintLang()});
 I18N.onChange(()=>{paintLang();paintAcct();if(!$('reports').hidden)renderReports();if(!$('teachers').hidden)renderTeachers()});paintLang();
 /* ---------------- screens ---------------- */
-const SCREENS=['home','setup','lobby','liveScr','reports','teachers','join','waitScr'];
+const SCREENS=['home','setup','lobby','liveScr','reports','teachers','sets','join','waitScr'];
 function show(id){SCREENS.forEach(s=>$(s).hidden=s!==id);window.scrollTo(0,0)}
 let mode='play';
 function setMode(m){mode=m;document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===m));
@@ -987,7 +1070,7 @@ async function switchGame(g,first){
   const keepS=sel.subject,keepT=sel.topic;sel.game=g;sel.bank=null;
   if(!first){const last=store.get('edu-portal-last-'+g.id,{});sel.values=Object.assign({},last.values);sel.picked=Object.assign({},last.picked);sel.cust=Object.assign({},last.cust)}
   document.querySelector('#setup .setup').style.setProperty('--gc',g.color||'#2b3990');renderSetup();
-  try{const b=await loadBank(g);if(sel.game!==g)return;sel.bank=b;
+  try{const b=await loadBank(g);if(sel.game!==g)return;sel.bank=withMine(b);if(auth())pullSets();
     const sj=b.find(x=>x.id===keepS);sel.subject=sj?keepS:null;sel.topic=sj&&sj.topics.some(t=>t.id===keepT)?keepT:null}
   catch(e){sel.bank=[];sel.err=true}
   renderSetup()}
@@ -1014,7 +1097,7 @@ function renderSetup(){const g=sel.game,B=sel.bank,s=curSub(),t=curTop();
     $('sSettings').innerHTML='';paintGo();return}
   dropdown($('ddSubj'),{label:'lSubj',placeholder:'Choose a subject',value:sel.subject,options:B.map(x=>({value:x.id,x})),
     onChange:id=>{sel.subject=id;sel.topic=null;renderSetup();setTimeout(()=>$('ddTop')._open&&$('ddTop')._open(),0)},
-    render:o=>{const u=o.x.topics.filter(x=>x.unit).length;return[subjIcon(B,o.x.id),txt(o.x.name,`${o.x.topics.length-u} topics`+(u?` · ${u} unit${u>1?'s':''}`:''))]}});
+    render:o=>{const u=o.x.topics.filter(x=>x.unit).length;return[subjIcon(B,o.x.id),txt(o.x.name,(o.x.id==='mine'?`${o.x.topics.length} ${o.x.topics.length===1?'set':'sets'}`:`${o.x.topics.length-u} ${o.x.topics.length-u===1?'topic':'topics'}`)+(u?` · ${u} unit${u>1?'s':''}`:''))]}});
   dropdown($('ddTop'),{label:'lTop',placeholder:s?(tab==='units'?'Choose a unit':'Choose a topic'):'Choose a subject first',disabled:!s,value:sel.topic,options:tList.map(x=>({value:x.id,x})),
     onChange:id=>{sel.topic=id;renderSetup()},
     render:(o,inBtn)=>{const lv=(sel.picked[o.x.id]||{}).level||o.x.d;return inBtn?[subjIcon(B,s.id),txt(o.x.name,o.x.bl)]:[txt(o.x.name,o.x.bl),lvlDots(lv)]}});
@@ -1027,7 +1110,7 @@ function renderSetup(){const g=sel.game,B=sel.bank,s=curSub(),t=curTop();
     row.append(chip('all','All',all));B.regions.forEach(r=>row.append(chip(r.id,r.name,!all&&cur.includes(r.id))));box.append(row)}
   Object.keys(sel.values).forEach(k=>{if(k.slice(0,2)==='o_'&&!(t&&t.opts&&t.opts.some(o=>'o_'+o.key===k)))delete sel.values[k]});
   if(t&&t.opts)topicOptsUI(t,box);
-  if(t)(g.settings||[]).forEach(st=>{let v=sel.values[st.key];const cu=st.custom;sel.cust=sel.cust||{};
+  if(t)(g.settings||[]).filter(st=>!(t.set&&st.key==='level')).forEach(st=>{let v=sel.values[st.key];const cu=st.custom;sel.cust=sel.cust||{};
     Object.keys(sel.values).forEach(k=>{if(k.startsWith(st.key+'_'))delete sel.values[k]});
     const isC=!!(cu&&sel.cust[st.key]&&sel.cust[st.key].on);let cv=null;
     const auto=st.default==='topic'&&st.key==='level';if(auto)v=(sel.picked[t.id]||{})[st.key];
@@ -1080,12 +1163,13 @@ function topicOptsUI(t,box){const mem=store.get('edu-topt-'+t.id,{});
 const optsLabel=(t,v)=>!t||!t.opts?'':t.opts.map(o=>{const x=v['o_'+o.key];if(x==null||x==='')return '';
   if(o.multi){const l=String(x).split(o.key==='ops'?'':',');return l.map(y=>(o.options.find(p=>p[0]===y)||[y,y])[1]).join(o.key==='ops'?' ':', ')}
   const p=o.options.find(p=>p[0]===x);return o.key==='max'?`${T('up to')} ${p?p[1]:x}`:(p?p[1]:x)}).filter(Boolean).join(' · ');
-function roundFromSel(){const g=sel.game,s=curSub(),t=curTop(),ol=t.regions?'':optsLabel(t,sel.values);
-  return{id:'r'+Date.now().toString(36),game:g.id,gameName:g.name,base:g.base,subject:s.id,subjectName:s.name,topic:t.id,topicName:t.name,
+function roundFromSel(){const g=sel.game,s=curSub(),t=curTop(),ol=t.regions||t.set?'':optsLabel(t,sel.values);
+  return{id:'r'+Date.now().toString(36),game:g.id,gameName:g.name,base:g.base,subject:s.id,topic:t.id,topicName:t.name,
     regionsLabel:t.regions&&sel.bank.regionLabel?sel.bank.regionLabel(sel.values.regions?sel.values.regions.split(','):null):ol,
     race:mode==='class'&&g.multiplayer&&g.multiplayer.race?{seed:1}:null,lang:I18N.lang,
-    values:Object.assign({},sel.values),label:`${g.name} · ${t.name}${ol?' · '+ol:''} · ${LEVELS[sel.values.level]||''}${sel.values.time?' · '+(sel.values.time>=120?sel.values.time/60+' min':sel.values.time+' sec'):''}`}}
-function gameURL(r,lock){const u=new URL(r.base);u.searchParams.set('topic',r.topic);u.searchParams.set('lang',r.lang||I18N.lang);Object.entries(r.values).forEach(([k,v])=>u.searchParams.set(k,v));if(lock)u.searchParams.set('lock','1');
+    qset:t.set?encSet(t.set):null,setId:t.set?t.set.id:null,subjectName:t.set?(t.set.subject||T('My questions')):s.name,
+    values:Object.assign({},sel.values),label:`${g.name} · ${t.name}${ol?' · '+ol:''}${t.set?'':' · '+(LEVELS[sel.values.level]||'')}${sel.values.time?' · '+(sel.values.time>=120?sel.values.time/60+' min':sel.values.time+' sec'):''}`}}
+function gameURL(r,lock){const u=new URL(r.base);u.searchParams.set('topic',r.topic);u.searchParams.set('lang',r.lang||I18N.lang);Object.entries(r.values).forEach(([k,v])=>u.searchParams.set(k,v));if(lock)u.searchParams.set('lock','1');if(r.qset)u.searchParams.set('qset',r.qset);
   if(lock&&r.race){u.searchParams.set('race','1');u.searchParams.set('seed',r.race.seed)}return u.href}
 /* race games (game.json multiplayer.race): one seed per round, a spectate view for the teacher */
 function specURL(r){const u=new URL(r.base);u.searchParams.set('spectate','1');u.searchParams.set('seed',r.race.seed);['laps','track'].forEach(k=>{if(r.values[k]!=null)u.searchParams.set(k,r.values[k])});return u.href}
@@ -1140,7 +1224,7 @@ async function signIn(u,p){
   store.set('edu-teacher-auth',{token:d.token,u:d.u,name:d.name,role:d.role,exp:d.exp});syncState='';paintAcct();return d}
 function signedOut(ended){store.set('edu-teacher-auth',null);remoteSessions=[];lastPull=0;syncState=ended?'badpin':'';paintAcct();if(!$('teachers').hidden)setMode('play');
   /* on a shared computer: forget the class lists and the reports that are already saved online */
-  store.set('edu-portal-classes-cache',[]);const pend=pendingSync();store.set('edu-portal-sessions',localSessions().filter(s=>pend.includes(s.id)||(session&&s.id===session.id)));
+  store.set('edu-portal-classes-cache',[]);store.set('edu-sets-cache',{mine:[],shared:[]});const pend=pendingSync();store.set('edu-portal-sessions',localSessions().filter(s=>pend.includes(s.id)||(session&&s.id===session.id)));
   clsState='pin';paintClsPick();paintSync();if(!$('reports').hidden)renderReports(true)}
 /* ---- account button (top right), sign-in and password dialogs ---- */
 const api=async(path,o={})=>{const r=await T_(20000,fetch(`${REPORTS_HTTP()}${path}`,{method:o.body?'POST':'GET',cache:'no-store',headers:{'Content-Type':'text/plain',...authH()},body:o.body?JSON.stringify(o.body):undefined}));
@@ -1156,7 +1240,7 @@ function paintAcct(){const a=auth();document.querySelectorAll('[data-acct]').for
   const h=el('div','mh');h.append(el('b',null,a.name),el('span',null,a.role==='admin'?'Admin · sees every teacher\'s reports':'@'+a.u));m.append(h);
   const item=(t,f,cls)=>{const x=el('button',cls||null,t);x.type='button';x.setAttribute('role','menuitem');x.onclick=()=>{m.hidden=true;f()};m.append(x)};
   if(a.role==='admin')item('Teachers',openTeachers);
-  item('My reports',()=>setMode('reports'));item('Google Sheets',openSheets);item('Change password',()=>openPassword(false));
+  item('My questions',openSets);item('My reports',()=>setMode('reports'));item('Google Sheets',openSheets);item('Change password',()=>openPassword(false));
   item('Sign out',()=>{signedOut();toast(T('Signed out'))});item('Sign out on all devices',signOutAll,'danger');
   b.onclick=e=>{e.stopPropagation();const open=m.hidden;document.querySelectorAll('.acctmenu').forEach(x=>x.hidden=true);m.hidden=!open;b.setAttribute('aria-expanded',String(open))};
   box.append(b,m)})}
@@ -1177,7 +1261,7 @@ function openSignIn(){modal(box=>{
   f.onsubmit=async e=>{e.preventDefault();if(!u.value.trim()||!p.value)return;go.disabled=true;err.textContent='';
     try{const d=await signIn(u.value,p.value);closeModal();afterSignIn(d)}catch(x){err.textContent=x.message;p.value='';p.focus()}go.disabled=false};
   box.append(f)})}
-function afterSignIn(d){paintAcct();paintSync();if(d.mustChange){openPassword(true);return}
+function afterSignIn(d){paintAcct();paintSync();pullSets();if(d.mustChange){openPassword(true);return}
   toast(T('Signed in as '+d.name));pullReports(true);syncNow();loadClasses()}
 function openPassword(forced){const a=auth();if(!a)return openSignIn();modal(box=>{
   const f=el('form');f.style.display='grid';f.style.gap='14px';
@@ -1228,6 +1312,120 @@ async function openSheets(){modal(box=>box.append(el('h2',null,'Google Sheets'),
       catch(x){if(w)w.close();err.textContent=x&&x.message?x.message:NET_ERR()}go.disabled=false}})}
 const okRow=box=>{const row=el('div','mrow'),ok=el('button','cta','OK');ok.type='button';ok.onclick=closeModal;row.append(ok);box.append(row)};
 window.addEventListener('message',e=>{if(e.data&&e.data.type==='edu-google'){if(e.data.ok)toast(T('Google Sheets connected'));if(!$('modal').hidden)openSheets()}});
+/* ---------------- My questions: a teacher's own question sets ----------------
+   kept on the class server (/sets); a set travels to the game inside its address (?qset=), so students need nothing */
+const mySets=()=>store.get('edu-sets-cache',{mine:[],shared:[]});
+async function pullSets(){if(!auth())return mySets();try{const {r,d}=await api('/sets');if(r.ok){store.set('edu-sets-cache',{mine:d.mine||[],shared:d.shared||[]});if(sel&&!$('setup').hidden&&sel.bank){sel.bank=withMine(sel.bank);renderSetup()}}}catch(e){}return mySets()}
+const SUBJ_SUGGEST=['English','Română','Math','Geography','History','Biology','Chemistry','Physics','Science','Informatics','Music','Religion','French','German','Other'];
+function openSets(){if(!auth())return openSignIn();document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed','false'));show('sets');$('setEd').hidden=true;$('setsList').hidden=false;renderSets();pullSets().then(renderSets)}
+const clsName=id=>{const c=classes().find(x=>x.id===id);return c?c.name:id};
+function renderSets(){const S=mySets(),me=auth()||{},box=$('mineList');box.innerHTML='';
+  const card=(x,own)=>{const c=el('div','setcard'),ic=el('span','si','★'),tx=el('div'),nm=el('b',null,x.name);tx.append(nm);if(x.shared&&own)tx.append(el('span','badge',T('shared')));
+    const bits=[`${x.q.length} ${T(x.q.length===1?'question':'questions')}`];if(x.subject)bits.push(x.subject);if(x.classes&&x.classes.length)bits.push(T('class')+' '+x.classes.map(clsName).join(', '));
+    if(!own||x.owner!==me.u)bits.push(T('by')+' '+(x.ownerName||x.owner));tx.append(el('small',null,bits.join(' · ')));
+    const ta=el('div','ta'),btn=(t,f,cls)=>{const b=el('button',cls||null,t);b.type='button';b.onclick=f;ta.append(b)};
+    if(own){btn('Edit',()=>editSet(x));btn('Delete',()=>confirmBox(T('Delete')+' “'+x.name+'”?',T('The set is removed for good. Reports that used it stay.'),T('Delete'),async()=>{const {r}=await api('/sets',{body:{action:'delete',id:x.id}});if(!r.ok)throw 0;closeModal();await pullSets();renderSets()},true),'danger')}
+    else btn('Copy to my sets',async()=>{try{const {r,d}=await api('/sets',{body:{action:'copy',id:x.id}});if(!r.ok)throw 0;toast(T('Copied to your sets'));await pullSets();renderSets()}catch(e){toast(NET_ERR())}});
+    c.append(ic,tx,ta);return c};
+  if(!S.mine.length)box.append(el('p','sub','No sets yet. Click “New set” to make your first one.'));S.mine.forEach(x=>box.append(card(x,true)));
+  $('mineH').textContent=me.role==='admin'?T('All sets'):T('Your sets');
+  const sh=$('sharedList');sh.innerHTML='';$('sharedHead').hidden=!S.shared.length;S.shared.forEach(x=>sh.append(card(x,false)))}
+$('newSet').onclick=()=>editSet(null);
+$('edBack').onclick=()=>{if(ed&&ed.dirty&&!confirm(T('Leave without saving?')))return;ed=null;$('setEd').hidden=true;$('setsList').hidden=false;renderSets()};
+/* the editor */
+let ed=null;
+function editSet(x){ed={id:x?x.id:null,dirty:false,rows:x?x.q.map(r=>[r[0]||'',r[1]||'',r[2]||'',r[3]||'',r[4]||'',r[5]||'']):[]};
+  $('edName').value=x?x.name:'';$('edSubj').value=x?x.subject||'':'';$('edLang').value=x?x.lang:(I18N.lang==='ro'?'ro':'en');$('edShared').checked=!!(x&&x.shared);
+  $('edSubjL').innerHTML='';SUBJ_SUGGEST.forEach(n=>{const o=el('option');o.value=n;$('edSubjL').append(o)});
+  ed.classes=new Set(x?x.classes:[]);paintEdCls();$('impText').value='';$('impNote').textContent='';
+  if(!ed.rows.length)ed.rows.push(['','','','','','']);
+  $('setsList').hidden=true;$('setEd').hidden=false;paintRows();window.scrollTo(0,0);setTimeout(()=>$('edName').focus(),30)}
+function paintEdCls(){const box=$('edCls');box.innerHTML='';const l=classes();
+  if(!l.length){box.append(el('span','sub','Class lists load after you sign in.'));return}
+  l.forEach(c=>{const b=el('button',null,c.name);b.type='button';b.setAttribute('aria-pressed',ed.classes.has(c.id));b.onclick=()=>{ed.classes.has(c.id)?ed.classes.delete(c.id):ed.classes.add(c.id);ed.dirty=true;paintEdCls()};box.append(b)})}
+['edName','edSubj','edLang','edShared'].forEach(id=>$(id).addEventListener('input',()=>{if(ed)ed.dirty=true}));
+function rowErr(r,i,all){if(!r.slice(0,5).some(Boolean))return '';if(!r[0].trim())return T('Write the question.');if(!r[1].trim())return T('Write the right answer.');
+  const w=r.slice(2,5).map(x=>x.trim()).filter(Boolean);if(w.length<2)return T('Add at least 2 wrong answers.');
+  const low=x=>x.trim().toLowerCase();if(w.some(x=>low(x)===low(r[1])))return T('A wrong answer is the same as the right one.');
+  if(new Set(w.map(low)).size<w.length)return T('Two wrong answers are the same.');
+  if(all.findIndex(o=>low(o[0])===low(r[0]))<i)return T('Same question as one above.');return ''}
+function paintRows(){const box=$('qRows');box.innerHTML='';
+  ed.rows.forEach((r,i)=>{const row=el('div','qrow'),f=el('div','qf'),a=el('div','qa'),err=el('div','qerr');
+    const inp=(k,ph,cls)=>{const x=el('input',cls);x.value=r[k];x.placeholder=T(ph);x.maxLength=k?(k===5?600:120):300;
+      x.oninput=()=>{r[k]=x.value;ed.dirty=true;const e=rowErr(r,i,ed.rows);err.textContent=e;row.classList.toggle('bad',!!e&&!!x.value);paintCount()};
+      x.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const all=[...row.querySelectorAll('input')],j=all.indexOf(x);if(j<4)all[j+1].focus();else{if(i===ed.rows.length-1)addRow();else box.children[i+1].querySelector('input').focus()}}};return x};
+    f.append(inp(0,'Question','q'));a.append(inp(1,'Right answer','ok'),inp(2,'Wrong answer'),inp(3,'Wrong answer'),inp(4,'Wrong (optional)'));
+    const x=el('button','qx','×');x.type='button';x.title=T('Remove');x.onclick=()=>{ed.rows.splice(i,1);if(!ed.rows.length)ed.rows.push(['','','','','','']);ed.dirty=true;paintRows()};a.append(x);
+    f.append(a);const im=inp(5,'Picture link (optional): https://…','img');f.append(im,err);
+    const e=rowErr(r,i,ed.rows);err.textContent=e;row.classList.toggle('bad',!!e);
+    row.append(el('span','qn',String(i+1)),f);box.append(row)});paintCount()}
+function addRow(){ed.rows.push(['','','','','','']);paintRows();const l=$('qRows').lastElementChild;l.querySelector('input').focus();l.scrollIntoView({block:'center'})}
+$('addQ').onclick=addRow;
+const okRows=()=>ed.rows.filter((r,i)=>r.slice(0,5).some(Boolean)&&!rowErr(r,i,ed.rows));
+function paintCount(){const n=okRows().length,bad=ed.rows.filter((r,i)=>r.slice(0,5).some(Boolean)&&rowErr(r,i,ed.rows)).length;
+  $('edCount').textContent=n;$('edCountL').textContent=T(n===1?'question':'questions');
+  $('edState').textContent=bad?`${bad} ${T(bad===1?'needs fixing':'need fixing')}`:'';}
+$('edSave').onclick=async()=>{const name=$('edName').value.trim();if(!name){toast(T('Give the set a name.'));$('edName').focus();return}
+  const bad=ed.rows.filter((r,i)=>r.slice(0,5).some(Boolean)&&rowErr(r,i,ed.rows)).length,q=okRows().map(r=>r.map(x=>x.trim()));
+  if(!q.length){toast(T('Add at least one complete question.'));return}
+  if(bad&&!confirm(`${bad} ${T('questions are not complete and will not be saved. Save the rest?')}`))return;
+  $('edSave').disabled=true;
+  try{const {r,d}=await api('/sets',{body:{action:'save',set:{id:ed.id,name,subject:$('edSubj').value.trim(),lang:$('edLang').value,shared:$('edShared').checked,classes:[...ed.classes],q}}});
+    if(!r.ok)throw new Error(d.error==='Too big'?T('The set is too big. Split it into two sets.'):NET_ERR());
+    ed.id=d.id;ed.dirty=false;toast(T('Saved')+' · '+q.length+' '+T(q.length===1?'question':'questions'));await pullSets()}
+  catch(e){toast(e.message||NET_ERR())}$('edSave').disabled=false};
+/* import: blocks with * for the right answer, a pasted Excel/Sheets table, CSV, JSON, or "A) … Answer: B" */
+function parseQuestions(text){text=String(text||'').replace(/\r/g,'').replace(/ /g,' ').trim();if(!text)return[];
+  const tidy=x=>String(x==null?'':x).replace(/^\s*(?:[-•–]|\d+[.)]|[A-Fa-f][.)])\s+/,'').trim();
+  const fromObj=o=>{if(!o||typeof o!=='object')return null;const q=o.question||o.q||o.text||o.prompt||o['întrebare'];
+    let right=o.answer!=null?o.answer:o.correct!=null?o.correct:o.right!=null?o.right:o.correct_answer!=null?o.correct_answer:o['răspuns'];
+    let wrong=o.wrong||o.wrongs||o.incorrect||o.incorrect_answers||o.distractors||o.wrong_answers||null;const opts=o.options||o.choices||o.answers||null;
+    if(Array.isArray(opts)){const list=opts.map(x=>typeof x==='object'&&x?(x.text||x.answer||''):String(x));
+      if(typeof right==='number'&&list[right]!=null)right=list[right];else if(typeof right==='string'&&/^[A-Fa-f]$/.test(right.trim())&&list.length>1)right=list['abcdef'.indexOf(right.trim().toLowerCase())];
+      else if(right==null){const k=opts.findIndex(x=>x&&typeof x==='object'&&(x.correct||x.isCorrect));if(k>=0)right=list[k]}
+      if(!wrong)wrong=list.filter(x=>String(x).trim()!==String(right).trim())}
+    if(!q||right==null)return null;wrong=(Array.isArray(wrong)?wrong:[wrong]).filter(x=>x!=null&&String(x).trim());
+    return[tidy(q),String(right).trim(),...wrong.slice(0,3).map(x=>String(x).trim())].concat(['','','','']).slice(0,5).concat([o.image||o.img||''])};
+  if(/^[\[{]/.test(text)){try{let d=JSON.parse(text);if(!Array.isArray(d))d=d.questions||d.items||d.quiz||Object.values(d).find(Array.isArray)||[];return d.map(fromObj).filter(Boolean)}catch(e){}}
+  const lines=text.split('\n');
+  /* a table: tabs (Excel, Sheets) or ; or , with 3+ columns on most lines */
+  const sepOf=l=>l.includes('\t')?'\t':(l.split(';').length>=3?';':(l.split(',').length>=3&&!/[?.!]\s*$/.test(l)?',':null));
+  const nonEmpty=lines.filter(l=>l.trim());const sep=sepOf(nonEmpty[0]||'');
+  if(sep&&nonEmpty.filter(l=>l.split(sep).length>=3).length>=Math.ceil(nonEmpty.length*.7)){
+    const csv=l=>{if(sep==='\t')return l.split('\t');const out=[];let cur='',qt=false;for(const ch of l){if(ch==='"'){qt=!qt;continue}if(ch===sep&&!qt){out.push(cur);cur='';continue}cur+=ch}out.push(cur);return out};
+    let rows=nonEmpty.map(csv).map(c=>c.map(x=>x.trim()));if(/^(question|întrebare|intrebare|q)$/i.test(rows[0][0]))rows=rows.slice(1);
+    return rows.filter(c=>c[0]&&c[1]).map(c=>[c[0],c[1],c[2]||'',c[3]||'',c[4]||'',c[5]&&/^https?:/.test(c[5])?c[5]:''])}
+  /* blocks */
+  const blocks=text.split(/\n\s*\n/).map(b=>b.split('\n').map(x=>x.trim()).filter(Boolean)).filter(b=>b.length>=2);
+  const out=[];blocks.forEach(b=>{let q=tidy(b[0].replace(/^(?:q(?:uestion)?|întrebare(?:a)?)\s*\d*\s*[:.)-]\s*/i,'')),rest=b.slice(1),right=null,wrong=[],letter=null;
+    const ansLine=rest.find(l=>/^(answer|correct( answer)?|răspuns(ul)?( corect)?|raspuns)\s*[:=-]/i.test(l));
+    if(ansLine){letter=ansLine.replace(/^[^:=-]*[:=-]\s*/,'').trim();rest=rest.filter(l=>l!==ansLine)}
+    const opts=rest.map(l=>{const star=/^(\*|✓|✔|\+|\(x\)|\[x\])\s*/i.test(l)||/\s(\*|✓|✔)$/.test(l)||/\((correct|corect)\)\s*$/i.test(l);
+      const m=l.match(/^\(?([A-Fa-f])[.)\]]\s*(.*)$/);let t=l.replace(/^(\*|✓|✔|\+|\(x\)|\[x\])\s*/i,'').replace(/\s(\*|✓|✔)$/,'').replace(/\s*\((correct|corect)\)\s*$/i,'');
+      return{t:tidy(m?m[2]:t).replace(/^(\*|✓|✔)\s*/,''),star,L:m?m[1].toLowerCase():null}}).filter(o=>o.t);
+    if(letter){const L=letter.replace(/[).\]]/g,'').trim();const byL=/^[A-Fa-f]$/.test(L)?opts.find(o=>o.L===L.toLowerCase()):null;
+      const hit=byL||opts.find(o=>o.t.toLowerCase()===L.toLowerCase());if(hit){right=hit.t;wrong=opts.filter(o=>o!==hit).map(o=>o.t)}else{right=L.replace(/^[A-Fa-f][.)]\s*/,'');wrong=opts.map(o=>o.t).filter(t=>t!==right)}}
+    else{const st=opts.find(o=>o.star);if(st){right=st.t;wrong=opts.filter(o=>o!==st).map(o=>o.t)}else{right=opts[0]&&opts[0].t;wrong=opts.slice(1).map(o=>o.t)}}
+    if(q&&right)out.push([q,right,wrong[0]||'',wrong[1]||'',wrong[2]||'','']) });
+  return out}
+async function doImport(text){const list=parseQuestions(text);
+  if(!list.length){$('impNote').className='impnote warn';$('impNote').textContent=T('No questions found. Check the format (open “Which formats work?”).');return}
+  ed.rows=ed.rows.filter(r=>r.slice(0,5).some(Boolean)).concat(list.map(r=>r.map(x=>String(x||''))));ed.dirty=true;paintRows();
+  const bad=ed.rows.filter((r,i)=>rowErr(r,i,ed.rows)).length;$('impText').value='';
+  $('impNote').className='impnote '+(bad?'warn':'ok');$('impNote').textContent=`${list.length} ${T(list.length===1?'question added':'questions added')}${bad?' · '+bad+' '+T(bad===1?'needs fixing (in red)':'need fixing (in red)'):''}`}
+$('impGo').onclick=()=>doImport($('impText').value);
+$('impFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;if(f.size>2e6){toast(T('That file is too big.'));return}doImport(await f.text());e.target.value=''};
+$('aiPrompt').onclick=()=>{const ro=$('edLang').value==='ro',topic=$('edName').value.trim()||(ro?'[tema]':'[topic]'),cls=[...ed.classes].map(clsName).join(', ')||(ro?'[clasa]':'[class]');
+  const p=ro?`Fă 20 de întrebări scurte cu variante de răspuns despre „${topic}” pentru elevii clasei ${cls}, în limba română. Fiecare întrebare are 1 răspuns corect și 3 răspunsuri greșite, dar credibile. Întrebările să aibă sub 100 de caractere, răspunsurile sub 40. Răspunde DOAR cu întrebările, în exact acest format, cu un rând liber între ele:\n\nTextul întrebării\n* răspunsul corect\nrăspuns greșit\nrăspuns greșit\nrăspuns greșit`
+    :`Make 20 short multiple-choice quiz questions about "${topic}" for class ${cls} students, in English. Each question has 1 correct answer and 3 wrong but believable answers. Keep questions under 100 characters and answers under 40. Reply ONLY with the questions, in exactly this format, with a blank line between them:\n\nQuestion text\n* correct answer\nwrong answer\nwrong answer\nwrong answer`;
+  (navigator.clipboard?navigator.clipboard.writeText(p):Promise.reject()).then(()=>toast(T('AI prompt copied. Paste it into ChatGPT, Gemini or Claude, then paste the answer here.'),5000),()=>{$('impText').value=p;toast(T('Copy the prompt from the box.'))})};
+/* sets in the game setup: subject "My questions" */
+const encSet=x=>{const j=JSON.stringify({id:'set-'+x.id,n:x.name,q:x.q});return btoa(unescape(encodeURIComponent(j))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')};
+function withMine(B){const base=B.base||B,S=mySets(),list=auth()?[...S.mine,...S.shared]:[];if(!list.length)return base;
+  const cid=session&&session.classId,sorted=list.slice().sort((a,b)=>(b.classes.includes(cid)?1:0)-(a.classes.includes(cid)?1:0));
+  const out=base.filter(x=>x.id!=='mine').concat([{id:'mine',name:'My questions',topics:sorted.map(x=>({id:'set-'+x.id,name:x.name,d:2,set:x,
+    bl:`${x.q.length} ${T('questions')}${x.classes.length?' · '+T('class')+' '+x.classes.map(clsName).join(', '):''}${x.owner!==(auth()||{}).u?' · '+(x.ownerName||''):''}`}))}]);
+  ['icon','hue','regions','getRegions','setRegions','regionLabel'].forEach(k=>out[k]=base[k]);out.base=base;out.icon=Object.assign({mine:'<path d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>'},base.icon||{});out.hue=Object.assign({mine:'#ffb347'},base.hue||{});return out}
 /* ---- Teachers page (admin) ---- */
 function openTeachers(){if(!auth()||auth().role!=='admin')return;document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed','false'));show('teachers');renderTeachers()}
 const agoTxt=t=>{if(!t)return T('never signed in');const m=Math.round((Date.now()-t)/60000);if(m<2)return T('active now');if(m<60)return T('{n} min ago').replace('{n}',m);const h=Math.round(m/60);if(h<24)return T('{n} h ago').replace('{n}',h);return fmtDate(t)};

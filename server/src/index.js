@@ -35,7 +35,7 @@ export default {
       if (req.headers.get('Upgrade') !== 'websocket') return new Response('Expected a WebSocket', {status: 426, headers: CORS});
       return env.ROOM.get(env.ROOM.idFromName(room[1])).fetch(req);
     }
-    if (p === '/login' || p === '/classes' || p === '/reports' || p === '/account' || p === '/teachers' || p.startsWith('/google')) {
+    if (p === '/login' || p === '/classes' || p === '/reports' || p === '/account' || p === '/teachers' || p === '/sets' || p.startsWith('/google')) {
       if (!env.AUTH_SECRET) return new Response('No AUTH_SECRET set on the server', {status: 503, headers: CORS});
       return env.STORE.get(env.STORE.idFromName('reports')).fetch(req);
     }
@@ -240,6 +240,7 @@ export class Store {
     if (p === '/account') return this.account(req, me);
     if (p === '/teachers') return admin ? this.teachers(req, me) : this.json({error: 'admin only'}, 403);
     if (p === '/google') return this.google(req, me);
+    if (p === '/sets') return this.sets(req, me);
     if (req.method === 'POST') {
       const body = await req.text();
       if (body.length > 1900000) return this.json({error: 'Too big'}, 413);
@@ -454,5 +455,44 @@ export class Store {
     const r = await fetch(`${base}/values/${encodeURIComponent(`'${name}'!A1`)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, {method: 'POST', headers: H, body: JSON.stringify({values: list})});
     if (r.status === 404) { const e = new Error('gone'); e.gone = true; throw e; }
     if (!r.ok) throw new Error('append ' + r.status);
+  }
+  /* ---------------- question sets ("My questions") ----------------
+     set:<id> = {id, owner, ownerName, name, subject, classes:[ids], lang, shared, q:[[question, right, wrong, wrong, wrong?, image?]], at}
+     GET  /sets -> {mine:[...], shared:[...]} (the admin's "mine" has everyone's)
+     POST /sets {action:'save', set} -> {id}; {action:'delete', id}; {action:'copy', id} -> {id} */
+  async sets(req, me) {
+    const admin = me.role === 'admin', all = [...(await this.state.storage.list({prefix: 'set:'})).values()];
+    if (req.method !== 'POST') {
+      const mine = all.filter(x => x.owner === me.u || admin), shared = all.filter(x => x.shared && x.owner !== me.u && !admin);
+      const by = (a, b) => (b.at || 0) - (a.at || 0);
+      return this.json({mine: mine.sort(by), shared: shared.sort(by)});
+    }
+    const b = await this.body(req), clean = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
+    if (b.action === 'save') {
+      const x = b.set || {}, id = /^[a-z0-9]{6,16}$/.test(x.id || '') ? x.id : b64u(crypto.getRandomValues(new Uint8Array(9))).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 10) || 'set' + Date.now().toString(36);
+      const old = await this.state.storage.get('set:' + id);
+      if (old && old.owner !== me.u && !admin) return this.json({error: 'Not your set'}, 403);
+      const q = (Array.isArray(x.q) ? x.q : []).slice(0, 500).map(r => Array.isArray(r) ? [clean(r[0], 300), clean(r[1], 120), clean(r[2], 120), clean(r[3], 120), clean(r[4], 120), clean(r[5], 600)] : null)
+        .filter(r => r && r[0] && r[1] && [r[2], r[3], r[4]].filter(Boolean).length >= 2).map(r => { while (r.length && !r[r.length - 1]) r.pop(); return r; });
+      const name = clean(x.name, 80);
+      if (!name) return this.json({error: 'name'}, 400);
+      if (!q.length) return this.json({error: 'empty'}, 400);
+      const rec = {id, owner: old ? old.owner : me.u, ownerName: old ? old.ownerName : me.name, name, subject: clean(x.subject, 40), classes: (Array.isArray(x.classes) ? x.classes : []).map(c => clean(c, 20)).filter(Boolean).slice(0, 40),
+        lang: x.lang === 'ro' ? 'ro' : 'en', shared: !!x.shared, q, at: Date.now(), created: old ? old.created : Date.now()};
+      if (JSON.stringify(rec).length > 400000) return this.json({error: 'Too big'}, 413);
+      await this.state.storage.put('set:' + id, rec);
+      return this.json({ok: true, id, set: rec});
+    }
+    const old = await this.state.storage.get('set:' + String(b.id || ''));
+    if (!old) return this.json({error: 'missing'}, 404);
+    if (b.action === 'delete') { if (old.owner !== me.u && !admin) return this.json({error: 'Not your set'}, 403); await this.state.storage.delete('set:' + old.id); return this.json({ok: true}); }
+    if (b.action === 'copy') {
+      if (!old.shared && old.owner !== me.u && !admin) return this.json({error: 'Not shared'}, 403);
+      const id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      const rec = {...old, id, owner: me.u, ownerName: me.name, shared: false, copiedFrom: old.ownerName, at: Date.now(), created: Date.now()};
+      await this.state.storage.put('set:' + id, rec);
+      return this.json({ok: true, id, set: rec});
+    }
+    return this.json({error: 'Unknown action'}, 400);
   }
 }
