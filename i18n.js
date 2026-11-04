@@ -90,7 +90,12 @@ const UI={
  /* exports */
  'Session code':'Cod oră','Subject name':'Materie','Asked':'Întrebări','% right':'% corecte','Missed questions':'Întrebări greșite','Question':'Întrebare','They picked':'A ales','Common mistakes':'Greșeli frecvente',
  'Skill':'Abilitate','Wrong':'Greșite','Answered':'Răspunsuri','% wrong':'% greșite','Most picked wrong':'Greșeala cea mai aleasă','Students':'Elevi','All answers':'Toate răspunsurile','Correct':'Corect','yes':'da','no':'nu',
- 'Results':'Rezultate','Topic name':'Temă'};
+ 'Results':'Rezultate','Topic name':'Temă',
+ 'Results are saved on this device and online for every teacher. Filter by game, day, session or student, then export.':'Rezultatele se salvează pe acest dispozitiv și online pentru toți profesorii. Filtrează după joc, zi, oră sau elev, apoi exportă.',
+ 'Results are only on this device. Enter the teacher PIN to see the school\'s reports and save yours online.':'Rezultatele sunt doar pe acest dispozitiv. Introdu PIN-ul de profesor ca să vezi rapoartele școlii și să le salvezi online pe ale tale.',
+ 'Show the school\'s reports':'Arată rapoartele școlii',
+ 'The teacher PIN changed. Enter it again in the class room to keep saving results online.':'PIN-ul de profesor s-a schimbat. Introdu-l din nou ca rezultatele să se salveze online.',
+ 'Couldn\'t reach the class server. Showing what is saved on this device.':'Nu ne putem conecta la serverul clasei. Arătăm ce e salvat pe acest dispozitiv.','Saved online for every teacher':'Salvat online pentru toți profesorii'};
 const D=Object.assign({},BANK,UI);
 const P=[ /* patterns: numbers and names inside sentences */
  [/^(\d+) topics$/,(m)=>`${m[1]} teme`],[/^(\d+) topics · (\d+) units?$/,m=>`${m[1]} teme · ${m[2]} ${m[2]==='1'?'unitate':'unități'}`],[/^(\d+) subjects$/,m=>`${m[1]} materii`],
@@ -111,6 +116,8 @@ const P=[ /* patterns: numbers and names inside sentences */
  [/^Which flag\? (.+)$/,m=>`Ce steag? ${m[1]}`],[/^Difficulty: (.+)$/,m=>`Dificultate: ${tr(m[1])||m[1]}`],[/^(Less|More) (.+)$/,m=>`${m[1]==='Less'?'Mai puțin':'Mai mult'}: ${(tr(m[2].replace(/^./,c=>c.toUpperCase()))||m[2]).toLowerCase()}`],
  [/^weakest: (.+) \((\d+)%\)$/,m=>`cel mai slab: ${tr(m[1])||m[1]} (${m[2]}%)`],[/^(\d+) of (\d+) right · weakest: (.+) \((\d+)%\)$/,m=>`${m[1]} din ${m[2]} corecte · cel mai slab: ${tr(m[3])||m[3]} (${m[4]}%)`],
  [/^(\d+) round$/,m=>`${m[1]} rundă`],
+ [/^Saved online for every teacher · updated (.+)$/,m=>`Salvat online pentru toți profesorii · actualizat ${m[1]}`],
+ [/^(\d+) sessions? not saved online yet\. They will be sent when the class server can be reached\.$/,m=>`${m[1]} ${m[1]==='1'?'oră nu e salvată':'ore nu sunt salvate'} online încă. Se trimit când serverul clasei e disponibil.`],
  [/^Couldn't reach the class server\. (.+)$/,()=>'Nu ne putem conecta la serverul clasei. Verifică dacă dispozitivul are internet. Dacă alte site-uri merg, rețeaua îl blochează: roagă IT-ul școlii să permită accesul.'],
  [/^(A2|B1|B2|B2\+|C1) · Unit (\d+)$/,m=>`${m[1]} · Unitatea ${m[2]}`],[/^Unit (\d+)$/,m=>`Unitatea ${m[1]}`],
  [/^(.+?) · (.+)$/,m=>{const parts=m[0].split(' · ');let hit=false;const out=parts.map(x=>{const r=tr(x);if(r!=null&&r!==x){hit=true;return r}return x});return hit?out.join(' · '):null}]];

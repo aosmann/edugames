@@ -455,6 +455,9 @@ p{margin:0}
 .bars .tr i.mid{background:#e9a23b}.bars .tr i.low{background:var(--bad)}
 .bars small{grid-column:1/-1;font-size:13px;color:var(--ink2)}
 .inote{font-size:13px;color:var(--ink2)}
+.syncnote{font-size:14px;font-weight:700;padding:10px 14px;border-radius:var(--r-m);background:var(--card);box-shadow:0 1px 0 var(--line)}
+.syncnote:empty{display:none}
+.rpin{display:flex;gap:8px;flex-wrap:wrap}.rpin[hidden]{display:none}.rpin input{border:1.5px solid var(--line);border-radius:var(--r-m);padding:12px 14px;font-size:16px;font-weight:700;width:170px;background:var(--card)}.rpin .cta{width:auto;padding:12px 18px;font-size:16px}.syncnote.ok{color:var(--good)}.syncnote.ok::before{content:'☁ ';}.syncnote.warn{color:#9a6700;background:#fff6dc}
 .exp{display:flex;gap:10px;flex-wrap:wrap}
 .exp .cta,.exp .ghost{width:auto;flex:0 1 auto;padding:12px 18px;font-size:16px}
 @media(max-width:480px){.exp .cta,.exp .ghost{flex:1 1 0}}
@@ -654,7 +657,7 @@ p{margin:0}
       <button type="button" data-mode="class" aria-pressed="false">Class</button>
       <button type="button" data-mode="reports" aria-pressed="true">Reports</button>
     </nav>
-    <section class="intro" style="padding-bottom:6px"><h1>Reports</h1><p>Results stay on this device. Filter by game, day, session or student, then export.</p></section>
+    <section class="intro" style="padding-bottom:6px"><h1>Reports</h1><p>Results are saved on this device and online for every teacher. Filter by game, day, session or student, then export.</p></section>
     <div class="panel filters">
       <label>Game<select id="fGame"></select></label>
       <label>Class<select id="fClass"></select></label>
@@ -664,6 +667,8 @@ p{margin:0}
       <label>Student<input type="search" id="fStudent" placeholder="Any name"></label>
       <label class="check"><input type="checkbox" id="fSolo"> Include my own games</label>
     </div>
+    <p class="syncnote" id="syncNote"></p>
+    <form class="rpin" id="rPin" hidden><input id="rPinIn" type="password" inputmode="numeric" autocomplete="off" placeholder="Teacher PIN" aria-label="Teacher PIN"><button class="cta class" type="submit">Show the school's reports</button></form>
     <div class="sum" id="sum"></div>
     <div class="ins" id="ins" hidden></div>
     <div class="exp">
@@ -994,9 +999,37 @@ const randomAvatar=()=>AVATARS[Math.floor(Math.random()*AVATARS.length)].id;
 let session=null; // live class (teacher)
 const conns=new Map(); // name -> {conn, status, score, right, asked, streak, hue}
 let peer=null,round=null,clockT=null;
-const sessions=()=>store.get('edu-portal-sessions',[]);
+/* sessions: this device's own, plus the school's saved online (class server, teacher PIN) */
+const localSessions=()=>store.get('edu-portal-sessions',[]);
+let remoteSessions=[],lastPull=0,pulling=false,syncState='';
+const sessions=()=>{const m=new Map(localSessions().map(s=>[s.id,s]));remoteSessions.forEach(r=>{const l=m.get(r.id);if(!l||(+r.updatedAt||0)>(+l.updatedAt||0))m.set(r.id,r)});
+  return [...m.values()].sort((a,b)=>String(a.startedAt).localeCompare(String(b.startedAt)))};
+const REPORTS_HTTP=()=>httpOf(RELAYS[0]);
+const pendingSync=()=>store.get('edu-sync-pending',[]);
+let syncT=null;const syncSoon=(ms=8000)=>{clearTimeout(syncT);syncT=setTimeout(syncNow,ms)};
+async function syncNow(){const pin=store.get('edu-teacher-pin','');let pend=pendingSync();if(!pin||!pend.length){paintSync();return}
+  const loc=new Map(localSessions().map(s=>[s.id,s]));
+  for(const id of pend.slice()){const s=loc.get(id);if(!s){pend=pend.filter(x=>x!==id);continue}
+    try{const r=await T_(15000,fetch(`${REPORTS_HTTP()}/reports?pin=${encodeURIComponent(pin)}`,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({session:s})}));
+      if(r.ok){pend=pend.filter(x=>x!==id);syncState='ok'}else if(r.status===403){syncState='badpin';break}else{syncState='offline';break}}
+    catch(e){syncState='offline';break}}
+  store.set('edu-sync-pending',pend);paintSync();if(pend.length)syncSoon(60000)}
+async function pullReports(force){const pin=store.get('edu-teacher-pin','');if(!pin||pulling||(!force&&Date.now()-lastPull<60000))return;pulling=true;
+  try{const r=await T_(15000,fetch(`${REPORTS_HTTP()}/reports?pin=${encodeURIComponent(pin)}`,{cache:'no-store'}));
+    if(r.ok){const l=await r.json();remoteSessions=Array.isArray(l)?l:[];lastPull=Date.now();if(syncState!=='offline')syncState='ok'}else if(r.status===403)syncState='badpin';else syncState='offline'}
+  catch(e){syncState='offline'}
+  pulling=false;if(!$('reports').hidden)renderReports(true)}
+function paintSync(){const e=$('syncNote');if(!e)return;const pin=store.get('edu-teacher-pin',''),pend=pendingSync().length;e.className='syncnote';$('rPin').hidden=!!pin&&syncState!=='badpin';
+  if(!pin){e.textContent='Results are only on this device. Enter the teacher PIN to see the school\'s reports and save yours online.';e.classList.add('warn');return}
+  if(syncState==='badpin'){e.textContent='The teacher PIN changed. Enter it again in the class room to keep saving results online.';e.classList.add('warn');return}
+  if(syncState==='offline'||pend){e.textContent=pend?`${pend} session${pend===1?'':'s'} not saved online yet. They will be sent when the class server can be reached.`:'Couldn\'t reach the class server. Showing what is saved on this device.';e.classList.add('warn');return}
+  e.textContent=lastPull?`Saved online for every teacher · updated ${fmtDate(lastPull)}`:'Saved online for every teacher';e.classList.add('ok')}
+window.addEventListener('online',()=>syncSoon(1000));
+$('rPin').onsubmit=async e=>{e.preventDefault();const v=$('rPinIn').value.trim();if(!v)return;$('rPinIn').value='';store.set('edu-teacher-pin',v);syncState='';
+  await pullReports(true);if(syncState==='badpin'){store.set('edu-teacher-pin','');toast(T('Wrong PIN'));paintSync();return}syncNow();loadClasses&&session&&loadClasses()};
 let saveT=null;const saveSoon=()=>{if(!saveT)saveT=setTimeout(()=>{saveT=null;saveSession()},2500)};
-function saveSession(){if(!session||!session.rounds.length)return;const all=sessions().filter(s=>s.id!==session.id);all.push(session);store.set('edu-portal-sessions',all.slice(-300))}
+function saveSession(){if(!session||!session.rounds.length)return;session.updatedAt=Date.now();const all=localSessions().filter(s=>s.id!==session.id);all.push(session);store.set('edu-portal-sessions',all.slice(-300));
+  const p=pendingSync();if(!p.includes(session.id)){p.push(session.id);store.set('edu-sync-pending',p.slice(-300))}syncSoon()}
 const newCode=()=>Array.from({length:5},()=>CODE_ABC[Math.floor(Math.random()*CODE_ABC.length)]).join('');
 const online=c=>!!(c&&c.conn&&c.conn.open);
 const hueOf=n=>{let h=0;for(const ch of n)h=(h*31+ch.charCodeAt(0))%360;return h};
@@ -1205,7 +1238,7 @@ $('againRound').onclick=()=>{if(session&&session.last)startRound(session.last)};
 $('nextRound').onclick=()=>{$('podium').hidden=true;stopRace();$('raceBox').hidden=true;$('specFrame').src='about:blank';show('lobby');paintLobby()};
 $('finishSession').onclick=()=>{$('podium').hidden=true;closeClass(true)};
 $('closeClass').onclick=()=>{if([...conns.values()].some(online)&&!confirm(T('End the class? Every student will be disconnected.')))return;closeClass(!!(session&&session.rounds.length))};
-function closeClass(toReport){if(!session)return setMode('play');
+function closeClass(toReport){if(!session)return setMode('play');setTimeout(syncNow,400);
   if(round&&!round.closed){round.closed=true;round.endedAt=new Date().toISOString()}
   session.endedAt=new Date().toISOString();saveSession();clearInterval(clockT);
   conns.forEach(c=>{try{c.conn.send({t:'bye'})}catch(e){}});const sid=session.id;
@@ -1295,7 +1328,7 @@ function row(x,ctx){const g=GAMES.find(g=>g.id===x.game);return{at:x.at||x.recei
   seconds:x.timeUsed??x.duration??'',missed:x.missed||[],log:ctx.round&&ctx.round.log?ctx.round.log.filter(e=>e.p===ctx.player):null}}
 function filtered(){const g=$('fGame').value,s=$('fSession').value,c=$('fClass').value,f=$('fFrom').value,t=$('fTo').value,n=$('fStudent').value.trim().toLowerCase();
   return allRows().filter(r=>(!g||r.game===g)&&(!s||r.sessionId===s)&&(!c||r.cls===c)&&(!f||dayKey(r.at)>=f)&&(!t||dayKey(r.at)<=t)&&(!n||r.student.toLowerCase().includes(n)))}
-function renderReports(){
+function renderReports(fromPull){if(!fromPull)pullReports();paintSync();
   const gs=$('fGame'),gv=gs.value;gs.innerHTML='';gs.append(new Option('All games',''));
   const ids=new Set([...GAMES.map(g=>g.id),...sessions().flatMap(s=>(s.rounds||[]).map(r=>r.game))]);
   ids.forEach(id=>{const g=GAMES.find(x=>x.id===id);gs.append(new Option(g?g.name:id,id))});gs.value=gv;
@@ -1380,7 +1413,7 @@ $('expXlsx').onclick=async()=>{$('expXlsx').disabled=true;$('expXlsx').textConte
 renderHeroCats();
 const hj=location.hash.match(/join=([A-Z0-9]{5})/i);{const hb=location.hash.match(/[&#]b=(\d)/);joinRelay=hb&&RELAYS[+hb[1]]?+hb[1]:0}
 if(hj){openJoin(hj[1]);history.replaceState(null,'',location.pathname+location.search)}else setMode('play');
-discover();
+discover();setTimeout(syncNow,3000);
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>

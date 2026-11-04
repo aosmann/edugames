@@ -11,7 +11,7 @@ import CLASSES from './classes.json';
      GET  /peerjs?id=&token= -> WebSocket upgrade, handled by the Hub Durable Object
      GET  /                  -> "ok" (health check) */
 
-const CORS = {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS', 'Access-Control-Allow-Headers': '*'};
+const CORS = {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': '*'};
 const ID_OK = /^[A-Za-z0-9_-][A-Za-z0-9_ -]{0,62}[A-Za-z0-9_-]?$/;
 
 export default {
@@ -37,6 +37,13 @@ export default {
       if (!env.TEACHER_PIN) return new Response('No TEACHER_PIN set on the server', {status: 503, headers: CORS});
       if (pin !== env.TEACHER_PIN) return new Response('Wrong PIN', {status: 403, headers: CORS});
       return new Response(JSON.stringify(CLASSES), {headers: {...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store'}});
+    }
+    if (p === '/reports') {
+      /* class reports, saved by the teachers' portals and shared by everyone with the teacher PIN */
+      const pin = url.searchParams.get('pin') || req.headers.get('X-Teacher-Pin') || '';
+      if (!env.TEACHER_PIN) return new Response('No TEACHER_PIN set on the server', {status: 503, headers: CORS});
+      if (pin !== env.TEACHER_PIN) return new Response('Wrong PIN', {status: 403, headers: CORS});
+      return env.STORE.get(env.STORE.idFromName('reports')).fetch(req);
     }
     if (p === '' || p === '/health') return new Response('EduGames class server: ok', {headers: {...CORS, 'Content-Type': 'text/plain'}});
     return new Response('Not found', {status: 404, headers: CORS});
@@ -152,5 +159,32 @@ export class Room {
     try { ws.close(); } catch (e) {}
     if (a.role === 'guest') { if (this.guests(a.cid).some(g => g !== ws)) return; const h = this.host(); if (h) this.send(h, {ev: 'leave', f: a.cid}); }
     if (a.role === 'host' && !this.state.getWebSockets('host').some(h => h !== ws)) this.guests().forEach(g => this.send(g, {ev: 'hostleft'}));
+  }
+}
+
+/* Saved class sessions (rounds, results, answers), one record per session.
+   POST /reports  {session}         -> saved (kept if the stored copy is newer)
+   GET  /reports?after=<ms>         -> sessions changed after that time, newest first (up to 300) */
+export class Store {
+  constructor(state) { this.state = state; }
+  async fetch(req) {
+    const url = new URL(req.url), J = {...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store'};
+    if (req.method === 'POST') {
+      const body = await req.text();
+      if (body.length > 1900000) return new Response('Too big', {status: 413, headers: CORS});
+      let s; try { s = JSON.parse(body).session; } catch (e) { return new Response('Bad JSON', {status: 400, headers: CORS}); }
+      if (!s || typeof s.id !== 'string' || !/^s[a-z0-9]{4,20}$/.test(s.id)) return new Response('Bad session', {status: 400, headers: CORS});
+      const at = +s.updatedAt || Date.now(), old = await this.state.storage.get('m:' + s.id);
+      if (old && old.at > at) return new Response(JSON.stringify({ok: true, kept: 'newer'}), {headers: J});
+      await this.state.storage.put({['s:' + s.id]: JSON.stringify(s), ['m:' + s.id]: {at}});
+      return new Response(JSON.stringify({ok: true, at}), {headers: J});
+    }
+    const after = +url.searchParams.get('after') || 0;
+    const meta = await this.state.storage.list({prefix: 'm:'});
+    const ids = [...meta].filter(([, m]) => m.at > after).sort((a, b) => b[1].at - a[1].at).slice(0, 300).map(([k]) => k.slice(2));
+    const vals = new Map();
+    for (let i = 0; i < ids.length; i += 100) (await this.state.storage.get(ids.slice(i, i + 100).map(id => 's:' + id))).forEach((v, k) => vals.set(k, v));
+    const out = ids.map(id => { try { return JSON.parse(vals.get('s:' + id)); } catch (e) { return null; } }).filter(Boolean);
+    return new Response(JSON.stringify(out), {headers: J});
   }
 }
