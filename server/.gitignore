@@ -2,3 +2,4 @@ node_modules/
 .wrangler/
 src/classes.json
 .dev.vars
+classes-for-render.txt
