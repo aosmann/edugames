@@ -955,7 +955,7 @@ function roundFromSel(){const g=sel.game,s=curSub(),t=curTop();
     regionsLabel:t.regions&&sel.bank.regionLabel?sel.bank.regionLabel(sel.values.regions?sel.values.regions.split(','):null):'',
     race:mode==='class'&&g.multiplayer&&g.multiplayer.race?{seed:1}:null,lang:I18N.lang,
     values:Object.assign({},sel.values),label:`${g.name} · ${t.name} · ${LEVELS[sel.values.level]||''}${sel.values.time?' · '+(sel.values.time>=120?sel.values.time/60+' min':sel.values.time+' sec'):''}`}}
-function gameURL(r,lock){const u=new URL(r.base);u.searchParams.set('topic',r.topic);if((r.lang||I18N.lang)==='ro')u.searchParams.set('lang','ro');Object.entries(r.values).forEach(([k,v])=>u.searchParams.set(k,v));if(lock)u.searchParams.set('lock','1');
+function gameURL(r,lock){const u=new URL(r.base);u.searchParams.set('topic',r.topic);u.searchParams.set('lang',r.lang||I18N.lang);Object.entries(r.values).forEach(([k,v])=>u.searchParams.set(k,v));if(lock)u.searchParams.set('lock','1');
   if(lock&&r.race){u.searchParams.set('race','1');u.searchParams.set('seed',r.race.seed)}return u.href}
 /* race games (game.json multiplayer.race): one seed per round, a spectate view for the teacher */
 function specURL(r){const u=new URL(r.base);u.searchParams.set('spectate','1');u.searchParams.set('seed',r.race.seed);['laps','track'].forEach(k=>{if(r.values[k]!=null)u.searchParams.set(k,r.values[k])});return u.href}
