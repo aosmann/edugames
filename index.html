@@ -338,6 +338,18 @@ p{margin:0}
 .lbhead h2{font-size:clamp(26px,3.6vw,44px);font-weight:800;letter-spacing:-.01em;font-variation-settings:'opsz' 96;letter-spacing:-.02em;line-height:1.05}
 .lbhead .meta{color:#c8cff5;font-size:17px}
 .lbhead .sp{flex:1}
+.lbmode{display:flex;gap:4px;padding:4px;border-radius:999px;background:rgba(255,255,255,.12)}
+.lbmode button{border:0;background:none;color:#dfe3ff;font-weight:800;font-size:14px;padding:8px 14px;border-radius:999px;cursor:pointer}
+.lbmode button[aria-pressed=true]{background:#fff;color:var(--board)}
+.classview{display:grid;gap:18px;justify-items:center;padding:28px 18px;border-radius:26px;background:rgba(255,255,255,.08)}
+.classview[hidden]{display:none}
+.cvbig{display:grid;justify-items:center}.cvbig b{font-size:clamp(64px,10vw,120px);font-weight:800;line-height:1;color:var(--marker);font-variant-numeric:tabular-nums}
+.cvbig span{font-size:20px;font-weight:700;color:#dfe3ff}
+.cvbar{width:min(100%,720px);height:22px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden}
+.cvbar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--marker),#7fe0a4);transition:width .6s}
+.cvstats{display:flex;gap:28px;flex-wrap:wrap;justify-content:center;color:#dfe3ff;font-weight:700;font-size:18px}.cvstats b{color:#fff;font-size:26px}
+.lbmore{text-align:center;color:#c8cff5;font-weight:700}
+
 .clock{font-weight:800;font-size:clamp(30px,4vw,48px);font-variant-numeric:tabular-nums;color:var(--marker);font-variation-settings:'opsz' 96,'wdth' 75;min-width:3.4ch;text-align:right}
 .clock.low{color:#ff8a7a}
 .counts{display:flex;gap:18px;color:#dfe3ff;font-weight:700}
@@ -619,6 +631,9 @@ p{margin:0}
     <div class="lbhead">
       <div><h2 id="liveT"></h2><p class="meta" id="liveMeta"></p></div>
       <span class="sp"></span>
+      <div class="lbmode" id="lbMode" role="group" aria-label="What the class sees">
+        <button type="button" data-lb="all">Everyone</button><button type="button" data-lb="top5">Top 5</button><button type="button" data-lb="class">Class only</button>
+      </div>
       <div class="counts" id="liveCounts"></div>
       <div class="clock" id="liveClock" aria-live="off"></div>
       <button class="endbtn" type="button" id="endRound">End round</button>
@@ -632,7 +647,13 @@ p{margin:0}
         <button class="ghost" type="button" id="projRace">Open track on projector</button>
       </div>
     </section>
+    <section class="classview" id="classView" hidden aria-live="polite">
+      <div class="cvbig"><b id="cvRight">0</b><span>right answers, all together</span></div>
+      <div class="cvbar"><i id="cvFill"></i></div>
+      <div class="cvstats"><span><b id="cvPct">0%</b> right</span><span><b id="cvDone">0</b> finished</span><span><b id="cvPlay">0</b> playing</span></div>
+    </section>
     <ol class="lb" id="lb" aria-label="Leaderboard"></ol>
+    <p class="lbmore" id="lbMore" hidden></p>
   </div>
 </main>
 
@@ -1192,13 +1213,20 @@ $('startRace').onclick=()=>{if(!round||!round.race||round.raceStarted)return;rou
   if(peer)peer.broadcast({t:'kgo'});toSpec({type:'edu-go'});$('startRace').hidden=true;$('raceNote').textContent='Race on! Late joiners start from the grid.'};
 $('projRace').onclick=()=>{if(!round||!round.race)return;projWin=window.open(specURL(round),'kartfall-track');
   if(projWin&&round.raceStarted)setTimeout(()=>{try{projWin.postMessage({type:'edu-go'},'*')}catch(e){}},2500)};
+let lbMode=store.get('edu-lb-mode','all');if(!['all','top5','class'].includes(lbMode))lbMode='all';
+document.querySelectorAll('#lbMode button').forEach(b=>b.onclick=()=>{lbMode=b.dataset.lb;store.set('edu-lb-mode',lbMode);paintLive()});
 function paintLive(){if(!round||$('liveScr').hidden)return;
+  document.querySelectorAll('#lbMode button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lb===lbMode));
   $('liveCode').textContent=session.code;$('liveT').textContent=`${round.gameName} · ${round.topicName}`;$('liveMeta').textContent=settingLine(round);
   const list=[...conns.entries()].filter(([n,c])=>online(c)||c.status!=='waiting'||(round.results||[]).some(x=>x.player===n));
   list.sort((a,b)=>(b[1].score||0)-(a[1].score||0)||(b[1].right||0)-(a[1].right||0)||a[0].localeCompare(b[0]));
   const playing=list.filter(([,c])=>c.status==='playing'&&online(c)).length,done=list.filter(([,c])=>c.status==='done').length;
   const cnt=$('liveCounts');cnt.innerHTML='';[[playing,'playing'],[done,'finished']].forEach(([v,l])=>{const d=el('span');d.append(el('b',null,String(v)),document.createTextNode(' '+l));cnt.append(d)});
-  const ol=$('lb');ol.classList.toggle('two',list.length>10);
+  {const cv=$('classView');cv.hidden=lbMode!=='class';$('lb').hidden=lbMode==='class';
+    const R=list.reduce((a,[,c])=>a+(c.right||0),0),A=list.reduce((a,[,c])=>a+(c.asked||0),0);$('cvRight').textContent=R;$('cvPct').textContent=(A?Math.round(R/A*100):0)+'%';
+    $('cvDone').textContent=done;$('cvPlay').textContent=playing;$('cvFill').style.width=(list.length?Math.round(done/list.length*100):0)+'%';
+    const more=$('lbMore');more.hidden=!(lbMode==='top5'&&list.length>5);more.textContent=`+ ${list.length-5} more playing`}
+  const ol=$('lb');ol.classList.toggle('two',list.length>10&&lbMode==='all');
   if(!list.length){ol.innerHTML='';ol.append(el('li','lbempty','Nobody has joined yet. Students who scan the code now get this round.'));return}
   ol.querySelector('.lbempty')?.remove();
   const before=new Map();LB.forEach((r,n)=>{if(r.li.isConnected)before.set(n,r.li.getBoundingClientRect())});
@@ -1211,8 +1239,8 @@ function paintLive(){if(!round||$('liveScr').hidden)return;
     if(c.status==='done')r.sub.append(el('span','tag done','Finished'));else if(!online(c))r.sub.append(el('span','tag gone','Offline'));
     if(c.flash){const f=c.flash;r.li.classList.remove('ok','no');void r.li.offsetWidth;r.li.classList.add(f);
       if(c.delta){const d=el('span','delta '+f,(c.delta>0?'+':'−')+Math.abs(c.delta));r.li.append(d);setTimeout(()=>d.remove(),900)}c.flash=null;c.delta=0}
-    ol.append(r.li)});
-  const keep=new Set(list.map(([n])=>LB.get(n).li));[...ol.children].forEach(li=>{if(!keep.has(li))li.remove()});
+    if(lbMode==='top5'&&i>=5){r.li.remove();return}ol.append(r.li)});
+  const keep=new Set((lbMode==='top5'?list.slice(0,5):list).map(([n])=>LB.get(n).li));[...ol.children].forEach(li=>{if(!keep.has(li))li.remove()});
   if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   LB.forEach((r,n)=>{const a=before.get(n);if(!a||!r.li.isConnected)return;const b=r.li.getBoundingClientRect();const dx=a.left-b.left,dy=a.top-b.top;
     if(!dx&&!dy)return;r.li.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'none'}],{duration:450,easing:'cubic-bezier(.2,.8,.2,1)'})})}
@@ -1226,11 +1254,11 @@ function endRound(){if(!round||round.closed)return;round.closed=true;round.ended
       score:c.score||0,right:c.right||0,asked:c.asked||0,missed:mine,partial:true,player:n,at:round.endedAt,receivedAt:round.endedAt})});
   saveSession();clearInterval(clockT);paintClock();
   const ranked=[...conns.entries()].filter(([n])=>(round.results||[]).some(x=>x.player===n)||conns.get(n).asked>0).sort((a,b)=>(b[1].score||0)-(a[1].score||0)||(b[1].right||0)-(a[1].right||0));
-  conns.forEach((c,n)=>{if(!online(c))return;const i=ranked.findIndex(x=>x[0]===n);c.conn.send({t:'stop',rank:i>=0?i+1:null,of:ranked.length,score:c.score||0})});
+  const anon=lbMode==='class';conns.forEach((c,n)=>{if(!online(c))return;const i=ranked.findIndex(x=>x[0]===n);c.conn.send({t:'stop',rank:!anon&&i>=0?i+1:null,of:ranked.length,score:c.score||0})});
   const steps=$('steps');steps.innerHTML='';const order=[1,0,2];
-  order.forEach(k=>{const e=ranked[k];const st=el('div','step p'+(k+1));if(!e){st.style.visibility='hidden';st.append(el('div','blk'));steps.append(st);return}
+  order.forEach(k=>{const e=anon?null:ranked[k];const st=el('div','step p'+(k+1));if(!e){st.style.visibility='hidden';st.append(el('div','blk'));steps.append(st);return}
     const [n,c]=e;const blk=el('div','blk');blk.append(el('b',null,String(c.score||0)),el('span',null,`${c.right||0}/${c.asked||0} right`));st.append(avatar(n),el('strong',null,n),blk);steps.append(st)});
-  $('podT').textContent=ranked.length?`${ranked[0][0]} wins!`:'Round over';
+  {const R=ranked.reduce((a,[,c])=>a+(c.right||0),0);$('podT').textContent=anon?(ranked.length?`Well done, class! ${R} right answer${R===1?'':'s'}`:'Round over'):ranked.length?`${ranked[0][0]} wins!`:'Round over';$('steps').hidden=anon}
   $('podS').textContent=`${round.gameName} · ${round.topicName} · ${(round.results||[]).length} result${(round.results||[]).length===1?'':'s'} saved`;
   $('podium').hidden=false;paintLive()}
 $('endRound').onclick=endRound;
