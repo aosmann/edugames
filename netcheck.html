@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EduGames network check</title>
+<style>
+:root{--ink:#18203d;--ink2:#58618a;--line:#d8ddec;--good:#1a9c5f;--bad:#d6423a;--wait:#b38a00}
+*{box-sizing:border-box}body{margin:0;font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f2f4fa;color:var(--ink)}
+main{max-width:720px;margin:0 auto;padding:24px 16px 48px}h1{font-size:28px;margin:0 0 6px}p{color:var(--ink2);margin:0 0 16px}
+ol{list-style:none;margin:0 0 18px;padding:0;display:grid;gap:8px}
+li{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;background:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 1px 0 var(--line)}
+li b{display:block}li small{color:var(--ink2)}li .st{font-weight:800}
+.dot{width:22px;height:22px;border-radius:50%;background:var(--line)}
+.ok .dot{background:var(--good)}.no .dot{background:var(--bad)}.ok .st{color:var(--good)}.no .st{color:var(--bad)}.run .st{color:var(--wait)}
+button{border:0;border-radius:14px;padding:14px 18px;font:inherit;font-weight:800;background:#2b3990;color:#fff;cursor:pointer}
+textarea{width:100%;margin-top:12px;border:1.5px solid var(--line);border-radius:12px;padding:10px;font:13px ui-monospace,Menlo,monospace;min-height:120px}
+</style></head><body><main>
+<h1>Network check</h1>
+<p>Open this on the school Wi-Fi. It tests which services the network lets through, so class mode can use one that works. Takes about 15 seconds.</p>
+<ol id="list"></ol>
+<button id="copy" type="button" disabled>Copy results</button>
+<textarea id="out" readonly hidden></textarea>
+</main>
+<script>
+'use strict';
+const T=(ms,p)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),ms))]);
+/* reachable at all: an opaque no-cors request only resolves when the secure connection works */
+const reach=u=>T(8000,fetch(u,{mode:'no-cors',cache:'no-store'})).then(()=>'reachable');
+const json=u=>T(8000,fetch(u,{cache:'no-store'})).then(r=>r.ok?'answers':'HTTP '+r.status);
+/* a WebSocket that opens and gets a first message */
+const ws=(u,expect)=>T(8000,new Promise((res,rej)=>{let w;try{w=new WebSocket(u)}catch(e){return rej(e)}
+  w.onmessage=e=>{const d=String(e.data);try{w.close()}catch(x){}if(!expect||d.includes(expect))res('live connection ok');else res('connected')};
+  w.onerror=()=>rej(new Error('blocked'));w.onclose=e=>rej(new Error('closed '+e.code))}));
+const id='nc'+Math.random().toString(36).slice(2,10);
+const TESTS=[
+ ['Internet','google.com (baseline)',()=>reach('https://www.google.com/favicon.ico')],
+ ['GitHub Pages','this portal',()=>reach(location.origin+'/edugames/games.json')],
+ ['Our class server','edugames-class.edugames.workers.dev',()=>json('https://edugames-class.edugames.workers.dev/')],
+ ['Our class server, live','WebSocket to workers.dev',()=>ws('wss://edugames-class.edugames.workers.dev/room/TEST0?role=guest&cid='+id,'nohost')],
+ ['Old class service','0.peerjs.com',()=>json('https://0.peerjs.com/peerjs/id')],
+ ['Old class service, live','WebSocket to peerjs',()=>ws('wss://0.peerjs.com/peerjs?key=peerjs&id='+id+'&token=t1','OPEN')],
+ ['Google Firebase','firebaseio.com',()=>reach('https://edugames-check-default-rtdb.firebaseio.com/.json')],
+ ['Google Firebase, live','WebSocket to firebaseio.com',()=>ws('wss://edugames-check-default-rtdb.firebaseio.com/.ws?v=5&ns=edugames-check-default-rtdb')],
+ ['Google Firestore','firestore.googleapis.com',()=>reach('https://firestore.googleapis.com/')],
+ ['Generic WebSocket','echo.websocket.org',()=>ws('wss://echo.websocket.org/')],
+ ['Cloudflare Pages','pages.dev',()=>reach('https://edugames.pages.dev/')],
+ ['Vercel','vercel.app',()=>reach('https://vercel-check.vercel.app/')],
+ ['Netlify','netlify.app',()=>reach('https://netlify-check.netlify.app/')],
+ ['Render','onrender.com',()=>reach('https://render-check.onrender.com/')],
+ ['Deno Deploy','deno.dev',()=>reach('https://deno-check.deno.dev/')],
+ ['Supabase','supabase.co',()=>reach('https://supabase-check.supabase.co/')],
+ ['Ably','realtime.ably.io',()=>json('https://rest.ably.io/time')]];
+const list=document.getElementById('list'),res=[];
+TESTS.forEach(([n,d])=>{const li=document.createElement('li');li.className='run';li.innerHTML='<span class="dot"></span><span><b></b><small></small></span><span class="st">testing…</span>';
+  li.querySelector('b').textContent=n;li.querySelector('small').textContent=d;list.append(li)});
+Promise.all(TESTS.map(([n,d,f],i)=>f().then(v=>[true,v],e=>[false,e&&e.message||'blocked']).then(([ok,v])=>{const li=list.children[i];
+  li.className=ok?'ok':'no';li.querySelector('.st').textContent=ok?'OK':'Blocked';li.querySelector('small').textContent=d+' · '+v;res[i]=`${ok?'OK     ':'BLOCKED'} ${n} (${d}): ${v}`}))).then(()=>{
+  const out=document.getElementById('out');out.value='EduGames network check '+new Date().toISOString()+'\n'+navigator.userAgent+'\n'+res.join('\n');out.hidden=false;
+  const b=document.getElementById('copy');b.disabled=false;b.onclick=async()=>{try{await navigator.clipboard.writeText(out.value);b.textContent='Copied'}catch(e){out.select()}}});
+</script></body></html>
