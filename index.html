@@ -248,7 +248,8 @@ p{margin:0}
 .roomcls .tog input{width:22px;height:22px;accent-color:var(--marker)}
 .roomcls .tog[hidden],.roomcls [hidden]{display:none}
 .pinrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.pinrow input{border:0;border-radius:var(--r-m);padding:12px 14px;font-size:16px;font-weight:700;width:150px}
+.pinrow input{border:0;border-radius:var(--r-m);padding:12px 14px;font-size:16px;font-weight:700;width:150px;color:var(--ink)}
+.pinrow input::placeholder{color:#8a93b8;font-weight:600}
 .pinrow .err{color:#ffb4ae}
 .clsnote{color:#c8cff5;font-weight:600}.clsnote:empty{display:none}
 .link.light{color:#dfe4ff}.link.light:hover{color:#fff}
@@ -564,6 +565,7 @@ p{margin:0}
       <select id="clsPick"></select>
       <label class="tog" id="guestTog" hidden><input type="checkbox" id="allowGuests"> Allow guests</label>
       <button class="link light" type="button" id="clsReload" hidden>Reload class lists</button>
+      <button class="link light" type="button" id="pinShow" hidden>Use a class list</button>
       <form class="pinrow" id="pinRow" hidden><input id="pinIn" type="password" inputmode="numeric" autocomplete="off" placeholder="Teacher PIN" aria-label="Teacher PIN"><button class="ghost" type="submit">Load classes</button><span class="err" id="pinErr" hidden>Wrong PIN</span></form>
       <span class="clsnote" id="clsNote"></span>
     </div>
@@ -1023,7 +1025,7 @@ async function loadClasses(pin){pin=pin||store.get('edu-teacher-pin','');if(!pin
 function paintClsPick(){const sp=$('clsPick'),l=classes();sp.innerHTML='';sp.append(new Option('Anyone · students type their name',''));
   l.forEach(c=>sp.append(new Option(`${c.name} · ${c.students.length} students`,c.id)));sp.value=session&&session.classId&&l.some(c=>c.id===session.classId)?session.classId:'';
   $('guestTog').hidden=!sp.value;$('allowGuests').checked=!!(session&&session.allowGuests);
-  const pr=$('pinRow');pr.hidden=!(clsState==='pin'||clsState==='badpin');$('pinErr').hidden=clsState!=='badpin';
+  const needPin=clsState==='pin'||clsState==='badpin',pr=$('pinRow');pr.hidden=!(needPin&&(pinOpen||clsState==='badpin'));$('pinShow').hidden=!needPin||!pr.hidden;$('pinErr').hidden=clsState!=='badpin';
   $('clsNote').textContent=clsState==='loading'?'Loading class lists…':clsState==='offline'?'Couldn\'t load the class lists. Check the connection.':'';
   $('clsReload').hidden=!(l.length||clsState==='offline')}
 $('clsPick').onchange=()=>{if(!session)return;const c=classes().find(x=>x.id===$('clsPick').value)||null;session.classId=c?c.id:null;session.className=c?c.name:null;
@@ -1031,6 +1033,7 @@ $('clsPick').onchange=()=>{if(!session)return;const c=classes().find(x=>x.id===$
 $('allowGuests').onchange=()=>{if(!session)return;session.allowGuests=$('allowGuests').checked;store.set('edu-portal-guests',session.allowGuests);saveSession();pushMode()};
 $('pinRow').onsubmit=e=>{e.preventDefault();const v=$('pinIn').value.trim();if(v){$('pinIn').value='';loadClasses(v)}};
 $('clsReload').onclick=()=>loadClasses();
+let pinOpen=false;$('pinShow').onclick=()=>{pinOpen=true;paintClsPick();$('pinIn').focus()};
 /* what a student who hasn't picked a name yet sees; refreshed for everyone still choosing when it changes */
 const pending=new Set();
 function modeMsg(conn,msg){const R=curRoster(),taken=n=>{const c=conns.get(n);return!!(c&&online(c)&&c.conn!==conn)};
