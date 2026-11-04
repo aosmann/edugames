@@ -1130,7 +1130,7 @@ function paintAcct(){const a=auth();document.querySelectorAll('[data-acct]').for
   const h=el('div','mh');h.append(el('b',null,a.name),el('span',null,a.role==='admin'?'Admin · sees every teacher\'s reports':'@'+a.u));m.append(h);
   const item=(t,f,cls)=>{const x=el('button',cls||null,t);x.type='button';x.setAttribute('role','menuitem');x.onclick=()=>{m.hidden=true;f()};m.append(x)};
   if(a.role==='admin')item('Teachers',openTeachers);
-  item('My reports',()=>setMode('reports'));item('Change password',()=>openPassword(false));
+  item('My reports',()=>setMode('reports'));item('Google Sheets',openSheets);item('Change password',()=>openPassword(false));
   item('Sign out',()=>{signedOut();toast(T('Signed out'))});item('Sign out on all devices',signOutAll,'danger');
   b.onclick=e=>{e.stopPropagation();const open=m.hidden;document.querySelectorAll('.acctmenu').forEach(x=>x.hidden=true);m.hidden=!open;b.setAttribute('aria-expanded',String(open))};
   box.append(b,m)})}
@@ -1179,6 +1179,29 @@ function showPassword(title,name,u,pw){modal(box=>{
   const row=el('div','mrow'),ok=el('button','cta','Done');ok.type='button';ok.onclick=closeModal;row.append(ok);
   const p=el('p');p.append(document.createTextNode(T('Give these to')+' '+name+': '),el('b',null,T('username')+' '+u),document.createTextNode('. '+T('They choose their own password when they first sign in. This password is shown only now.')));
   box.append(el('h2',null,title),p,pb,row)})}
+/* ---- Google Sheets: results go by themselves into a sheet in the teacher's own school Google Drive ---- */
+async function openSheets(){modal(box=>box.append(el('h2',null,'Google Sheets'),el('p',null,'Loading…')));
+  let g;try{const {r,d}=await api('/google');if(!r.ok)throw 0;g=d}catch(e){modal(box=>{box.append(el('h2',null,'Google Sheets'),el('p',null,NET_ERR()));okRow(box)});return}
+  modal(box=>{box.append(el('h2',null,'Google Sheets'));
+    if(!g.available){box.append(el('p',null,'Google Sheets is not set up on the class server yet.'));okRow(box);return}
+    if(g.connected){
+      const p=el('p');p.append(document.createTextNode(T('Every class you run is added to your sheet by itself: a tab per class, All results, Mistakes and Guests.')));box.append(p);
+      if(g.all)box.append(el('p',null,'As admin, your sheet gets every teacher\'s results.'));
+      const st=el('p');st.style.fontWeight='700';st.style.color='var(--ink)';st.textContent=(g.email?g.email+' · ':'')+(g.at?T('last sent')+' '+fmtDate(g.at):T('waiting for the first results'));box.append(st);
+      if(g.err==='failed')box.append(el('p','merr',T('Couldn\'t reach Google last time. It tries again by itself in a few minutes.')));
+      const row=el('div','mrow'),dis=el('button','plain','Disconnect'),open=el('a','cta','Open my sheet');dis.type='button';open.href=g.url;open.target='_blank';open.rel='noopener';open.style.textDecoration='none';
+      dis.onclick=()=>confirmBox(T('Disconnect Google Sheets?'),T('New results stop going to the sheet. The sheet and everything in it stays in your Google Drive.'),T('Disconnect'),async()=>{const {r}=await api('/google',{body:{action:'disconnect'}});if(!r.ok)throw 0;closeModal();toast(T('Disconnected'))},true);
+      row.append(dis,open);box.append(row);return}
+    if(g.err==='revoked')box.append(el('p','merr',T('Google access was removed. Connect again to keep your sheet up to date.')));
+    if(g.err==='deleted')box.append(el('p','merr',T('Your sheet was deleted. Connect again and a new one is made.')));
+    box.append(el('p',null,'Connect once with your @spectrum.ro Google account. EduGames makes a sheet in your Google Drive and adds every class to it by itself: a tab per class, All results, Mistakes and Guests. Your past reports are added too.'));
+    if(g.all)box.append(el('p',null,'As admin, your sheet gets every teacher\'s results.'));
+    const err=el('p','merr'),row=el('div','mrow'),c=el('button','plain','Cancel'),go=el('button','cta','Connect Google Sheets');c.type=go.type='button';c.onclick=closeModal;row.append(c,go);box.append(err,row);
+    go.onclick=async()=>{const w=window.open('about:blank','edu-google','width=520,height=680');go.disabled=true;err.textContent='';
+      try{const {r,d}=await api('/google',{body:{action:'start',lang:I18N.lang}});if(!r.ok||!d.url)throw 0;if(w){w.location.href=d.url;const t=setInterval(()=>{if(w.closed){clearInterval(t);if(!$('modal').hidden)openSheets()}},1000)}else location.href=d.url}
+      catch(x){if(w)w.close();err.textContent=x&&x.message?x.message:NET_ERR()}go.disabled=false}})}
+const okRow=box=>{const row=el('div','mrow'),ok=el('button','cta','OK');ok.type='button';ok.onclick=closeModal;row.append(ok);box.append(row)};
+window.addEventListener('message',e=>{if(e.data&&e.data.type==='edu-google'){if(e.data.ok)toast(T('Google Sheets connected'));if(!$('modal').hidden)openSheets()}});
 /* ---- Teachers page (admin) ---- */
 function openTeachers(){if(!auth()||auth().role!=='admin')return;document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed','false'));show('teachers');renderTeachers()}
 const agoTxt=t=>{if(!t)return T('never signed in');const m=Math.round((Date.now()-t)/60000);if(m<2)return T('active now');if(m<60)return T('{n} min ago').replace('{n}',m);const h=Math.round(m/60);if(h<24)return T('{n} h ago').replace('{n}',h);return fmtDate(t)};

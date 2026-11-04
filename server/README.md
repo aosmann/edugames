@@ -71,6 +71,21 @@ A teacher sees only their own reports; the admin sees all of them, including the
 
 After changing `classes.json`, run `npx wrangler deploy` again.
 
+## Google Sheets (school accounts)
+
+Teachers connect their own sheet from the portal: their name (top right) → Google Sheets → Connect.
+Results then go into a sheet in their own Google Drive by themselves (a tab per class, All results,
+Mistakes, Guests). The admin's sheet gets every teacher's results. Only @spectrum.ro accounts can connect.
+
+Setup once (Google Cloud Console, signed in with a @spectrum.ro account):
+the app is "Internal", the OAuth client is a "Web application" with the redirect URI
+`https://edugames-class.edugames.workers.dev/google/callback`, and the Google Sheets API is enabled.
+Then put the client ID in `wrangler.toml` (`GOOGLE_CLIENT_ID`) and the secret on the server:
+```
+npx wrangler secret put GOOGLE_CLIENT_SECRET
+npx wrangler deploy
+```
+
 ## Later
 
 - Update after a code change: `npx wrangler deploy` again in this folder.
