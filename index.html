@@ -40,6 +40,9 @@ p{margin:0}
 .link:hover{color:var(--ink)}
 .joinpill{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:10px 16px 10px 12px;font-weight:800;background:var(--card);color:var(--ink);box-shadow:0 1px 0 var(--line),0 4px 14px -6px rgba(24,32,61,.25)}
 .joinpill svg{width:20px;height:20px;color:var(--board)}
+.langbtn{border:0;border-radius:999px;padding:9px 14px;font-weight:800;font-size:14px;background:var(--card);color:var(--ink);box-shadow:0 1px 0 var(--line);display:inline-flex;gap:6px;align-items:center}
+.langbtn b{font-weight:800;color:var(--ink2)}.langbtn b.on{color:var(--board)}
+.jhead{display:flex;align-items:center;justify-content:space-between;gap:12px}.jhead .langbtn{background:var(--paper);flex:none}
 .joinpill:hover{box-shadow:0 1px 0 var(--line),0 6px 18px -6px rgba(24,32,61,.35)}
 .back{display:inline-flex;align-items:center;gap:6px;border:0;background:var(--card);border-radius:999px;padding:9px 16px 9px 12px;font-weight:700;box-shadow:0 1px 0 var(--line)}
 .back svg{width:16px;height:16px}
@@ -517,6 +520,7 @@ p{margin:0}
         <button type="button" data-mode="reports" aria-pressed="false">Reports</button>
       </nav>
       <span class="sp"></span>
+      <button class="langbtn" type="button" data-lang data-noi18n aria-label="Language / Limba"></button>
       <button class="joinpill" type="button" data-nav="join"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="6" height="6" rx="1.2"/><rect x="14.5" y="3.5" width="6" height="6" rx="1.2"/><rect x="3.5" y="14.5" width="6" height="6" rx="1.2"/><path d="M14.5 14.5h2.5v2.5M20.5 14.5v.01M14.5 20.5h6v-3"/></svg>Join a class</button>
     </header>
     <section class="hero">
@@ -673,7 +677,7 @@ p{margin:0}
 <!-- ============ STUDENT: join ============ -->
 <main id="join" class="solo" hidden>
   <form class="panel" id="joinForm" autocomplete="off">
-    <h1>Join a class</h1>
+    <div class="jhead"><h1>Join a class</h1><button class="langbtn" type="button" data-lang data-noi18n aria-label="Language / Limba"></button></div>
     <p>Your teacher shows the code on the board.</p>
     <div class="me">
       <button type="button" class="mepic" id="jPic" aria-label="Change your avatar"><span id="jPicImg"></span>
@@ -712,6 +716,7 @@ p{margin:0}
 
 <div class="toast" id="toast" hidden role="status"></div>
 
+<script src="i18n.js"></script>
 <script src="lib/qrcode.js"></script>
 <script>
 'use strict';
@@ -779,10 +784,15 @@ function guestRoom(code,h,base){const cid=myCid();let ws=null,alive=true,opened=
 const ROOM_PREFIX='edugames-v1-';
 const CODE_ABC='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const LEVELS={1:'Easy',2:'Medium',3:'Hard'};
-const fmtDate=d=>new Date(d).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+const fmtDate=d=>new Date(d).toLocaleString(window.EDU_I18N&&EDU_I18N.lang==='ro'?'ro-RO':undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
 const dayKey=d=>{const x=new Date(d);return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`};
 function toast(t,ms=2600){const e=$('toast');e.textContent=t;e.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>e.hidden=true,ms)}
 
+/* ---------------- language ---------------- */
+const I18N=window.EDU_I18N||{lang:'en',set(){},onChange(){},T:t=>t};
+function paintLang(){document.querySelectorAll('[data-lang]').forEach(b=>{b.innerHTML=`<b class="${I18N.lang==='ro'?'on':''}">RO</b><span aria-hidden="true">·</span><b class="${I18N.lang==='en'?'on':''}">EN</b>`;b.title=I18N.lang==='ro'?'Switch to English':'Treci la română'})}
+document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{I18N.set(I18N.lang==='ro'?'en':'ro');paintLang()});
+I18N.onChange(()=>{paintLang();if(!$('reports').hidden)renderReports()});paintLang();
 /* ---------------- screens ---------------- */
 const SCREENS=['home','setup','lobby','liveScr','reports','join','waitScr'];
 function show(id){SCREENS.forEach(s=>$(s).hidden=s!==id);window.scrollTo(0,0)}
@@ -943,9 +953,9 @@ $('sGo').onclick=()=>{if(!curTop())return;if(mode==='class'&&session)startRound(
 function roundFromSel(){const g=sel.game,s=curSub(),t=curTop();
   return{id:'r'+Date.now().toString(36),game:g.id,gameName:g.name,base:g.base,subject:s.id,subjectName:s.name,topic:t.id,topicName:t.name,
     regionsLabel:t.regions&&sel.bank.regionLabel?sel.bank.regionLabel(sel.values.regions?sel.values.regions.split(','):null):'',
-    race:mode==='class'&&g.multiplayer&&g.multiplayer.race?{seed:1}:null,
+    race:mode==='class'&&g.multiplayer&&g.multiplayer.race?{seed:1}:null,lang:I18N.lang,
     values:Object.assign({},sel.values),label:`${g.name} · ${t.name} · ${LEVELS[sel.values.level]||''}${sel.values.time?' · '+(sel.values.time>=120?sel.values.time/60+' min':sel.values.time+' sec'):''}`}}
-function gameURL(r,lock){const u=new URL(r.base);u.searchParams.set('topic',r.topic);Object.entries(r.values).forEach(([k,v])=>u.searchParams.set(k,v));if(lock)u.searchParams.set('lock','1');
+function gameURL(r,lock){const u=new URL(r.base);u.searchParams.set('topic',r.topic);if((r.lang||I18N.lang)==='ro')u.searchParams.set('lang','ro');Object.entries(r.values).forEach(([k,v])=>u.searchParams.set(k,v));if(lock)u.searchParams.set('lock','1');
   if(lock&&r.race){u.searchParams.set('race','1');u.searchParams.set('seed',r.race.seed)}return u.href}
 /* race games (game.json multiplayer.race): one seed per round, a spectate view for the teacher */
 function specURL(r){const u=new URL(r.base);u.searchParams.set('spectate','1');u.searchParams.set('seed',r.race.seed);['laps','track'].forEach(k=>{if(r.values[k]!=null)u.searchParams.set(k,r.values[k])});return u.href}
@@ -1056,10 +1066,10 @@ $('clsReload').onclick=()=>loadClasses();
 let pinOpen=false;$('pinShow').onclick=()=>{pinOpen=true;paintClsPick();$('pinIn').focus()};
 /* what a student who hasn't picked a name yet sees; refreshed for everyone still choosing when it changes */
 const pending=new Set();
-function modeMsg(conn,msg){const R=curRoster(),taken=n=>{const c=conns.get(n);return!!(c&&online(c)&&c.conn!==conn)};
-  return{t:'mode',cls:R?R.name:null,names:R?R.students.map(n=>({n,taken:taken(n)})):null,guests:!R||!!session.allowGuests,msg:msg||''}}
+function modeMsg(conn,msg){const lang=I18N.lang,R=curRoster(),taken=n=>{const c=conns.get(n);return!!(c&&online(c)&&c.conn!==conn)};
+  return{t:'mode',lang,cls:R?R.name:null,names:R?R.students.map(n=>({n,taken:taken(n)})):null,guests:!R||!!session.allowGuests,msg:msg||''}}
 function pushMode(){pending.forEach(c=>{if(c.open)c.send(modeMsg(c))})}
-function kickStudent(n){const c=conns.get(n);if(!c||!confirm(`Remove ${n} from the class?`))return;
+function kickStudent(n){const c=conns.get(n);if(!c||!confirm(T(`Remove ${n} from the class?`)))return;
   try{c.conn.send({t:'kicked'})}catch(e){}const cc=c.conn;setTimeout(()=>{try{cc.close()}catch(e){}},300);
   conns.delete(n);if(session&&!(session.rounds||[]).some(r=>(r.results||[]).some(x=>x.player===n)))session.players=session.players.filter(x=>x!==n);
   LB.delete&&LB.delete(n);saveSession();paintLobby();paintLive()}
@@ -1094,7 +1104,7 @@ function onStudent(conn){let name=null;
       pending.delete(conn);if(guest&&!(session.guests||(session.guests=[])).includes(name))session.guests.push(name);
       const prev=conns.get(name)||{status:'waiting',score:0,right:0,asked:0,streak:0};prev.conn=conn;prev.avatar=AVMAP[m.avatar]?m.avatar:(prev.avatar||randomAvatar());conns.set(name,prev);
       if(!session.players.includes(name))session.players.push(name);
-      conn.send({t:'welcome',name,code:session.code});
+      conn.send({t:'welcome',name,code:session.code,lang:I18N.lang});
       if(round&&!round.closed&&!(round.results||[]).some(x=>x.player===name)){Object.assign(prev,{status:'playing',score:0,right:0,asked:0,streak:0});conn.send({t:'start',round:pub(round)})}
       paintLobby();paintLive();pushMode();return}
     if(!name)return;const s=conns.get(name);if(!s)return;
@@ -1194,7 +1204,7 @@ $('endRound').onclick=endRound;
 $('againRound').onclick=()=>{if(session&&session.last)startRound(session.last)};
 $('nextRound').onclick=()=>{$('podium').hidden=true;stopRace();$('raceBox').hidden=true;$('specFrame').src='about:blank';show('lobby');paintLobby()};
 $('finishSession').onclick=()=>{$('podium').hidden=true;closeClass(true)};
-$('closeClass').onclick=()=>{if([...conns.values()].some(online)&&!confirm('End the class? Every student will be disconnected.'))return;closeClass(!!(session&&session.rounds.length))};
+$('closeClass').onclick=()=>{if([...conns.values()].some(online)&&!confirm(T('End the class? Every student will be disconnected.')))return;closeClass(!!(session&&session.rounds.length))};
 function closeClass(toReport){if(!session)return setMode('play');
   if(round&&!round.closed){round.closed=true;round.endedAt=new Date().toISOString()}
   session.endedAt=new Date().toISOString();saveSession();clearInterval(clockT);
@@ -1260,6 +1270,7 @@ function startJoin(code,order){order=order||[joinRelay,...RELAYS.map((x,j)=>j).f
     removed(){},
     status(x){const e=$('wErr');if(x==='ok'){e.hidden=true;return}e.textContent=x==='hostleft'?'Your teacher\'s screen lost its connection. Waiting for it to come back…':'Reconnecting…';e.hidden=false},
     data(m){if(!m||student!==st)return;
+      if(m.lang&&m.lang!==I18N.lang){I18N.set(m.lang);paintLang()}
       if(m.t==='mode'){if(st.name&&!m.msg)return;jMode=m;if(!$('join').hidden||m.msg){show('join');paintWho()}return}
       if(m.t==='welcome'){st.name=m.name;store.set('edu-player',st.want&&st.want.guest?m.name:(m.name));$('wHi').textContent=`You're in, ${m.name}`;$('wMsg').textContent='Waiting for your teacher to start the game.';$('wErr').hidden=true;if(!st.cur)show('waitScr');return}
       if(m.t==='start'){st.cur=m.round;let url=m.round.url;
@@ -1345,20 +1356,22 @@ const missedRows=rows=>rows.flatMap(r=>r.missed.map(m=>({Date:new Date(r.at).toL
 function fileName(ext){const s=$('fSession').value,g=$('fGame').value;return `edugames-report${g?'-'+g:''}${s&&s!=='solo'?'-'+(sessions().find(x=>x.id===s)||{}).code:''}-${dayKey(Date.now())}.${ext}`}
 function download(blob,name){const a=el('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
 $('expCsv').onclick=()=>{const data=flat(filtered());const esc=v=>{v=v==null?'':String(v);return /[",\n;]/.test(v)?`"${v.replace(/"/g,'""')}"`:v};
-  const csv=[COLS.map(c=>c[0]).join(','),...data.map(r=>COLS.map(c=>esc(r[c[0]])).join(','))].join('\r\n');
+  const csv=[COLS.map(c=>esc(T(c[0]))).join(','),...data.map(r=>COLS.map(c=>esc(r[c[0]])).join(','))].join('\r\n');
   download(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}),fileName('csv'))};
 let xlsxP=null;
+const TCOL=new Set(['Level','Topic','Skill','Correct','Subject']);
+const sheet=rows=>XLSX.utils.json_to_sheet(rows.map(o=>Object.fromEntries(Object.entries(o).map(([k,v])=>[T(k),TCOL.has(k)&&typeof v==='string'?T(v):v]))));
 $('expXlsx').onclick=async()=>{$('expXlsx').disabled=true;$('expXlsx').textContent='Preparing…';
   try{xlsxP=xlsxP||new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';s.onload=res;s.onerror=rej;document.head.append(s)});await xlsxP;
     const rows=filtered(),wb=XLSX.utils.book_new();
-    const a=XLSX.utils.json_to_sheet(flat(rows));a['!cols']=COLS.map(([h])=>({wch:Math.max(10,h.length+2)}));XLSX.utils.book_append_sheet(wb,a,'Results');
-    const m=missedRows(rows);if(m.length){const b=XLSX.utils.json_to_sheet(m);b['!cols']=[{wch:18},{wch:9},{wch:14},{wch:12},{wch:20},{wch:34},{wch:16},{wch:16}];XLSX.utils.book_append_sheet(wb,b,'Missed questions')}
+    const a=sheet(flat(rows));a['!cols']=COLS.map(([h])=>({wch:Math.max(10,h.length+2)}));XLSX.utils.book_append_sheet(wb,a,T('Results'));
+    const m=missedRows(rows);if(m.length){const b=sheet(m);b['!cols']=[{wch:18},{wch:9},{wch:14},{wch:12},{wch:20},{wch:34},{wch:16},{wch:16}];XLSX.utils.book_append_sheet(wb,b,T('Missed questions'))}
     const A=answersOf(rows),qs=questionStats(A);
-    if(qs.length){const c=XLSX.utils.json_to_sheet(qs.map(o=>({Question:qLabel(o.x),'Right answer':o.x.a,Skill:o.x.tag||o.x.topic,Wrong:o.w,Answered:o.full?o.n:'',
+    if(qs.length){const c=sheet(qs.map(o=>({Question:qLabel(o.x),'Right answer':o.x.a,Skill:o.x.tag||o.x.topic,Wrong:o.w,Answered:o.full?o.n:'',
       '% wrong':o.full?Math.round(o.w/o.n*100):'','Most picked wrong':([...o.picks.entries()].sort((a,b)=>b[1]-a[1])[0]||[''])[0],Students:[...o.who].join(', ')})));
-      c['!cols']=[{wch:36},{wch:16},{wch:22},{wch:7},{wch:9},{wch:8},{wch:18},{wch:40}];XLSX.utils.book_append_sheet(wb,c,'Common mistakes')}
-    const fa=A.filter(x=>x.full);if(fa.length){const d=XLSX.utils.json_to_sheet(fa.map(x=>({Student:x.student,Topic:x.topic,Skill:x.tag||'',Question:qLabel(x),'Right answer':x.a,'They picked':x.pk,Correct:x.ok?'yes':'no'})));
-      d['!cols']=[{wch:14},{wch:20},{wch:22},{wch:36},{wch:16},{wch:16},{wch:8}];XLSX.utils.book_append_sheet(wb,d,'All answers')}
+      c['!cols']=[{wch:36},{wch:16},{wch:22},{wch:7},{wch:9},{wch:8},{wch:18},{wch:40}];XLSX.utils.book_append_sheet(wb,c,T('Common mistakes'))}
+    const fa=A.filter(x=>x.full);if(fa.length){const d=sheet(fa.map(x=>({Student:x.student,Topic:x.topic,Skill:x.tag||'',Question:qLabel(x),'Right answer':x.a,'They picked':x.pk,Correct:x.ok?'yes':'no'})));
+      d['!cols']=[{wch:14},{wch:20},{wch:22},{wch:36},{wch:16},{wch:16},{wch:8}];XLSX.utils.book_append_sheet(wb,d,T('All answers'))}
     XLSX.writeFile(wb,fileName('xlsx'))}
   catch(e){xlsxP=null;toast('Couldn\'t prepare the Excel file. Check the connection, or export CSV instead.')}
   $('expXlsx').disabled=false;$('expXlsx').textContent='Export Excel'};
