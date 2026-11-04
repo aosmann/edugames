@@ -1013,7 +1013,7 @@ const curRoster=()=>session&&session.classId?classes().find(c=>c.id===session.cl
 let clsState='';
 async function loadClasses(pin){pin=pin||store.get('edu-teacher-pin','');if(!pin){clsState='pin';paintClsPick();return}
   clsState='loading';paintClsPick();
-  try{let r=null;for(const i of [relayIdx,...RELAYS.map((x,j)=>j).filter(j=>j!==relayIdx)]){try{r=await T_(i?75000:8000,fetch(`${httpOf(RELAYS[i])}/classes?pin=${encodeURIComponent(pin)}`,{cache:'no-store'}));break}catch(e){r=null}}
+  try{let r=null;for(const i of [relayIdx,...RELAYS.map((x,j)=>j).filter(j=>j!==relayIdx)]){try{r=await T_(i?75000:8000,fetch(`${httpOf(RELAYS[i])}/classes?pin=${encodeURIComponent(pin)}`,{cache:'no-store'}));if(r.ok||r.status===403)break;r=null}catch(e){r=null}}
     if(!r)throw new Error('offline');
     if(r.status===403){clsState='badpin';store.set('edu-teacher-pin','');paintClsPick();return}
     if(!r.ok)throw new Error(r.status);const l=await r.json();
