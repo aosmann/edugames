@@ -38,7 +38,7 @@ const TESTS=[
  ['Old class service','0.peerjs.com',()=>json('https://0.peerjs.com/peerjs/id')],
  ['Old class service, live','WebSocket to peerjs',()=>ws('wss://0.peerjs.com/peerjs?key=peerjs&id='+id+'&token=t1','OPEN')],
  ['Google Firebase','firebaseio.com',()=>reach('https://edugames-check-default-rtdb.firebaseio.com/.json')],
- ['Google Firebase, live','WebSocket to firebaseio.com',()=>ws('wss://s-gke-euw1-nssi1-1.europe-west1.firebasedatabase.app/.ws?v=5&ns=edugames-check')],
+ ['Google Firebase, live','WebSocket to firebaseio.com',()=>ws('wss://edugames-check-default-rtdb.firebaseio.com/.ws?v=5&ns=edugames-check-default-rtdb')],
  ['Google Firestore','firestore.googleapis.com',()=>reach('https://firestore.googleapis.com/')],
  ['Generic WebSocket','echo.websocket.org',()=>ws('wss://echo.websocket.org/')],
  ['Cloudflare Pages','pages.dev',()=>reach('https://edugames.pages.dev/')],
