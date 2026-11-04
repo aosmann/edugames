@@ -86,6 +86,14 @@ Count topics with `subject.topics.filter(t => !t.unit).length`. Unit questions c
 
 The flag images live in `flags/<iso>.webp` next to `questions.js` (195 files, ~550 KB). Copy the folder with the bank and add it to the service worker so flags work offline.
 
+### Language (Romanian / English)
+
+The portal opens every game with `&lang=ro` or `&lang=en`. The shared bank (EduQ v5) does the work: with `lang=ro`, or the choice saved on the site (`localStorage['edu-lang']`), it calls `EduQ.setLang('ro')` before the game's script runs. That switches the questions of every subject except English to Romanian, and the subject, topic, level and continent names. It also swaps the game's own menus and labels for Romanian as they appear. Question and answer text is never translated.
+
+- Text drawn on a canvas is not translated automatically: use `EduQ.T('English text')` for it.
+- Put `data-noi18n` on anything that must stay as written, such as the game's logo.
+- New interface words go into `GAME_RO` in questions.js, so every game gets them.
+
 ## 4. Messages to the portal
 
 Post to `window.parent` (only when `window.parent !== window`), target `'*'`:
