@@ -1,16 +1,25 @@
 import CLASSES from './classes.json';
+import TEACHERS from './teachers.json';
+import {checkPassword, signToken, verifyToken, bearer} from './auth.js';
 /* EduGames class connection server: a tiny PeerJS-compatible signalling server on Cloudflare Workers.
    It only passes the short "how do I reach you" messages (offer, answer, ICE candidates) between the teacher's
    and the students' browsers. Game data then flows directly between the devices; nothing is stored here.
 
    v2: class rooms relayed through the server (/room/<CODE>): works on any network that allows HTTPS, no direct
-   device-to-device link needed. Class lists for teachers (/classes, needs the TEACHER_PIN secret).
+   device-to-device link needed. Teachers sign in with their own account (/login, accounts in src/teachers.json,
+   tokens signed with the AUTH_SECRET secret); class lists (/classes) and reports (/reports) need that sign-in.
 
    Routes (PeerJS client with {host, port: 443, path: '/', secure: true, key: 'peerjs'}):
      GET  /peerjs/id         -> a random peer id (text)
      GET  /peerjs?id=&token= -> WebSocket upgrade, handled by the Hub Durable Object
      GET  /                  -> "ok" (health check) */
 
+/* the signed-in teacher, or null. A token stops working when its account is removed or its password is reset. */
+async function teacher(req, env) {
+  const t = await verifyToken(bearer(req), env.AUTH_SECRET);
+  const acc = t && TEACHERS.find(a => a.u === t.u);
+  return acc && acc.hash.slice(0, 8) === t.v ? {u: acc.u, name: acc.name, role: acc.role} : null;
+}
 const CORS = {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': '*'};
 const ID_OK = /^[A-Za-z0-9_-][A-Za-z0-9_ -]{0,62}[A-Za-z0-9_-]?$/;
 
@@ -31,19 +40,18 @@ export default {
       if (req.headers.get('Upgrade') !== 'websocket') return new Response('Expected a WebSocket', {status: 426, headers: CORS});
       return env.ROOM.get(env.ROOM.idFromName(room[1])).fetch(req);
     }
-    if (p === '/classes') {
-      /* the school's class lists, only for teachers who know the PIN */
-      const pin = url.searchParams.get('pin') || req.headers.get('X-Teacher-Pin') || '';
-      if (!env.TEACHER_PIN) return new Response('No TEACHER_PIN set on the server', {status: 503, headers: CORS});
-      if (pin !== env.TEACHER_PIN) return new Response('Wrong PIN', {status: 403, headers: CORS});
-      return new Response(JSON.stringify(CLASSES), {headers: {...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store'}});
+    if (p === '/login') {
+      /* username + password -> a signed token for 60 days; too many wrong tries lock the account for 15 minutes */
+      if (req.method !== 'POST') return new Response('Use POST', {status: 405, headers: CORS});
+      if (!env.AUTH_SECRET) return new Response('No AUTH_SECRET set on the server', {status: 503, headers: CORS});
+      return env.STORE.get(env.STORE.idFromName('reports')).fetch(new Request('https://store/login', {method: 'POST', body: await req.text()}));
     }
-    if (p === '/reports') {
-      /* class reports, saved by the teachers' portals and shared by everyone with the teacher PIN */
-      const pin = url.searchParams.get('pin') || req.headers.get('X-Teacher-Pin') || '';
-      if (!env.TEACHER_PIN) return new Response('No TEACHER_PIN set on the server', {status: 503, headers: CORS});
-      if (pin !== env.TEACHER_PIN) return new Response('Wrong PIN', {status: 403, headers: CORS});
-      return env.STORE.get(env.STORE.idFromName('reports')).fetch(req);
+    if (p === '/classes' || p === '/reports') {
+      const who = await teacher(req, env);
+      if (!who) return new Response('Please sign in', {status: 401, headers: CORS});
+      if (p === '/classes') return new Response(JSON.stringify(CLASSES), {headers: {...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store'}});
+      const h = new Headers({'X-Edu-User': who.u, 'X-Edu-Role': who.role});
+      return env.STORE.get(env.STORE.idFromName('reports')).fetch(new Request(url.toString(), {method: req.method, headers: h, body: req.method === 'POST' ? await req.text() : undefined}));
     }
     if (p === '' || p === '/health') return new Response('EduGames class server: ok', {headers: {...CORS, 'Content-Type': 'text/plain'}});
     return new Response('Not found', {status: 404, headers: CORS});
@@ -166,25 +174,48 @@ export class Room {
    POST /reports  {session}         -> saved (kept if the stored copy is newer)
    GET  /reports?after=<ms>         -> sessions changed after that time, newest first (up to 300) */
 export class Store {
-  constructor(state) { this.state = state; }
+  constructor(state, env) { this.state = state; this.env = env; }
   async fetch(req) {
     const url = new URL(req.url), J = {...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store'};
+    if (url.pathname === '/login') return this.login(req, J);
+    const me = req.headers.get('X-Edu-User') || '', admin = req.headers.get('X-Edu-Role') === 'admin';
+    if (!me) return new Response('Please sign in', {status: 401, headers: CORS});
     if (req.method === 'POST') {
       const body = await req.text();
       if (body.length > 1900000) return new Response('Too big', {status: 413, headers: CORS});
       let s; try { s = JSON.parse(body).session; } catch (e) { return new Response('Bad JSON', {status: 400, headers: CORS}); }
       if (!s || typeof s.id !== 'string' || !/^s[a-z0-9]{4,20}$/.test(s.id)) return new Response('Bad session', {status: 400, headers: CORS});
       const at = +s.updatedAt || Date.now(), old = await this.state.storage.get('m:' + s.id);
+      if (old && old.owner && old.owner !== me && !admin) return new Response('Not your session', {status: 403, headers: CORS});
       if (old && old.at > at) return new Response(JSON.stringify({ok: true, kept: 'newer'}), {headers: J});
-      await this.state.storage.put({['s:' + s.id]: JSON.stringify(s), ['m:' + s.id]: {at}});
+      const owner = (old && old.owner) || me;
+      s.owner = owner;
+      await this.state.storage.put({['s:' + s.id]: JSON.stringify(s), ['m:' + s.id]: {at, owner}});
       return new Response(JSON.stringify({ok: true, at}), {headers: J});
     }
     const after = +url.searchParams.get('after') || 0;
     const meta = await this.state.storage.list({prefix: 'm:'});
-    const ids = [...meta].filter(([, m]) => m.at > after).sort((a, b) => b[1].at - a[1].at).slice(0, 300).map(([k]) => k.slice(2));
+    const ids = [...meta].filter(([, m]) => m.at > after && (admin || m.owner === me)).sort((a, b) => b[1].at - a[1].at).slice(0, 300).map(([k]) => k.slice(2));
     const vals = new Map();
     for (let i = 0; i < ids.length; i += 100) (await this.state.storage.get(ids.slice(i, i + 100).map(id => 's:' + id))).forEach((v, k) => vals.set(k, v));
     const out = ids.map(id => { try { return JSON.parse(vals.get('s:' + id)); } catch (e) { return null; } }).filter(Boolean);
     return new Response(JSON.stringify(out), {headers: J});
+  }
+  async login(req, J) {
+    let b; try { b = JSON.parse(await req.text()); } catch (e) { b = {}; }
+    const u = String(b.u || '').trim().toLowerCase().slice(0, 40), key = 'lock:' + u, now = Date.now();
+    const lock = (await this.state.storage.get(key)) || {n: 0, until: 0};
+    if (lock.until > now) return new Response(JSON.stringify({error: 'locked', minutes: Math.ceil((lock.until - now) / 60000)}), {status: 429, headers: J});
+    const acc = TEACHERS.find(a => a.u === u);
+    if (!acc || !(await checkPassword(acc, b.p))) {
+      lock.n = (lock.until && lock.until <= now ? 0 : lock.n) + 1; lock.until = lock.n >= 8 ? now + 15 * 60000 : 0;
+      if (lock.until) lock.n = 0;
+      await this.state.storage.put(key, lock);
+      return new Response(JSON.stringify({error: 'wrong'}), {status: 403, headers: J});
+    }
+    if (lock.n) await this.state.storage.delete(key);
+    const exp = now + 60 * 864e5;
+    const token = await signToken({u: acc.u, v: acc.hash.slice(0, 8), exp}, this.env.AUTH_SECRET);
+    return new Response(JSON.stringify({token, u: acc.u, name: acc.name, role: acc.role, exp}), {headers: J});
   }
 }

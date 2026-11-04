@@ -469,6 +469,7 @@ p{margin:0}
 .inote{font-size:13px;color:var(--ink2)}
 .syncnote{font-size:14px;font-weight:700;padding:10px 14px;border-radius:var(--r-m);background:var(--card);box-shadow:0 1px 0 var(--line)}
 .syncnote:empty{display:none}
+.whoami{margin:-4px 0 12px;font-size:14px;color:var(--mute,#5b6386)}.whoami[hidden]{display:none}.whoami .link{font-size:14px}
 .rpin{display:flex;gap:8px;flex-wrap:wrap}.rpin[hidden]{display:none}.rpin input{border:1.5px solid var(--line);border-radius:var(--r-m);padding:12px 14px;font-size:16px;font-weight:700;width:170px;background:var(--card)}.rpin .cta{width:auto;padding:12px 18px;font-size:16px}.syncnote.ok{color:var(--good)}.syncnote.ok::before{content:'☁ ';}.syncnote.warn{color:#9a6700;background:#fff6dc}
 .exp{display:flex;gap:10px;flex-wrap:wrap}
 .exp .cta,.exp .ghost{width:auto;flex:0 1 auto;padding:12px 18px;font-size:16px}
@@ -601,8 +602,8 @@ p{margin:0}
       <div class="dd clsdd" id="clsDD"></div>
       <label class="tog" id="guestTog" hidden><input type="checkbox" id="allowGuests"> Allow guests</label>
       <button class="link light" type="button" id="clsReload" hidden>Reload class lists</button>
-      <button class="link light" type="button" id="pinShow" hidden>Use a class list</button>
-      <form class="pinrow" id="pinRow" hidden><input id="pinIn" type="password" inputmode="numeric" autocomplete="off" placeholder="Teacher PIN" aria-label="Teacher PIN"><button class="ghost" type="submit">Load classes</button><span class="err" id="pinErr" hidden>Wrong PIN</span></form>
+      <button class="link light" type="button" id="pinShow" hidden>Sign in to use class lists</button>
+      <form class="pinrow" id="pinRow" hidden><input id="auU" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="Username" aria-label="Username"><input id="auP" type="password" autocomplete="current-password" placeholder="Password" aria-label="Password"><button class="ghost" type="submit">Sign in</button><span class="err" id="pinErr" hidden>Wrong username or password</span></form>
       <span class="clsnote" id="clsNote"></span>
     </div>
     <p class="roomnote" id="lobbyNote"></p>
@@ -678,7 +679,7 @@ p{margin:0}
       <button type="button" data-mode="class" aria-pressed="false">Class</button>
       <button type="button" data-mode="reports" aria-pressed="true">Reports</button>
     </nav>
-    <section class="intro" style="padding-bottom:6px"><h1>Reports</h1><p>Results are saved on this device and online for every teacher. Filter by game, day, session or student, then export.</p></section>
+    <section class="intro" style="padding-bottom:6px"><h1>Reports</h1><p>Results are saved on this device and online in your account. Filter by game, day, session or student, then export.</p></section>
     <div class="panel filters">
       <label>Game<select id="fGame"></select></label>
       <label>Class<select id="fClass"></select></label>
@@ -689,7 +690,8 @@ p{margin:0}
       <label class="check"><input type="checkbox" id="fSolo"> Include my own games</label>
     </div>
     <p class="syncnote" id="syncNote"></p>
-    <form class="rpin" id="rPin" hidden><input id="rPinIn" type="password" inputmode="numeric" autocomplete="off" placeholder="Teacher PIN" aria-label="Teacher PIN"><button class="cta class" type="submit">Show the school's reports</button></form>
+    <form class="rpin" id="rPin" hidden><input id="rU" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="Username" aria-label="Username"><input id="rP" type="password" autocomplete="current-password" placeholder="Password" aria-label="Password"><button class="cta class" type="submit">Sign in</button></form>
+    <p class="whoami" id="whoAmI" hidden><span id="whoName"></span> · <button class="link" type="button" id="signOut">Sign out</button></p>
     <div class="sum" id="sum"></div>
     <div class="ins" id="ins" hidden></div>
     <div class="exp">
@@ -1020,7 +1022,28 @@ const randomAvatar=()=>AVATARS[Math.floor(Math.random()*AVATARS.length)].id;
 let session=null; // live class (teacher)
 const conns=new Map(); // name -> {conn, status, score, right, asked, streak, hue}
 let peer=null,round=null,clockT=null;
-/* sessions: this device's own, plus the school's saved online (class server, teacher PIN) */
+/* teacher accounts: each teacher signs in with their own username and password (made by the school admin).
+   The class server returns a signed token for 60 days; it is kept only on this device. */
+try{localStorage.removeItem('edu-teacher-pin')}catch(e){}
+const auth=()=>{const a=store.get('edu-teacher-auth',null);return a&&a.token&&a.exp>Date.now()?a:null};
+const authH=()=>{const a=auth();return a?{Authorization:'Bearer '+a.token}:{}};
+async function signIn(u,p){
+  const r=await T_(20000,fetch(`${REPORTS_HTTP()}/login`,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({u:u.trim().toLowerCase(),p})}));
+  const d=await r.json().catch(()=>({}));
+  if(r.status===429)throw new Error(T('Too many wrong tries. Try again in {n} minutes.').replace('{n}',d.minutes||15));
+  if(r.status===403)throw new Error(T('Wrong username or password'));
+  if(!r.ok||!d.token)throw new Error(T('Couldn\'t reach the class server. Check the connection.'));
+  const prev=auth();if(prev&&prev.u!==d.u){remoteSessions=[];store.set('edu-portal-classes-cache',[])}
+  store.set('edu-teacher-auth',{token:d.token,u:d.u,name:d.name,role:d.role,exp:d.exp});syncState='';return d}
+function signedOut(){store.set('edu-teacher-auth',null);remoteSessions=[];lastPull=0;syncState='';
+  /* on a shared computer: forget the class lists and the reports that are already saved online */
+  store.set('edu-portal-classes-cache',[]);const pend=pendingSync();store.set('edu-portal-sessions',localSessions().filter(s=>pend.includes(s.id)||(session&&s.id===session.id)));
+  clsState='pin';paintClsPick();paintSync();if(!$('reports').hidden)renderReports(true)}
+async function submitSignIn(uIn,pIn,errEl){const u=uIn.value,p=pIn.value;if(!u.trim()||!p)return false;
+  try{await signIn(u,p);pIn.value='';uIn.value='';if(errEl)errEl.hidden=true;toast(T('Signed in as '+auth().name));
+    await pullReports(true);syncNow();loadClasses();return true}
+  catch(e){pIn.value='';if(errEl){errEl.textContent=e.message;errEl.hidden=false}else toast(e.message);pIn.focus();return false}}
+/* sessions: this device's own, plus the ones this teacher saved online (all of them for the admin) */
 const localSessions=()=>store.get('edu-portal-sessions',[]);
 let remoteSessions=[],lastPull=0,pulling=false,syncState='';
 const sessions=()=>{const m=new Map(localSessions().map(s=>[s.id,s]));remoteSessions.forEach(r=>{const l=m.get(r.id);if(!l||(+r.updatedAt||0)>(+l.updatedAt||0))m.set(r.id,r)});
@@ -1028,26 +1051,26 @@ const sessions=()=>{const m=new Map(localSessions().map(s=>[s.id,s]));remoteSess
 const REPORTS_HTTP=()=>httpOf(RELAYS[0]);
 const pendingSync=()=>store.get('edu-sync-pending',[]);
 let syncT=null;const syncSoon=(ms=8000)=>{clearTimeout(syncT);syncT=setTimeout(syncNow,ms)};
-async function syncNow(){const pin=store.get('edu-teacher-pin','');let pend=pendingSync();if(!pin||!pend.length){paintSync();return}
+async function syncNow(){let pend=pendingSync();if(!auth()||!pend.length){paintSync();return}
   const loc=new Map(localSessions().map(s=>[s.id,s]));
   for(const id of pend.slice()){const s=loc.get(id);if(!s){pend=pend.filter(x=>x!==id);continue}
-    try{const r=await T_(15000,fetch(`${REPORTS_HTTP()}/reports?pin=${encodeURIComponent(pin)}`,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({session:s})}));
-      if(r.ok){pend=pend.filter(x=>x!==id);syncState='ok'}else if(r.status===403){syncState='badpin';break}else{syncState='offline';break}}
+    try{const r=await T_(15000,fetch(`${REPORTS_HTTP()}/reports`,{method:'POST',headers:{'Content-Type':'text/plain',...authH()},body:JSON.stringify({session:s})}));
+      if(r.ok){pend=pend.filter(x=>x!==id);syncState='ok'}else if(r.status===401){syncState='badpin';break}else if(r.status===403){pend=pend.filter(x=>x!==id)}else{syncState='offline';break}}
     catch(e){syncState='offline';break}}
   store.set('edu-sync-pending',pend);paintSync();if(pend.length)syncSoon(60000)}
-async function pullReports(force){const pin=store.get('edu-teacher-pin','');if(!pin||pulling||(!force&&Date.now()-lastPull<60000))return;pulling=true;
-  try{const r=await T_(15000,fetch(`${REPORTS_HTTP()}/reports?pin=${encodeURIComponent(pin)}`,{cache:'no-store'}));
-    if(r.ok){const l=await r.json();remoteSessions=Array.isArray(l)?l:[];lastPull=Date.now();if(syncState!=='offline')syncState='ok'}else if(r.status===403)syncState='badpin';else syncState='offline'}
+async function pullReports(force){if(!auth()||pulling||(!force&&Date.now()-lastPull<60000))return;pulling=true;
+  try{const r=await T_(15000,fetch(`${REPORTS_HTTP()}/reports`,{cache:'no-store',headers:authH()}));
+    if(r.ok){const l=await r.json();remoteSessions=Array.isArray(l)?l:[];lastPull=Date.now();if(syncState!=='offline')syncState='ok'}else if(r.status===401){store.set('edu-teacher-auth',null);syncState='badpin'}else syncState='offline'}
   catch(e){syncState='offline'}
   pulling=false;if(!$('reports').hidden)renderReports(true)}
-function paintSync(){const e=$('syncNote');if(!e)return;const pin=store.get('edu-teacher-pin',''),pend=pendingSync().length;e.className='syncnote';$('rPin').hidden=!!pin&&syncState!=='badpin';
-  if(!pin){e.textContent='Results are only on this device. Enter the teacher PIN to see the school\'s reports and save yours online.';e.classList.add('warn');return}
-  if(syncState==='badpin'){e.textContent='The teacher PIN changed. Enter it again in the class room to keep saving results online.';e.classList.add('warn');return}
+function paintSync(){const e=$('syncNote');if(!e)return;const a=auth(),pend=pendingSync().length;e.className='syncnote';$('rPin').hidden=!!a;
+  $('whoAmI').hidden=!a;if(a)$('whoName').textContent='Signed in as '+a.name+(a.role==='admin'?' · sees every teacher\'s reports':'');
+  if(!a){e.textContent=syncState==='badpin'?'Your sign-in ended. Sign in again to keep saving results online.':'Results are only on this device. Sign in to see your reports from any device and save them online.';e.classList.add('warn');return}
   if(syncState==='offline'||pend){e.textContent=pend?`${pend} session${pend===1?'':'s'} not saved online yet. They will be sent when the class server can be reached.`:'Couldn\'t reach the class server. Showing what is saved on this device.';e.classList.add('warn');return}
-  e.textContent=lastPull?`Saved online for every teacher · updated ${fmtDate(lastPull)}`:'Saved online for every teacher';e.classList.add('ok')}
+  e.textContent=lastPull?`Saved online in your account · updated ${fmtDate(lastPull)}`:'Saved online in your account';e.classList.add('ok')}
 window.addEventListener('online',()=>syncSoon(1000));
-$('rPin').onsubmit=async e=>{e.preventDefault();const v=$('rPinIn').value.trim();if(!v)return;$('rPinIn').value='';store.set('edu-teacher-pin',v);syncState='';
-  await pullReports(true);if(syncState==='badpin'){store.set('edu-teacher-pin','');toast(T('Wrong PIN'));paintSync();return}syncNow();loadClasses&&session&&loadClasses()};
+$('rPin').onsubmit=e=>{e.preventDefault();submitSignIn($('rU'),$('rP'),null)};
+$('signOut').onclick=signedOut;
 let saveT=null;const saveSoon=()=>{if(!saveT)saveT=setTimeout(()=>{saveT=null;saveSession()},2500)};
 function saveSession(){if(!session||!session.rounds.length)return;session.updatedAt=Date.now();const all=localSessions().filter(s=>s.id!==session.id);all.push(session);store.set('edu-portal-sessions',all.slice(-300));
   const p=pendingSync();if(!p.includes(session.id)){p.push(session.id);store.set('edu-sync-pending',p.slice(-300))}syncSoon()}
@@ -1090,17 +1113,17 @@ function renderRoomGames(){const box=$('roomGames');box.innerHTML='';
   GAMES.forEach(g=>{const b=el('button','game');b.type='button';b.style.setProperty('--c',g.color||'#2b3990');
     const ic=el('span','ic');const im=el('img');im.src=g.base+(g.icon||'icon-512.png');im.alt='';ic.append(im);
     b.append(ic,el('span',null,g.name));b.onclick=()=>openSetup(g);box.append(b)})}
-/* ---------------- class lists: kept on the class server (not in this public page), behind the teacher PIN ---------------- */
+/* ---------------- class lists: kept on the class server (not in this public page), for signed-in teachers ---------------- */
 const classes=()=>store.get('edu-portal-classes-cache',[]);
 const curRoster=()=>session&&session.classId?classes().find(c=>c.id===session.classId)||null:null;
 let clsState='';
-async function loadClasses(pin){pin=pin||store.get('edu-teacher-pin','');if(!pin){clsState='pin';paintClsPick();return}
+async function loadClasses(){if(!auth()){clsState='pin';paintClsPick();return}
   clsState='loading';paintClsPick();
-  try{let r=null;for(const i of [relayIdx,...RELAYS.map((x,j)=>j).filter(j=>j!==relayIdx)]){try{r=await T_(i?75000:8000,fetch(`${httpOf(RELAYS[i])}/classes?pin=${encodeURIComponent(pin)}`,{cache:'no-store'}));if(r.ok||r.status===403)break;r=null}catch(e){r=null}}
+  try{let r=null;for(const i of [relayIdx,...RELAYS.map((x,j)=>j).filter(j=>j!==relayIdx)]){try{r=await T_(i?75000:8000,fetch(`${httpOf(RELAYS[i])}/classes`,{cache:'no-store',headers:authH()}));if(r.ok||r.status===401)break;r=null}catch(e){r=null}}
     if(!r)throw new Error('offline');
-    if(r.status===403){clsState='badpin';store.set('edu-teacher-pin','');paintClsPick();return}
+    if(r.status===401){if(!i){store.set('edu-teacher-auth',null);syncState='badpin'}clsState='pin';paintClsPick();paintSync();return}
     if(!r.ok)throw new Error(r.status);const l=await r.json();
-    store.set('edu-teacher-pin',pin);store.set('edu-portal-classes-cache',(Array.isArray(l)?l:[]).filter(c=>c&&c.id&&c.name&&Array.isArray(c.students)));clsState=''}
+    store.set('edu-portal-classes-cache',(Array.isArray(l)?l:[]).filter(c=>c&&c.id&&c.name&&Array.isArray(c.students)));clsState=''}
   catch(e){clsState=classes().length?'':'offline'}
   if(session&&session.classId){const c=curRoster();if(c)session.className=c.name}paintClsPick();paintLobby();pushMode()}
 function paintClsPick(){const l=classes(),cur=session&&session.classId&&l.some(c=>c.id===session.classId)?session.classId:'';
@@ -1109,15 +1132,15 @@ function paintClsPick(){const l=classes(),cur=session&&session.classId&&l.some(c
     render:(o,inBtn)=>{if(o.any)return[el('span','cbadge any','∗'),txt('Anyone','students type their name')];
       const n=o.c.students.length;return inBtn?[el('span','cbadge',o.c.name),txt(`Class ${o.c.name}`,`${n} students pick their name`)]:[el('b',null,o.c.name),el('small',null,`${n} students`)]}});
   $('guestTog').hidden=!cur;$('allowGuests').checked=!!(session&&session.allowGuests);
-  const needPin=clsState==='pin'||clsState==='badpin',pr=$('pinRow');pr.hidden=!(needPin&&(pinOpen||clsState==='badpin'));$('pinShow').hidden=!needPin||!pr.hidden;$('pinErr').hidden=clsState!=='badpin';
+  const needPin=clsState==='pin',pr=$('pinRow');pr.hidden=!(needPin&&pinOpen);$('pinShow').hidden=!needPin||!pr.hidden;
   $('clsNote').textContent=clsState==='loading'?'Loading class lists…':clsState==='offline'?'Couldn\'t load the class lists. Check the connection.':'';
   $('clsReload').hidden=!(l.length||clsState==='offline')}
 const pickClass=id=>{if(!session)return;const c=classes().find(x=>x.id===id)||null;session.classId=c?c.id:null;session.className=c?c.name:null;
   store.set('edu-portal-lastclass',session.classId||'');saveSession();paintClsPick();paintLobby();pushMode()};
 $('allowGuests').onchange=()=>{if(!session)return;session.allowGuests=$('allowGuests').checked;store.set('edu-portal-guests',session.allowGuests);saveSession();pushMode()};
-$('pinRow').onsubmit=e=>{e.preventDefault();const v=$('pinIn').value.trim();if(v){$('pinIn').value='';loadClasses(v)}};
+$('pinRow').onsubmit=async e=>{e.preventDefault();if(await submitSignIn($('auU'),$('auP'),$('pinErr')))pinOpen=false};
 $('clsReload').onclick=()=>loadClasses();
-let pinOpen=false;$('pinShow').onclick=()=>{pinOpen=true;paintClsPick();$('pinIn').focus()};
+let pinOpen=false;$('pinShow').onclick=()=>{pinOpen=true;paintClsPick();$('auU').focus()};
 /* what a student who hasn't picked a name yet sees; refreshed for everyone still choosing when it changes */
 const pending=new Set();
 function modeMsg(conn,msg){const lang=I18N.lang,R=curRoster(),taken=n=>{const c=conns.get(n);return!!(c&&online(c)&&c.conn!==conn)};

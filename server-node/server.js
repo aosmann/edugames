@@ -1,10 +1,14 @@
 /* EduGames class server for Render: the same rooms and class lists as the Cloudflare Worker (../server),
    for networks that block workers.dev. Everything lives in memory; nothing is written to disk.
-   Env: PORT (Render sets it), TEACHER_PIN, CLASSES_JSON (the class lists, as JSON text). */
+   Env: PORT (Render sets it), AUTH_SECRET (the same secret as the Cloudflare Worker, so a teacher's sign-in works here too),
+   CLASSES_JSON (the class lists, as JSON text). auth.js is a copy of ../server/src/auth.js. */
 import http from 'node:http';
 import {WebSocketServer} from 'ws';
+import {webcrypto} from 'node:crypto';
+if (!globalThis.crypto) globalThis.crypto = webcrypto;
+const {verifyToken} = await import('./auth.js');
 
-const PIN = process.env.TEACHER_PIN || '';
+const SECRET = process.env.AUTH_SECRET || '';
 let CLASSES = [];
 try { CLASSES = JSON.parse(process.env.CLASSES_JSON || '[]'); } catch (e) { console.error('CLASSES_JSON is not valid JSON'); }
 const CORS = {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS', 'Access-Control-Allow-Headers': '*'};
@@ -15,10 +19,13 @@ const server = http.createServer((req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(204, CORS); return res.end(); }
   if (p === '' || p === '/health') { res.writeHead(200, {...CORS, 'Content-Type': 'text/plain'}); return res.end('EduGames class server: ok'); }
   if (p === '/classes') {
-    const pin = url.searchParams.get('pin') || req.headers['x-teacher-pin'] || '';
-    if (!PIN) { res.writeHead(503, CORS); return res.end('No TEACHER_PIN set on the server'); }
-    if (pin !== PIN) { res.writeHead(403, CORS); return res.end('Wrong PIN'); }
-    res.writeHead(200, {...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store'}); return res.end(JSON.stringify(CLASSES));
+    if (!SECRET) { res.writeHead(503, CORS); return res.end('No AUTH_SECRET set on the server'); }
+    const m = /^Bearer (.+)$/.exec(req.headers['authorization'] || '');
+    verifyToken(m ? m[1] : '', SECRET).then(t => {
+      if (!t) { res.writeHead(401, CORS); return res.end('Please sign in'); }
+      res.writeHead(200, {...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store'}); res.end(JSON.stringify(CLASSES));
+    });
+    return;
   }
   res.writeHead(404, CORS); res.end('Not found');
 });

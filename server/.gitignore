@@ -3,3 +3,4 @@ node_modules/
 src/classes.json
 .dev.vars
 classes-for-render.txt
+src/teachers.json

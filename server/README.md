@@ -27,7 +27,7 @@ except the class lists you upload.
 The portal tries this server first and falls back to 0.peerjs.com by itself, so classes keep working even if
 one of them is down. The free plan covers far more than a school needs (100,000 requests a day).
 
-## Class lists and the teacher PIN
+## Class lists
 
 Class lists live only in `src/classes.json` on your Mac and on Cloudflare, never on GitHub (the file is in
 `.gitignore`). Format, one entry per class:
@@ -39,13 +39,35 @@ Class lists live only in `src/classes.json` on your Mac and on Cloudflare, never
 ]
 ```
 
-Teachers load the lists in the class room with a PIN. Set it once (Terminal, in this folder):
+Only signed-in teachers can load the class lists and the reports.
 
-```
-npx wrangler secret put TEACHER_PIN
-```
+## Teacher accounts
 
-After changing `classes.json`, run `npx wrangler deploy` again.
+Each teacher has their own username and password. The accounts live in `src/teachers.json`
+(only password hashes, never the passwords; the file stays on this computer and is not on GitHub).
+
+1. Once: make the secret that signs the sign-ins (Terminal, in this folder):
+   ```
+   npx wrangler secret put AUTH_SECRET
+   ```
+   Paste a long random text (for example from `openssl rand -base64 32`). Put the same text on Render:
+   Environment → `AUTH_SECRET`.
+2. Add a teacher (or reset a forgotten password) and deploy:
+   ```
+   node add-teacher.mjs maria "Maria Pop"
+   node add-teacher.mjs osman "Osman" admin
+   npx wrangler deploy
+   ```
+   The script prints the new password once. Give it to the teacher.
+3. A teacher sees only their own reports. An `admin` sees every teacher's reports
+   (and the reports saved before accounts existed).
+4. To remove a teacher, delete their entry in `src/teachers.json` and run `npx wrangler deploy`.
+   Resetting a password also signs that teacher out on every device.
+
+8 wrong passwords in a row lock that username for 15 minutes. A sign-in lasts 60 days on a device;
+"Sign out" in Reports ends it and clears the class lists and synced reports from that device.
+
+After changing `classes.json` or `teachers.json`, run `npx wrangler deploy` again.
 
 ## Later
 

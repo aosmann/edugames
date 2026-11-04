@@ -9,7 +9,7 @@ services:
     startCommand: node server.js
     healthCheckPath: /health
     envVars:
-      - key: TEACHER_PIN
+      - key: AUTH_SECRET
         sync: false
       - key: CLASSES_JSON
         sync: false
