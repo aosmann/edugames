@@ -1257,22 +1257,26 @@ const settingLine=r=>`${r.subjectName}${r.regionsLabel?' · '+r.regionsLabel:''}
 
 /* Class tab = the class room. It opens straight away; students join the class, not a game. */
 function enterClass(){if(session){show(round&&!round.closed?'liveScr':'lobby');paintLobby();paintLive();return}openClass()}
-function openClass(tries=0,ri=0){
+function openClass(tries=0){
   show('lobby');renderRoomGames();
   const code=newCode();
   session={id:'s'+Date.now().toString(36),code,startedAt:new Date().toISOString(),rounds:[],players:[],guests:[]};
   {const lc=classes().find(c=>c.id===store.get('edu-portal-lastclass',''));if(lc){session.classId=lc.id;session.className=lc.name}session.allowGuests=store.get('edu-portal-guests',true)!==false}
   $('code').textContent='·····';$('qr').innerHTML='<span class="wait">Opening the class…</span>';$('lobbyNote').textContent='';paintLobby();loadClasses();
-  if(ri>0)$('lobbyNote').textContent='Connecting through the backup class server… it can take up to a minute to wake up.';
-  const start=()=>{peer=hostRoom(code,{
-    open(){relayIdx=ri;$('lobbyNote').textContent='';drawQR();paintLobby()},
+  /* the class opens on every class server at once, so each student gets in through whichever one their network allows */
+  const hosts=RELAYS.map(()=>null),failed=new Set(),mine=session;let shown=false;
+  peer={get open(){return hosts.some(x=>x&&x.open)},broadcast(m){hosts.forEach(x=>x&&x.open&&x.broadcast(m))},destroy(){hosts.forEach(x=>{try{x&&x.destroy()}catch(e){}})}};
+  const P=peer,stale=()=>session!==mine||peer!==P;
+  const fail=i=>{failed.add(i);if(stale()||shown)return;if(failed.size>=RELAYS.length){$('qr').innerHTML='<span class="wait">No connection</span>';
+    $('lobbyNote').textContent=`Couldn't reach the class server. Check that this device is online. If other sites work, this network blocks it: ask the school's IT to allow ${SIGNAL_HOSTS.join(' and ')}.`}
+    else if(failed.has(0))$('lobbyNote').textContent='Connecting through the backup class server… it can take up to a minute to wake up.'};
+  const start=i=>{if(stale())return;hosts[i]=hostRoom(code,{
+    open(){if(stale())return;if(!shown){shown=true;relayIdx=i;$('lobbyNote').textContent='';drawQR();paintLobby()}},
     connection:onStudent,
-    taken(){session=null;if(tries<4)openClass(tries+1,ri)},
-    status(st){$('lobbyNote').textContent=st==='reconnecting'?'Connection lost. Reconnecting… students stay in the class.':''},
-    error(){if(ri+1<RELAYS.length){session=null;openClass(tries,ri+1);return}
-      $('qr').innerHTML='<span class="wait">No connection</span>';
-      $('lobbyNote').textContent=`Couldn't reach the class server. Check that this device is online. If other sites work, this network blocks it: ask the school's IT to allow ${SIGNAL_HOSTS.join(' and ')}.`}},RELAYS[ri])};
-  if(ri>0)wake(ri).then(start,start);else start()}
+    taken(){if(stale())return;if(i===0||!shown){P.destroy();session=null;peer=null;if(tries<4)openClass(tries+1)}else hosts[i]=null},
+    status(st){if(stale()||i!==relayIdx)return;$('lobbyNote').textContent=st==='reconnecting'?'Connection lost. Reconnecting… students stay in the class.':''},
+    error(){hosts[i]=null;fail(i)}},RELAYS[i])};
+  RELAYS.forEach((r,i)=>{if(!i)start(0);else wake(i).then(()=>start(i),()=>start(i))})}
 function joinLink(){const u=new URL('./',location.href);u.hash='join='+session.code+(relayIdx?'&b='+relayIdx:'');if(Q.get('peer'))u.search='?peer='+Q.get('peer');return u.href}
 function drawQR(){const q=qrcode(0,'M');q.addData(joinLink());q.make();const svg=q.createSvgTag({cellSize:6,margin:0,scalable:true});
   $('qr').innerHTML=svg;$('qrBigBox').innerHTML=svg;$('code').textContent=session.code;$('qrBigCode').textContent=session.code;
