@@ -43,31 +43,33 @@ Only signed-in teachers can load the class lists and the reports.
 
 ## Teacher accounts
 
-Each teacher has their own username and password. The accounts live in `src/teachers.json`
-(only password hashes, never the passwords; the file stays on this computer and is not on GitHub).
+Each teacher has their own username and password. Manage them on the portal:
+sign in as the admin, then **your name (top right) → Teachers**. There you add a teacher, reset a
+forgotten password, rename or remove someone, and see who used EduGames this month.
+A new teacher gets a starting password and picks their own the first time they sign in.
 
-1. Once: make the secret that signs the sign-ins (Terminal, in this folder):
-   ```
-   npx wrangler secret put AUTH_SECRET
-   ```
-   Paste a long random text (for example from `openssl rand -base64 32`). Put the same text on Render:
-   Environment → `AUTH_SECRET`.
-2. Add a teacher (or reset a forgotten password) and deploy:
-   ```
-   node add-teacher.mjs maria "Maria Pop"
-   node add-teacher.mjs osman "Osman" admin
-   npx wrangler deploy
-   ```
-   The script prints the new password once. Give it to the teacher.
-3. A teacher sees only their own reports. An `admin` sees every teacher's reports
-   (and the reports saved before accounts existed).
-4. To remove a teacher, delete their entry in `src/teachers.json` and run `npx wrangler deploy`.
-   Resetting a password also signs that teacher out on every device.
+The accounts are stored on the class server (Cloudflare), with only password hashes.
 
-8 wrong passwords in a row lock that username for 15 minutes. A sign-in lasts 60 days on a device;
-"Sign out" in Reports ends it and clears the class lists and synced reports from that device.
+Once, when setting up: make the secret that signs the sign-ins (Terminal, in this folder):
+```
+npx wrangler secret put AUTH_SECRET
+```
+Paste a long random text (for example from `openssl rand -base64 32`). Put the same text on Render:
+Environment → `AUTH_SECRET`.
 
-After changing `classes.json` or `teachers.json`, run `npx wrangler deploy` again.
+**Emergency (admin locked out or forgot the password):**
+```
+node add-teacher.mjs osman "Osman" admin
+npx wrangler deploy
+```
+This prints a new password and resets that account once (it is kept in `src/teachers.json`,
+which is not on GitHub). The first admin account was made the same way.
+
+8 wrong passwords in a row lock that username for 15 minutes. A sign-in lasts 60 days on a device.
+"Sign out on all devices" and every password change sign that teacher out everywhere.
+A teacher sees only their own reports; the admin sees all of them, including the ones saved before accounts.
+
+After changing `classes.json`, run `npx wrangler deploy` again.
 
 ## Later
 

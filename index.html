@@ -520,6 +520,50 @@ p{margin:0}
 @keyframes dot{50%{transform:translateY(-8px);opacity:.4}}
 @media(prefers-reduced-motion:reduce){.dots i{animation:none}}
 
+.acct{position:relative}
+.acctbtn{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:6px 14px 6px 6px;font-weight:800;background:var(--card);color:var(--ink);box-shadow:0 1px 0 var(--line),0 4px 14px -6px rgba(24,32,61,.25);max-width:210px}
+.acctbtn.out{padding:10px 16px 10px 12px}.acctbtn.out svg{width:20px;height:20px;color:var(--board)}
+.acctbtn .ai{width:30px;height:30px;border-radius:50%;background:var(--board);color:#fff;display:grid;place-items:center;font-size:14px;flex:none;box-shadow:inset 0 -3px 0 var(--board2)}
+.acctbtn .an{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acctbtn .chev{width:14px;height:14px;flex:none;color:var(--ink2)}
+.acctmenu{position:absolute;right:0;top:calc(100% + 8px);z-index:30;background:var(--card);border-radius:var(--r-m);box-shadow:0 1px 0 var(--line),0 18px 40px -12px rgba(24,32,61,.35);padding:6px;min-width:240px;display:grid}
+.acctmenu[hidden]{display:none}
+.acctmenu .mh{padding:10px 12px 8px;border-bottom:1px solid var(--line);margin-bottom:4px}.acctmenu .mh b{display:block;font-size:16px}.acctmenu .mh span{font-size:13px;color:var(--ink2)}
+.acctmenu button{border:0;background:none;text-align:left;padding:11px 12px;border-radius:10px;font-weight:700;font-size:15px;color:var(--ink)}
+.acctmenu button:hover,.acctmenu button:focus-visible{background:var(--paper)}.acctmenu button.danger{color:var(--bad)}
+.board .acctbtn{background:rgba(255,255,255,.14);color:#fff;box-shadow:none}.board .acctbtn .ai{background:#fff;color:var(--board);box-shadow:none}.board .acctbtn .chev,.board .acctbtn.out svg{color:#fff}
+.modal{position:fixed;inset:0;z-index:50;background:rgba(18,24,48,.55);display:grid;place-items:center;padding:16px}
+.modal[hidden]{display:none}
+.msheet{background:var(--card);border-radius:var(--r-l);padding:26px 24px 22px;width:100%;max-width:400px;box-shadow:0 30px 80px -20px rgba(0,0,0,.45);display:grid;gap:14px;max-height:calc(100vh - 32px);overflow:auto}
+.msheet h2{margin:0;font-size:24px;letter-spacing:-.02em}.msheet p{margin:0;color:var(--ink2);font-size:15px;line-height:1.45}
+.msheet label{display:grid;gap:6px;font-weight:700;font-size:14px;color:var(--ink2)}
+.msheet input{border:1.5px solid var(--line);border-radius:var(--r-m);padding:13px 14px;font-size:17px;font-weight:700;background:var(--card);color:var(--ink);width:100%}
+.msheet input:focus{outline:none;border-color:var(--board)}
+.msheet .merr{color:var(--bad);font-weight:700;font-size:14px}.msheet .merr:empty{display:none}
+.msheet .mrow{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.msheet .cta{width:auto;padding:13px 20px;font-size:16px;background:var(--board)}
+.msheet .plain{border:0;background:none;font-weight:700;color:var(--ink2);padding:13px 10px}
+.pwbox{display:flex;align-items:center;gap:10px;background:var(--paper);border-radius:var(--r-m);padding:14px 16px}
+.pwbox code{flex:1;font-size:24px;font-weight:800;letter-spacing:.06em;color:var(--ink);font-family:ui-monospace,Menlo,monospace}
+.pwbox button{border:0;border-radius:10px;background:var(--card);padding:8px 12px;font-weight:800;box-shadow:0 1px 0 var(--line)}
+.tpanel{background:var(--card);border-radius:var(--r-l);padding:20px;box-shadow:0 1px 0 var(--line);margin-bottom:18px}
+.tadd{display:grid;grid-template-columns:1.3fr 1fr 1fr auto;gap:10px;align-items:end}
+.tadd label{display:grid;gap:6px;font-weight:700;font-size:14px;color:var(--ink2)}
+.tadd input{border:1.5px solid var(--line);border-radius:var(--r-m);padding:12px 14px;font-size:16px;font-weight:700;background:var(--card);color:var(--ink);width:100%;min-width:0}
+.tadd .cta{width:auto;padding:12px 18px;font-size:16px;background:var(--board)}
+.tadd .hint{grid-column:1/-1;font-size:13px;color:var(--ink2);margin:0}
+@media(max-width:720px){.tadd{grid-template-columns:1fr 1fr}.tadd label:nth-child(3),.tadd .cta{grid-column:1/-1}}
+@media(max-width:620px){.acctbtn .an,.acctbtn .chev{display:none}.acctbtn{padding:5px}.acctbtn .ai{width:34px;height:34px}.acctbtn.out .an{display:inline}.acctbtn.out{padding:10px 14px 10px 12px}.top .acct{margin-left:auto}.top .joinpill+.acct{margin-left:0}
+ #tStats{display:grid;grid-template-columns:repeat(3,1fr)}#tStats div{padding:10px 12px}#tStats b{font-size:20px}#tStats span{font-size:12px}}
+.tstats{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 14px}.tstats div{background:var(--card);border-radius:var(--r-m);padding:12px 16px;box-shadow:0 1px 0 var(--line)}.tstats b{display:block;font-size:24px}.tstats span{font-size:13px;color:var(--ink2);font-weight:700}
+.tlist{display:grid;gap:10px}
+.trow{display:grid;grid-template-columns:auto 1fr auto auto;gap:14px;align-items:center;background:var(--card);border-radius:var(--r-m);padding:14px 16px;box-shadow:0 1px 0 var(--line)}
+.trow .ai{width:40px;height:40px;border-radius:50%;background:hsl(var(--hue,230) 55% 92%);color:hsl(var(--hue,230) 50% 30%);display:grid;place-items:center;font-weight:800}
+.trow .tn b{font-size:17px}.trow .tn .role{font-size:12px;font-weight:800;color:var(--board);background:#e6e9fb;border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:2px}
+.trow .tn small{display:block;color:var(--ink2);font-size:13px;margin-top:2px}.trow .tn .pend{color:#9a6700;font-weight:700}
+.trow .tc{text-align:right}.trow .tc b{display:block;font-size:20px}.trow .tc span{font-size:12px;color:var(--ink2);font-weight:700}
+.trow .ta{display:flex;gap:6px}.trow .ta button{border:0;border-radius:10px;background:var(--paper);padding:9px 12px;font-weight:800;font-size:14px;color:var(--ink)}.trow .ta button.danger{color:var(--bad)}
+@media(max-width:620px){.trow{grid-template-columns:auto 1fr auto}.trow .ta{grid-column:1/-1;justify-content:flex-end}}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:var(--r-m);font-weight:700;z-index:40;max-width:calc(100% - 32px)}
 </style>
 </head>
@@ -538,6 +582,7 @@ p{margin:0}
       <span class="sp"></span>
       <button class="langbtn" type="button" data-lang data-noi18n aria-label="Language / Limba"></button>
       <button class="joinpill" type="button" data-nav="join"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="6" height="6" rx="1.2"/><rect x="14.5" y="3.5" width="6" height="6" rx="1.2"/><rect x="3.5" y="14.5" width="6" height="6" rx="1.2"/><path d="M14.5 14.5h2.5v2.5M20.5 14.5v.01M14.5 20.5h6v-3"/></svg>Join a class</button>
+      <div class="acct" data-acct></div>
     </header>
     <section class="hero">
       <div class="hero-tx">
@@ -560,7 +605,7 @@ p{margin:0}
 <!-- ============ SETUP: game, subject, topic, settings ============ -->
 <main id="setup" hidden>
   <div class="wrap setup">
-    <header class="top"><a class="mark" href="./"><i aria-hidden="true"></i>EduGames</a><span class="sp"></span><span class="tag" id="sTag" hidden></span><button class="back" type="button" data-nav="home" id="sBack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span>All games</span></button></header>
+    <header class="top"><a class="mark" href="./" aria-label="EduGames home"><i aria-hidden="true"></i>EduGames</a><span class="sp"></span><span class="tag" id="sTag" hidden></span><button class="back" type="button" data-nav="home" id="sBack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span>All games</span></button></header>
     <h1 class="sr" id="lGame">Game</h1>
     <div class="dd gamedd" id="ddGame"></div>
     <div class="cols">
@@ -591,7 +636,7 @@ p{margin:0}
 <!-- ============ CLASS: room (projector). Students join the class, the teacher picks games ============ -->
 <main id="lobby" class="board" hidden>
   <div class="wrap roomwrap">
-    <header class="bar"><span class="mark"><i aria-hidden="true"></i>EduGames</span><span class="sp"></span><button class="endbtn" type="button" id="closeClass">End class</button></header>
+    <header class="bar"><a class="mark" href="./" aria-label="EduGames home"><i aria-hidden="true"></i>EduGames</a><span class="sp"></span><div class="acct" data-acct></div><button class="endbtn" type="button" id="closeClass">End class</button></header>
     <section class="joinbar" aria-label="How to join">
       <div class="jtext"><span>Join at</span><b id="joinUrl"></b></div>
       <div class="jcode"><span>Class code</span><div class="code" id="code">·····</div></div>
@@ -603,7 +648,7 @@ p{margin:0}
       <label class="tog" id="guestTog" hidden><input type="checkbox" id="allowGuests"> Allow guests</label>
       <button class="link light" type="button" id="clsReload" hidden>Reload class lists</button>
       <button class="link light" type="button" id="pinShow" hidden>Sign in to use class lists</button>
-      <form class="pinrow" id="pinRow" hidden><input id="auU" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="Username" aria-label="Username"><input id="auP" type="password" autocomplete="current-password" placeholder="Password" aria-label="Password"><button class="ghost" type="submit">Sign in</button><span class="err" id="pinErr" hidden>Wrong username or password</span></form>
+      
       <span class="clsnote" id="clsNote"></span>
     </div>
     <p class="roomnote" id="lobbyNote"></p>
@@ -628,7 +673,7 @@ p{margin:0}
 <!-- ============ CLASS: live leaderboard ============ -->
 <main id="liveScr" class="board" hidden>
   <div class="wrap lbwrap">
-    <header class="bar"><span class="mark"><i aria-hidden="true"></i>EduGames</span><span class="sp"></span><span class="codechip" id="liveCode" title="Class code: late joiners can still use it"></span></header>
+    <header class="bar"><a class="mark" href="./" aria-label="EduGames home"><i aria-hidden="true"></i>EduGames</a><span class="sp"></span><span class="codechip" id="liveCode" title="Class code: late joiners can still use it"></span></header>
     <div class="lbhead">
       <div><h2 id="liveT"></h2><p class="meta" id="liveMeta"></p></div>
       <span class="sp"></span>
@@ -673,12 +718,16 @@ p{margin:0}
 <!-- ============ REPORTS ============ -->
 <main id="reports" hidden>
   <div class="wrap reports">
-    <header class="bar"><a class="mark" href="./"><i aria-hidden="true"></i>EduGames</a></header>
-    <nav class="modes" aria-label="Mode">
-      <button type="button" data-mode="play" aria-pressed="false">Play</button>
-      <button type="button" data-mode="class" aria-pressed="false">Class</button>
-      <button type="button" data-mode="reports" aria-pressed="true">Reports</button>
-    </nav>
+    <header class="top"><a class="mark" href="./" aria-label="EduGames home"><i aria-hidden="true"></i>EduGames</a>
+      <nav class="modes" aria-label="Mode">
+        <button type="button" data-mode="play" aria-pressed="false">Play</button>
+        <button type="button" data-mode="class" aria-pressed="false">Class</button>
+        <button type="button" data-mode="reports" aria-pressed="true">Reports</button>
+      </nav>
+      <span class="sp"></span>
+      <button class="langbtn" type="button" data-lang data-noi18n aria-label="Language / Limba"></button>
+      <div class="acct" data-acct></div>
+    </header>
     <section class="intro" style="padding-bottom:6px"><h1>Reports</h1><p>Results are saved on this device and online in your account. Filter by game, day, session or student, then export.</p></section>
     <div class="panel filters">
       <label>Game<select id="fGame"></select></label>
@@ -690,8 +739,7 @@ p{margin:0}
       <label class="check"><input type="checkbox" id="fSolo"> Include my own games</label>
     </div>
     <p class="syncnote" id="syncNote"></p>
-    <form class="rpin" id="rPin" hidden><input id="rU" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="Username" aria-label="Username"><input id="rP" type="password" autocomplete="current-password" placeholder="Password" aria-label="Password"><button class="cta class" type="submit">Sign in</button></form>
-    <p class="whoami" id="whoAmI" hidden><span id="whoName"></span> · <button class="link" type="button" id="signOut">Sign out</button></p>
+    <button class="link" type="button" id="rSignIn" hidden>Sign in</button>
     <div class="sum" id="sum"></div>
     <div class="ins" id="ins" hidden></div>
     <div class="exp">
@@ -703,6 +751,33 @@ p{margin:0}
 </main>
 
 <!-- ============ STUDENT: join ============ -->
+<!-- ============ TEACHERS (admin) ============ -->
+<main id="teachers" hidden>
+  <div class="wrap reports">
+    <header class="top"><a class="mark" href="./" aria-label="EduGames home"><i aria-hidden="true"></i>EduGames</a>
+      <nav class="modes" aria-label="Mode">
+        <button type="button" data-mode="play" aria-pressed="false">Play</button>
+        <button type="button" data-mode="class" aria-pressed="false">Class</button>
+        <button type="button" data-mode="reports" aria-pressed="false">Reports</button>
+      </nav>
+      <span class="sp"></span>
+      <button class="langbtn" type="button" data-lang data-noi18n aria-label="Language / Limba"></button>
+      <div class="acct" data-acct></div>
+    </header>
+    <section class="intro" style="padding-bottom:6px"><h1>Teachers</h1><p>Add the teachers who use EduGames. Each one gets a starting password and picks their own the first time they sign in.</p></section>
+    <form class="tpanel tadd" id="tAdd" autocomplete="off">
+      <label>Name<input id="tName" placeholder="Ana Ionescu" maxlength="60"></label>
+      <label>Username<input id="tUser" placeholder="ana" maxlength="30" autocapitalize="off" spellcheck="false"></label>
+      <label>Starting password<input id="tPw" placeholder="Make one for me" maxlength="100" autocapitalize="off" spellcheck="false"></label>
+      <button class="cta" type="submit">Add teacher</button>
+      <p class="hint">Usernames: small letters and numbers, like ana or mariap. Leave the password empty and one is made for you.</p>
+    </form>
+    <div class="tstats" id="tStats"></div>
+    <div class="tlist" id="tList"><p class="sub">Loading…</p></div>
+  </div>
+</main>
+<div class="modal" id="modal" hidden><div class="msheet" id="msheet" role="dialog" aria-modal="true"></div></div>
+
 <main id="join" class="solo" hidden>
   <form class="panel" id="joinForm" autocomplete="off">
     <div class="jhead"><h1>Join a class</h1><button class="langbtn" type="button" data-lang data-noi18n aria-label="Language / Limba"></button></div>
@@ -820,16 +895,17 @@ function toast(t,ms=2600){const e=$('toast');e.textContent=t;e.hidden=false;clea
 const I18N=window.EDU_I18N||{lang:'en',set(){},onChange(){},T:t=>t};
 function paintLang(){document.querySelectorAll('[data-lang]').forEach(b=>{b.innerHTML=`<b class="${I18N.lang==='ro'?'on':''}">RO</b><span aria-hidden="true">·</span><b class="${I18N.lang==='en'?'on':''}">EN</b>`;b.title=I18N.lang==='ro'?'Switch to English':'Treci la română'})}
 document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{I18N.set(I18N.lang==='ro'?'en':'ro');paintLang()});
-I18N.onChange(()=>{paintLang();if(!$('reports').hidden)renderReports()});paintLang();
+I18N.onChange(()=>{paintLang();paintAcct();if(!$('reports').hidden)renderReports();if(!$('teachers').hidden)renderTeachers()});paintLang();
 /* ---------------- screens ---------------- */
-const SCREENS=['home','setup','lobby','liveScr','reports','join','waitScr'];
+const SCREENS=['home','setup','lobby','liveScr','reports','teachers','join','waitScr'];
 function show(id){SCREENS.forEach(s=>$(s).hidden=s!==id);window.scrollTo(0,0)}
 let mode='play';
 function setMode(m){mode=m;document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===m));
   if(m==='reports'){renderReports();show('reports');return}
   if(m==='class'){enterClass();return}
   renderShelf();show('home')}
-document.addEventListener('click',e=>{const m=e.target.closest('[data-mode]');if(m)return setMode(m.dataset.mode);
+document.addEventListener('click',e=>{const mk=e.target.closest('a.mark');if(mk&&!e.metaKey&&!e.ctrlKey&&!e.shiftKey){e.preventDefault();return setMode('play')}
+  const m=e.target.closest('[data-mode]');if(m)return setMode(m.dataset.mode);
   const n=e.target.closest('[data-nav]');if(n){if(n.dataset.nav==='join')openJoin();else setMode(mode==='reports'?'play':mode)}});
 
 /* ---------------- game discovery ---------------- */
@@ -1026,6 +1102,7 @@ let peer=null,round=null,clockT=null;
    The class server returns a signed token for 60 days; it is kept only on this device. */
 try{localStorage.removeItem('edu-teacher-pin')}catch(e){}
 const auth=()=>{const a=store.get('edu-teacher-auth',null);return a&&a.token&&a.exp>Date.now()?a:null};
+const ICON_USER='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.2-3.6 4.1-5.4 7.5-5.4s6.3 1.8 7.5 5.4"/></svg>';
 const authH=()=>{const a=auth();return a?{Authorization:'Bearer '+a.token}:{}};
 async function signIn(u,p){
   const r=await T_(20000,fetch(`${REPORTS_HTTP()}/login`,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({u:u.trim().toLowerCase(),p})}));
@@ -1034,15 +1111,112 @@ async function signIn(u,p){
   if(r.status===403)throw new Error(T('Wrong username or password'));
   if(!r.ok||!d.token)throw new Error(T('Couldn\'t reach the class server. Check the connection.'));
   const prev=auth();if(prev&&prev.u!==d.u){remoteSessions=[];store.set('edu-portal-classes-cache',[])}
-  store.set('edu-teacher-auth',{token:d.token,u:d.u,name:d.name,role:d.role,exp:d.exp});syncState='';return d}
-function signedOut(){store.set('edu-teacher-auth',null);remoteSessions=[];lastPull=0;syncState='';
+  store.set('edu-teacher-auth',{token:d.token,u:d.u,name:d.name,role:d.role,exp:d.exp});syncState='';paintAcct();return d}
+function signedOut(ended){store.set('edu-teacher-auth',null);remoteSessions=[];lastPull=0;syncState=ended?'badpin':'';paintAcct();if(!$('teachers').hidden)setMode('play');
   /* on a shared computer: forget the class lists and the reports that are already saved online */
   store.set('edu-portal-classes-cache',[]);const pend=pendingSync();store.set('edu-portal-sessions',localSessions().filter(s=>pend.includes(s.id)||(session&&s.id===session.id)));
   clsState='pin';paintClsPick();paintSync();if(!$('reports').hidden)renderReports(true)}
-async function submitSignIn(uIn,pIn,errEl){const u=uIn.value,p=pIn.value;if(!u.trim()||!p)return false;
-  try{await signIn(u,p);pIn.value='';uIn.value='';if(errEl)errEl.hidden=true;toast(T('Signed in as '+auth().name));
-    await pullReports(true);syncNow();loadClasses();return true}
-  catch(e){pIn.value='';if(errEl){errEl.textContent=e.message;errEl.hidden=false}else toast(e.message);pIn.focus();return false}}
+/* ---- account button (top right), sign-in and password dialogs ---- */
+const api=async(path,o={})=>{const r=await T_(20000,fetch(`${REPORTS_HTTP()}${path}`,{method:o.body?'POST':'GET',cache:'no-store',headers:{'Content-Type':'text/plain',...authH()},body:o.body?JSON.stringify(o.body):undefined}));
+  const d=await r.json().catch(()=>({}));if(r.status===401&&path!=='/login'){signedOut(true);throw new Error(T('Your sign-in ended. Sign in again.'))}return{r,d}};
+const NET_ERR=()=>T('Couldn\'t reach the class server. Check the connection.');
+const firstName=n=>String(n||'').trim().split(/\s+/)[0]||'';
+function paintAcct(){const a=auth();document.querySelectorAll('[data-acct]').forEach(box=>{box.innerHTML='';
+  const b=el('button','acctbtn'+(a?'':' out'));b.type='button';
+  if(!a){b.innerHTML=ICON_USER;b.append(el('span','an','Sign in'));b.title=T('Teachers sign in here');b.onclick=()=>openSignIn();box.append(b);return}
+  b.append(el('span','ai',initials(a.name)),el('span','an',firstName(a.name)));b.insertAdjacentHTML('beforeend','<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>');
+  b.setAttribute('aria-haspopup','menu');b.setAttribute('aria-expanded','false');
+  const m=el('div','acctmenu');m.hidden=true;m.setAttribute('role','menu');
+  const h=el('div','mh');h.append(el('b',null,a.name),el('span',null,a.role==='admin'?'Admin · sees every teacher\'s reports':'@'+a.u));m.append(h);
+  const item=(t,f,cls)=>{const x=el('button',cls||null,t);x.type='button';x.setAttribute('role','menuitem');x.onclick=()=>{m.hidden=true;f()};m.append(x)};
+  if(a.role==='admin')item('Teachers',openTeachers);
+  item('My reports',()=>setMode('reports'));item('Change password',()=>openPassword(false));
+  item('Sign out',()=>{signedOut();toast(T('Signed out'))});item('Sign out on all devices',signOutAll,'danger');
+  b.onclick=e=>{e.stopPropagation();const open=m.hidden;document.querySelectorAll('.acctmenu').forEach(x=>x.hidden=true);m.hidden=!open;b.setAttribute('aria-expanded',String(open))};
+  box.append(b,m)})}
+document.addEventListener('click',e=>{if(!e.target.closest('.acct'))document.querySelectorAll('.acctmenu').forEach(x=>x.hidden=true)});
+let modalClose=null;
+function modal(build,{locked}={}){const box=$('msheet');box.innerHTML='';build(box);$('modal').hidden=false;
+  modalClose=locked?null:()=>{$('modal').hidden=true};const f=box.querySelector('input');if(f)setTimeout(()=>f.focus(),30)}
+function closeModal(){$('modal').hidden=true;modalClose=null}
+$('modal').addEventListener('mousedown',e=>{if(e.target===$('modal')&&modalClose)modalClose()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('modal').hidden&&modalClose)modalClose()});
+const field=(label,attrs)=>{const l=el('label',null,label),i=el('input');Object.assign(i,attrs);l.append(i);return[l,i]};
+function openSignIn(){modal(box=>{
+  const f=el('form');f.style.display='grid';f.style.gap='14px';
+  const [lu,u]=field('Username',{autocomplete:'username',autocapitalize:'off',spellcheck:false});
+  const [lp,p]=field('Password',{type:'password',autocomplete:'current-password'});
+  const err=el('p','merr'),row=el('div','mrow'),cancel=el('button','plain','Cancel'),go=el('button','cta','Sign in');cancel.type='button';go.type='submit';cancel.onclick=closeModal;row.append(cancel,go);
+  f.append(el('h2',null,'Teacher sign in'),el('p',null,'Use the username and password you got from the school. Your reports then follow you to any device.'),lu,lp,err,row);
+  f.onsubmit=async e=>{e.preventDefault();if(!u.value.trim()||!p.value)return;go.disabled=true;err.textContent='';
+    try{const d=await signIn(u.value,p.value);closeModal();afterSignIn(d)}catch(x){err.textContent=x.message;p.value='';p.focus()}go.disabled=false};
+  box.append(f)})}
+function afterSignIn(d){paintAcct();paintSync();if(d.mustChange){openPassword(true);return}
+  toast(T('Signed in as '+d.name));pullReports(true);syncNow();loadClasses()}
+function openPassword(forced){const a=auth();if(!a)return openSignIn();modal(box=>{
+  const f=el('form');f.style.display='grid';f.style.gap='14px';
+  const [lo,o]=field('Current password',{type:'password',autocomplete:'current-password'});
+  const [ln,n]=field('New password',{type:'password',autocomplete:'new-password',minLength:6});
+  const [lr,r2]=field('New password again',{type:'password',autocomplete:'new-password'});
+  const err=el('p','merr'),row=el('div','mrow'),go=el('button','cta',forced?'Save and continue':'Save');go.type='submit';
+  if(!forced){const c=el('button','plain','Cancel');c.type='button';c.onclick=closeModal;row.append(c)}row.append(go);
+  f.append(el('h2',null,forced?'Choose your password':'Change password'),
+    el('p',null,forced?'Welcome, '+firstName(a.name)+'! Pick your own password now, so only you know it. At least 6 characters.':'At least 6 characters. Other devices where you are signed in will be signed out.'));
+  if(!forced)f.append(lo);f.append(ln,lr,err,row);
+  f.onsubmit=async e=>{e.preventDefault();err.textContent='';
+    if(n.value.length<6){err.textContent=T('Use at least 6 characters.');return}if(n.value!==r2.value){err.textContent=T('The two passwords are not the same.');return}
+    go.disabled=true;
+    try{const {r,d}=await api('/account',{body:{action:'password',old:o.value,new:n.value}});
+      if(r.status===403)err.textContent=T('The current password is wrong.');
+      else if(!r.ok||!d.token)err.textContent=NET_ERR();
+      else{store.set('edu-teacher-auth',{token:d.token,u:d.u,name:d.name,role:d.role,exp:d.exp});closeModal();toast(T('Password saved'));paintAcct();if(forced){pullReports(true);syncNow();loadClasses()}}}
+    catch(x){err.textContent=x.message||NET_ERR()}go.disabled=false};
+  box.append(f)},{locked:forced})}
+async function signOutAll(){try{const {r}=await api('/account',{body:{action:'signout-all'}});if(!r.ok)throw 0;signedOut();toast(T('Signed out on all devices'))}catch(e){toast(NET_ERR())}}
+function showPassword(title,name,u,pw){modal(box=>{
+  const pb=el('div','pwbox'),c=el('code',null,pw),cp=el('button',null,'Copy');cp.type='button';
+  cp.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(`${u} / ${pw}`).then(()=>{cp.textContent=T('Copied')},()=>{})};pb.append(c,cp);
+  const row=el('div','mrow'),ok=el('button','cta','Done');ok.type='button';ok.onclick=closeModal;row.append(ok);
+  const p=el('p');p.append(document.createTextNode(T('Give these to')+' '+name+': '),el('b',null,T('username')+' '+u),document.createTextNode('. '+T('They choose their own password when they first sign in. This password is shown only now.')));
+  box.append(el('h2',null,title),p,pb,row)})}
+/* ---- Teachers page (admin) ---- */
+function openTeachers(){if(!auth()||auth().role!=='admin')return;document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed','false'));show('teachers');renderTeachers()}
+const agoTxt=t=>{if(!t)return T('never signed in');const m=Math.round((Date.now()-t)/60000);if(m<2)return T('active now');if(m<60)return T('{n} min ago').replace('{n}',m);const h=Math.round(m/60);if(h<24)return T('{n} h ago').replace('{n}',h);return fmtDate(t)};
+async function renderTeachers(){const list=$('tList');
+  try{const {r,d}=await api('/teachers');if(!r.ok)throw 0;
+    const tt=d.teachers||[],sum=tt.reduce((a,t)=>a+t.month,0),act=tt.filter(t=>t.month>0).length,mon=new Date(d.month+'-01T12:00:00').toLocaleDateString(I18N.lang==='ro'?'ro-RO':'en-GB',{month:'long'});
+    const st=$('tStats');st.innerHTML='';const stat=(v,l)=>{const x=el('div');x.append(el('b',null,String(v)),el('span',null,l));st.append(x)};
+    stat(tt.length,T('teachers'));stat(sum,T('class sessions in')+' '+mon);stat(act,T('teachers active in')+' '+mon);
+    list.innerHTML='';const me=auth();
+    tt.forEach(t=>{const row=el('div','trow'),av=el('span','ai',initials(t.name));av.style.setProperty('--hue',hueOf(t.name));
+      const tn=el('div','tn'),nm=el('b',null,t.name);tn.append(nm);if(t.role==='admin')tn.append(el('span','role','Admin'));
+      const sm=el('small');sm.append(document.createTextNode('@'+t.u+' · '));sm.append(t.mustChange?el('span','pend',T('hasn\'t chosen a password yet')):document.createTextNode(agoTxt(t.lastSeen)));tn.append(sm);
+      const tc=el('div','tc');tc.append(el('b',null,String(t.month)),el('span',null,T('sessions in')+' '+mon));tc.title=`${t.total} ${T('sessions in total')}`;
+      const ta=el('div','ta'),btn=(x,f,cls)=>{const b=el('button',cls||null,x);b.type='button';b.onclick=f;ta.append(b)};
+      btn('Rename',()=>renameTeacher(t));btn('Reset password',()=>resetTeacher(t));if(t.u!==me.u)btn('Remove',()=>removeTeacher(t),'danger');
+      row.append(av,tn,tc,ta);list.append(row)});
+    if(d.unassigned)list.append(el('p','sub',`${d.unassigned} ${T('older sessions from before accounts (only you see them)')}`))}
+  catch(e){list.innerHTML='';list.append(el('p','sub',e&&e.message?e.message:NET_ERR()))}}
+$('tAdd').onsubmit=async e=>{e.preventDefault();const name=$('tName').value.trim(),u=$('tUser').value.trim().toLowerCase(),p=$('tPw').value;
+  if(!name){toast(T('Write the teacher\'s name.'));$('tName').focus();return}
+  if(!/^[a-z0-9._-]{2,30}$/.test(u)){toast(T('Username: small letters and numbers only, like ana or mariap.'));$('tUser').focus();return}
+  if(p&&p.length<6){toast(T('Use at least 6 characters.'));$('tPw').focus();return}
+  try{const {r,d}=await api('/teachers',{body:{action:'add',u,name,p}});
+    if(r.status===409){toast(T('That username is taken.'));return}if(!r.ok)throw 0;
+    $('tName').value=$('tUser').value=$('tPw').value='';showPassword(T('Teacher added'),name,u,d.password);renderTeachers()}catch(x){toast(x&&x.message?x.message:NET_ERR())}};
+$('tName').addEventListener('input',()=>{const u=$('tUser');if(u.dataset.touched)return;const n=$('tName').value.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').split(/\s+/);u.value=(n[0]||'').replace(/[^a-z0-9]/g,'')});
+$('tUser').addEventListener('input',()=>{$('tUser').dataset.touched=$('tUser').value?'1':''});
+async function resetTeacher(t){if(!confirmBox(T('Reset the password of')+' '+t.name+'?',T('They will be signed out everywhere and pick a new password with the one you give them.'),T('Reset password'),async()=>{
+  const {r,d}=await api('/teachers',{body:{action:'reset',u:t.u}});if(!r.ok)throw 0;showPassword(T('New starting password'),t.name,t.u,d.password);renderTeachers()}))return}
+function removeTeacher(t){confirmBox(T('Remove')+' '+t.name+'?',T('They can no longer sign in. Their saved reports stay, and you can still see them.'),T('Remove'),async()=>{
+  const {r}=await api('/teachers',{body:{action:'remove',u:t.u}});if(!r.ok)throw 0;closeModal();toast(T('Removed'));renderTeachers()},true)}
+function renameTeacher(t){modal(box=>{const f=el('form');f.style.display='grid';f.style.gap='14px';const [ln,n]=field('Name',{value:t.name,maxLength:60});
+  const err=el('p','merr'),row=el('div','mrow'),c=el('button','plain','Cancel'),go=el('button','cta','Save');c.type='button';go.type='submit';c.onclick=closeModal;row.append(c,go);
+  f.append(el('h2',null,'Rename'),ln,err,row);f.onsubmit=async e=>{e.preventDefault();if(!n.value.trim())return;
+    try{const {r}=await api('/teachers',{body:{action:'rename',u:t.u,name:n.value.trim()}});if(!r.ok)throw 0;closeModal();renderTeachers()}catch(x){err.textContent=NET_ERR()}};box.append(f)})}
+function confirmBox(title,text,label,act,danger){modal(box=>{const row=el('div','mrow'),c=el('button','plain','Cancel'),go=el('button','cta',label),err=el('p','merr');c.type=go.type='button';
+  if(danger)go.style.background='var(--bad)';c.onclick=closeModal;go.onclick=async()=>{go.disabled=true;try{await act()}catch(x){err.textContent=x&&x.message?x.message:NET_ERR()}go.disabled=false};
+  row.append(c,go);box.append(el('h2',null,title),el('p',null,text),err,row)})}
 /* sessions: this device's own, plus the ones this teacher saved online (all of them for the admin) */
 const localSessions=()=>store.get('edu-portal-sessions',[]);
 let remoteSessions=[],lastPull=0,pulling=false,syncState='';
@@ -1060,17 +1234,15 @@ async function syncNow(){let pend=pendingSync();if(!auth()||!pend.length){paintS
   store.set('edu-sync-pending',pend);paintSync();if(pend.length)syncSoon(60000)}
 async function pullReports(force){if(!auth()||pulling||(!force&&Date.now()-lastPull<60000))return;pulling=true;
   try{const r=await T_(15000,fetch(`${REPORTS_HTTP()}/reports`,{cache:'no-store',headers:authH()}));
-    if(r.ok){const l=await r.json();remoteSessions=Array.isArray(l)?l:[];lastPull=Date.now();if(syncState!=='offline')syncState='ok'}else if(r.status===401){store.set('edu-teacher-auth',null);syncState='badpin'}else syncState='offline'}
+    if(r.ok){const l=await r.json();remoteSessions=Array.isArray(l)?l:[];lastPull=Date.now();if(syncState!=='offline')syncState='ok'}else if(r.status===401){signedOut(true)}else syncState='offline'}
   catch(e){syncState='offline'}
   pulling=false;if(!$('reports').hidden)renderReports(true)}
-function paintSync(){const e=$('syncNote');if(!e)return;const a=auth(),pend=pendingSync().length;e.className='syncnote';$('rPin').hidden=!!a;
-  $('whoAmI').hidden=!a;if(a)$('whoName').textContent='Signed in as '+a.name+(a.role==='admin'?' · sees every teacher\'s reports':'');
-  if(!a){e.textContent=syncState==='badpin'?'Your sign-in ended. Sign in again to keep saving results online.':'Results are only on this device. Sign in to see your reports from any device and save them online.';e.classList.add('warn');return}
+function paintSync(){const e=$('syncNote');if(!e)return;const a=auth(),pend=pendingSync().length;e.className='syncnote';$('rSignIn').hidden=!!a;
+  if(!a){e.textContent=syncState==='badpin'?'Your sign-in ended. Sign in again (top right) to keep saving results online.':'Results are only on this device. Sign in (top right) to see your reports from any device and save them online.';e.classList.add('warn');return}
   if(syncState==='offline'||pend){e.textContent=pend?`${pend} session${pend===1?'':'s'} not saved online yet. They will be sent when the class server can be reached.`:'Couldn\'t reach the class server. Showing what is saved on this device.';e.classList.add('warn');return}
   e.textContent=lastPull?`Saved online in your account · updated ${fmtDate(lastPull)}`:'Saved online in your account';e.classList.add('ok')}
 window.addEventListener('online',()=>syncSoon(1000));
-$('rPin').onsubmit=e=>{e.preventDefault();submitSignIn($('rU'),$('rP'),null)};
-$('signOut').onclick=signedOut;
+$('rSignIn').onclick=()=>openSignIn();
 let saveT=null;const saveSoon=()=>{if(!saveT)saveT=setTimeout(()=>{saveT=null;saveSession()},2500)};
 function saveSession(){if(!session||!session.rounds.length)return;session.updatedAt=Date.now();const all=localSessions().filter(s=>s.id!==session.id);all.push(session);store.set('edu-portal-sessions',all.slice(-300));
   const p=pendingSync();if(!p.includes(session.id)){p.push(session.id);store.set('edu-sync-pending',p.slice(-300))}syncSoon()}
@@ -1121,7 +1293,7 @@ async function loadClasses(){if(!auth()){clsState='pin';paintClsPick();return}
   clsState='loading';paintClsPick();
   try{let r=null;for(const i of [relayIdx,...RELAYS.map((x,j)=>j).filter(j=>j!==relayIdx)]){try{r=await T_(i?75000:8000,fetch(`${httpOf(RELAYS[i])}/classes`,{cache:'no-store',headers:authH()}));if(r.ok||r.status===401)break;r=null}catch(e){r=null}}
     if(!r)throw new Error('offline');
-    if(r.status===401){if(!i){store.set('edu-teacher-auth',null);syncState='badpin'}clsState='pin';paintClsPick();paintSync();return}
+    if(r.status===401){if(!i)signedOut(true);clsState='pin';paintClsPick();paintSync();return}
     if(!r.ok)throw new Error(r.status);const l=await r.json();
     store.set('edu-portal-classes-cache',(Array.isArray(l)?l:[]).filter(c=>c&&c.id&&c.name&&Array.isArray(c.students)));clsState=''}
   catch(e){clsState=classes().length?'':'offline'}
@@ -1132,15 +1304,14 @@ function paintClsPick(){const l=classes(),cur=session&&session.classId&&l.some(c
     render:(o,inBtn)=>{if(o.any)return[el('span','cbadge any','∗'),txt('Anyone','students type their name')];
       const n=o.c.students.length;return inBtn?[el('span','cbadge',o.c.name),txt(`Class ${o.c.name}`,`${n} students pick their name`)]:[el('b',null,o.c.name),el('small',null,`${n} students`)]}});
   $('guestTog').hidden=!cur;$('allowGuests').checked=!!(session&&session.allowGuests);
-  const needPin=clsState==='pin',pr=$('pinRow');pr.hidden=!(needPin&&pinOpen);$('pinShow').hidden=!needPin||!pr.hidden;
+  $('pinShow').hidden=clsState!=='pin';
   $('clsNote').textContent=clsState==='loading'?'Loading class lists…':clsState==='offline'?'Couldn\'t load the class lists. Check the connection.':'';
   $('clsReload').hidden=!(l.length||clsState==='offline')}
 const pickClass=id=>{if(!session)return;const c=classes().find(x=>x.id===id)||null;session.classId=c?c.id:null;session.className=c?c.name:null;
   store.set('edu-portal-lastclass',session.classId||'');saveSession();paintClsPick();paintLobby();pushMode()};
 $('allowGuests').onchange=()=>{if(!session)return;session.allowGuests=$('allowGuests').checked;store.set('edu-portal-guests',session.allowGuests);saveSession();pushMode()};
-$('pinRow').onsubmit=async e=>{e.preventDefault();if(await submitSignIn($('auU'),$('auP'),$('pinErr')))pinOpen=false};
 $('clsReload').onclick=()=>loadClasses();
-let pinOpen=false;$('pinShow').onclick=()=>{pinOpen=true;paintClsPick();$('auU').focus()};
+$('pinShow').onclick=()=>openSignIn();
 /* what a student who hasn't picked a name yet sees; refreshed for everyone still choosing when it changes */
 const pending=new Set();
 function modeMsg(conn,msg){const lang=I18N.lang,R=curRoster(),taken=n=>{const c=conns.get(n);return!!(c&&online(c)&&c.conn!==conn)};
@@ -1464,7 +1635,7 @@ $('expXlsx').onclick=async()=>{$('expXlsx').disabled=true;$('expXlsx').textConte
 renderHeroCats();
 const hj=location.hash.match(/join=([A-Z0-9]{5})/i);{const hb=location.hash.match(/[&#]b=(\d)/);joinRelay=hb&&RELAYS[+hb[1]]?+hb[1]:0}
 if(hj){openJoin(hj[1]);history.replaceState(null,'',location.pathname+location.search)}else setMode('play');
-discover();setTimeout(syncNow,3000);
+paintAcct();discover();setTimeout(syncNow,3000);
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>

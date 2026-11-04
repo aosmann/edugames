@@ -1,6 +1,7 @@
-/* Create or reset a teacher account:  node add-teacher.mjs <username> "<Name>" [admin]
-   Prints a new password once and saves only its hash in src/teachers.json (kept out of git).
-   Then run: npx wrangler deploy */
+/* Emergency / first setup: create or reset an account from the Terminal.
+     node add-teacher.mjs <username> "<Name>" [admin]   then   npx wrangler deploy
+   Prints a new password once and saves only its hash in src/teachers.json (kept out of git); the class server
+   copies it in once on the next request. Normally teachers are managed on the portal: your name → Teachers. */
 process.removeAllListeners('warning');
 import fs from 'node:fs';
 import {webcrypto} from 'node:crypto';
