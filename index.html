@@ -1061,7 +1061,7 @@ function uniqueName(n,conn){n=(n||'Student').trim().slice(0,24)||'Student';
 function onStudent(conn){let name=null;
   conn.on('data',m=>{if(!m||typeof m!=='object')return;
     if(m.t==='hi'){if(!name){pending.add(conn);conn.send(modeMsg(conn))}else conn.send({t:'welcome',name,code:session.code});return}
-    if(m.t==='hello'){const R=curRoster(),want=String(m.name||'').trim().replace(/\s+/g,' ').slice(0,24);let guest=false;
+    if(m.t==='hello'){const R=curRoster(),want=String(m.name||'').trim().replace(/\s+/g,' ').slice(0,60);let guest=false;
       if(!R||m.guest){
         if(R&&!session.allowGuests){conn.send(modeMsg(conn,'Guests can\'t join this class. Pick your name from the list.'));return}
         if(!want){conn.send(modeMsg(conn,'Type a name so your teacher knows who you are.'));return}
