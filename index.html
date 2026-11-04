@@ -188,6 +188,9 @@ p{margin:0}
 .regchips{display:flex;flex-wrap:wrap;gap:6px}
 .regchips button{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:8px 12px;font-weight:700;font-size:14px;color:var(--ink2)}
 .regchips button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+.regchips.ops button{min-width:48px;font-size:18px;font-weight:800}
+.regchips input.optnum{border:1.5px solid var(--ink);border-radius:999px;padding:7px 12px;font-weight:800;font-size:14px;width:110px;background:var(--card);color:var(--ink)}
+.optsec{margin-top:14px}
 .seg button{flex:1;border:0;background:none;border-radius:12px;padding:10px 6px;font-weight:700;color:var(--ink2)}
 .seg button[aria-pressed=true]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(24,32,61,.12)}
 .ready{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px}
@@ -941,7 +944,7 @@ const BANKS={};
 function loadBank(g){if(BANKS[g.id])return Promise.resolve(BANKS[g.id]);
   return new Promise((res,rej)=>{const prev=window.EduQ;delete window.EduQ;const s=document.createElement('script');s.src=g.base+'questions.js';
     s.onload=()=>{const E=window.EduQ;window.EduQ=prev;if(!E)return rej(new Error('no bank'));
-      const B=E.SUBJECTS.map(s=>({id:s.id,name:s.name,topics:s.topics.map(t=>({id:t.id,name:t.name,bl:t.bl,d:t.d,regions:!!t.regions,unit:t.unit||null}))}));B.icon=E.SICON||{};B.hue=E.SHUE||{};
+      const B=E.SUBJECTS.map(s=>({id:s.id,name:s.name,topics:s.topics.map(t=>({id:t.id,name:t.name,bl:t.bl,d:t.d,regions:!!t.regions,unit:t.unit||null,opts:t.opts||null}))}));B.icon=E.SICON||{};B.hue=E.SHUE||{};
       B.regions=E.REGIONS||null;B.getRegions=E.getRegions||null;B.setRegions=E.setRegions||null;B.regionLabel=E.regionLabel||null;BANKS[g.id]=B;res(B)};
     s.onerror=()=>{window.EduQ=prev;rej(new Error('bank failed'))};document.head.append(s)})}
 
@@ -1022,6 +1025,8 @@ function renderSetup(){const g=sel.game,B=sel.bank,s=curSub(),t=curTop();
     const chip=(id,name,on)=>{const b=el('button',null,name);b.type='button';b.setAttribute('aria-pressed',on);
       b.onclick=()=>{if(id==='all')return set(B.regions.map(r=>r.id));if(all)return set([id]);const nx=cur.includes(id)?cur.filter(x=>x!==id):cur.concat(id);set(nx.length?nx:B.regions.map(r=>r.id))};return b};
     row.append(chip('all','All',all));B.regions.forEach(r=>row.append(chip(r.id,r.name,!all&&cur.includes(r.id))));box.append(row)}
+  Object.keys(sel.values).forEach(k=>{if(k.slice(0,2)==='o_'&&!(t&&t.opts&&t.opts.some(o=>'o_'+o.key===k)))delete sel.values[k]});
+  if(t&&t.opts)topicOptsUI(t,box);
   if(t)(g.settings||[]).forEach(st=>{let v=sel.values[st.key];const cu=st.custom;sel.cust=sel.cust||{};
     Object.keys(sel.values).forEach(k=>{if(k.startsWith(st.key+'_'))delete sel.values[k]});
     const isC=!!(cu&&sel.cust[st.key]&&sel.cust[st.key].on);let cv=null;
@@ -1054,11 +1059,32 @@ function paintGo(){if(!sel||$('setup').hidden)return;const t=curTop(),go=$('sGo'
     $('sNote').textContent=!t?'':on.length?'Anyone who joins later gets this round too.':'Nobody has joined yet. You can still start; students who join later get this round.'}
   else{rd.hidden=true;go.className='cta';go.textContent=t?`Play · ${t.name}`:'Choose a topic to play';$('sNote').textContent=t?'Your results are saved on this device and show up in Reports.':''}}
 $('sGo').onclick=()=>{if(!curTop())return;if(mode==='class'&&session)startRound(roundFromSel());else playSolo()};
-function roundFromSel(){const g=sel.game,s=curSub(),t=curTop();
+/* topic settings from the bank (topic.opts): Basic math operations and range, Times tables… sent to the game as ?o_<key>= */
+function topicOptsUI(t,box){const mem=store.get('edu-topt-'+t.id,{});
+  t.opts.forEach(o=>{const k='o_'+o.key;if(sel.values[k]==null&&mem[o.key]!=null)sel.values[k]=mem[o.key];if(sel.values[k]==null&&o.def)sel.values[k]=o.def;
+    const cur=sel.values[k]==null?'':String(sel.values[k]);
+    const set=v=>{if(v===''||v==null)delete sel.values[k];else sel.values[k]=v;const m=store.get('edu-topt-'+t.id,{});m[o.key]=v;store.set('edu-topt-'+t.id,m);renderSetup()};
+    const lab=el('div','sec-t optsec',o.label);lab.id='st-o-'+o.key;box.append(lab);
+    const row=el('div','regchips'+(o.key==='ops'?' ops':''));row.setAttribute('role','group');row.setAttribute('aria-labelledby',lab.id);
+    const chip=(v,name,on,f)=>{const b=el('button',null,name);b.type='button';b.setAttribute('aria-pressed',on);b.onclick=f;row.append(b)};
+    if(o.multi){const list=cur?cur.split(o.key==='ops'?'':','):[],all=o.options.map(x=>x[0]),sep=o.key==='ops'?'':',';
+      if(o.key!=='ops')chip('all','All',!list.length,()=>set(''));
+      o.options.forEach(([v,name])=>chip(v,name,list.includes(v),()=>{let nx=list.includes(v)?list.filter(x=>x!==v):list.concat(v);nx=all.filter(x=>nx.includes(x));
+        if(!nx.length&&o.key==='ops')return;set(nx.join(sep))}))}
+    else{const known=o.options.some(x=>x[0]===cur),custom=o.custom&&!known;
+      o.options.forEach(([v,name])=>chip(v,name,cur===v,()=>set(v)));
+      if(o.custom){chip('c','Custom',custom,()=>{if(!custom)set(String(Math.min(o.custom.max,Math.max(o.custom.min,500))))});
+        if(custom){const i=el('input','optnum');i.type='number';i.min=o.custom.min;i.max=o.custom.max;i.value=cur;i.setAttribute('aria-label',o.label);
+          i.onchange=()=>{const n=Math.round(+i.value);if(n>=o.custom.min&&n<=o.custom.max)set(String(n));else i.value=cur};row.append(i)}}}
+    box.append(row)})}
+const optsLabel=(t,v)=>!t||!t.opts?'':t.opts.map(o=>{const x=v['o_'+o.key];if(x==null||x==='')return '';
+  if(o.multi){const l=String(x).split(o.key==='ops'?'':',');return l.map(y=>(o.options.find(p=>p[0]===y)||[y,y])[1]).join(o.key==='ops'?' ':', ')}
+  const p=o.options.find(p=>p[0]===x);return o.key==='max'?`${T('up to')} ${p?p[1]:x}`:(p?p[1]:x)}).filter(Boolean).join(' · ');
+function roundFromSel(){const g=sel.game,s=curSub(),t=curTop(),ol=t.regions?'':optsLabel(t,sel.values);
   return{id:'r'+Date.now().toString(36),game:g.id,gameName:g.name,base:g.base,subject:s.id,subjectName:s.name,topic:t.id,topicName:t.name,
-    regionsLabel:t.regions&&sel.bank.regionLabel?sel.bank.regionLabel(sel.values.regions?sel.values.regions.split(','):null):'',
+    regionsLabel:t.regions&&sel.bank.regionLabel?sel.bank.regionLabel(sel.values.regions?sel.values.regions.split(','):null):ol,
     race:mode==='class'&&g.multiplayer&&g.multiplayer.race?{seed:1}:null,lang:I18N.lang,
-    values:Object.assign({},sel.values),label:`${g.name} · ${t.name} · ${LEVELS[sel.values.level]||''}${sel.values.time?' · '+(sel.values.time>=120?sel.values.time/60+' min':sel.values.time+' sec'):''}`}}
+    values:Object.assign({},sel.values),label:`${g.name} · ${t.name}${ol?' · '+ol:''} · ${LEVELS[sel.values.level]||''}${sel.values.time?' · '+(sel.values.time>=120?sel.values.time/60+' min':sel.values.time+' sec'):''}`}}
 function gameURL(r,lock){const u=new URL(r.base);u.searchParams.set('topic',r.topic);u.searchParams.set('lang',r.lang||I18N.lang);Object.entries(r.values).forEach(([k,v])=>u.searchParams.set(k,v));if(lock)u.searchParams.set('lock','1');
   if(lock&&r.race){u.searchParams.set('race','1');u.searchParams.set('seed',r.race.seed)}return u.href}
 /* race games (game.json multiplayer.race): one seed per round, a spectate view for the teacher */
