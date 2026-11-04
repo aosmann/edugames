@@ -1,6 +1,10 @@
+import CLASSES from './classes.json';
 /* EduGames class connection server: a tiny PeerJS-compatible signalling server on Cloudflare Workers.
    It only passes the short "how do I reach you" messages (offer, answer, ICE candidates) between the teacher's
    and the students' browsers. Game data then flows directly between the devices; nothing is stored here.
+
+   v2: class rooms relayed through the server (/room/<CODE>): works on any network that allows HTTPS, no direct
+   device-to-device link needed. Class lists for teachers (/classes, needs the TEACHER_PIN secret).
 
    Routes (PeerJS client with {host, port: 443, path: '/', secure: true, key: 'peerjs'}):
      GET  /peerjs/id         -> a random peer id (text)
@@ -21,6 +25,18 @@ export default {
       const id = url.searchParams.get('id') || '';
       if (!ID_OK.test(id)) return new Response('Bad id', {status: 400, headers: CORS});
       return env.HUB.get(env.HUB.idFromName('hub')).fetch(req);
+    }
+    const room = /^\/room\/([A-Z0-9]{5})$/.exec(p);
+    if (room) {
+      if (req.headers.get('Upgrade') !== 'websocket') return new Response('Expected a WebSocket', {status: 426, headers: CORS});
+      return env.ROOM.get(env.ROOM.idFromName(room[1])).fetch(req);
+    }
+    if (p === '/classes') {
+      /* the school's class lists, only for teachers who know the PIN */
+      const pin = url.searchParams.get('pin') || req.headers.get('X-Teacher-Pin') || '';
+      if (!env.TEACHER_PIN) return new Response('No TEACHER_PIN set on the server', {status: 503, headers: CORS});
+      if (pin !== env.TEACHER_PIN) return new Response('Wrong PIN', {status: 403, headers: CORS});
+      return new Response(JSON.stringify(CLASSES), {headers: {...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store'}});
     }
     if (p === '' || p === '/health') return new Response('EduGames class server: ok', {headers: {...CORS, 'Content-Type': 'text/plain'}});
     return new Response('Not found', {status: 404, headers: CORS});
@@ -72,4 +88,69 @@ export class Hub {
 
   webSocketClose(ws) { try { ws.close(); } catch (e) {} }
   webSocketError(ws) { try { ws.close(); } catch (e) {} }
+}
+
+/* One Room per class code. The teacher's browser is the host; students are guests. Messages:
+   guest -> server: any JSON         -> host gets {f: <guest id>, m: <message>}
+   host  -> server: {to: id|'*', m}   -> that guest (or all) gets m;  {kick: id} closes that guest
+   server -> host:  {ev:'open', guests:[ids]}, {ev:'join', f}, {ev:'leave', f}, {ev:'taken'}
+   server -> guest: {ev:'open'}, {ev:'nohost'}, {ev:'hostleft'}, {ev:'host'}
+   {ping:1} from anyone keeps the line alive and is ignored. */
+const CID_OK = /^[A-Za-z0-9_-]{4,40}$/;
+export class Room {
+  constructor(state) { this.state = state; }
+  att(ws) { try { return ws.deserializeAttachment() || {}; } catch (e) { return {}; } }
+  host() { return this.state.getWebSockets('host')[0] || null; }
+  guests(id) { return this.state.getWebSockets(id ? 'g:' + id : 'guest'); }
+  send(ws, o) { try { ws.send(typeof o === 'string' ? o : JSON.stringify(o)); } catch (e) {} }
+
+  async fetch(req) {
+    const url = new URL(req.url), role = url.searchParams.get('role');
+    const pair = new WebSocketPair(), [client, server] = Object.values(pair);
+    const done = () => new Response(null, {status: 101, webSocket: client});
+    if (role === 'host') {
+      const key = url.searchParams.get('key') || '';
+      const old = this.state.getWebSockets('host');
+      if (old.some(ws => this.att(ws).key !== key)) {
+        this.state.acceptWebSocket(server, ['dead']); this.send(server, {ev: 'taken'}); server.close(1008, 'taken'); return done();
+      }
+      old.forEach(ws => { try { ws.close(1000, 'replaced'); } catch (e) {} });
+      this.state.acceptWebSocket(server, ['host']); server.serializeAttachment({role: 'host', key});
+      this.send(server, {ev: 'open', guests: this.guests().map(ws => this.att(ws).cid)});
+      this.guests().forEach(g => this.send(g, {ev: 'host'}));
+      return done();
+    }
+    const cid = url.searchParams.get('cid') || '';
+    if (role !== 'guest' || !CID_OK.test(cid)) return new Response('Bad request', {status: 400});
+    if (!this.host()) { this.state.acceptWebSocket(server, ['dead']); this.send(server, {ev: 'nohost'}); server.close(1000, 'nohost'); return done(); }
+    this.guests(cid).forEach(ws => { try { ws.close(1000, 'replaced'); } catch (e) {} });
+    this.state.acceptWebSocket(server, ['guest', 'g:' + cid]); server.serializeAttachment({role: 'guest', cid});
+    this.send(server, {ev: 'open'});
+    const h = this.host(); if (h) this.send(h, {ev: 'join', f: cid});
+    return done();
+  }
+
+  webSocketMessage(ws, raw) {
+    if (typeof raw !== 'string' || raw.length > 65536) return;
+    let o; try { o = JSON.parse(raw); } catch (e) { return; }
+    if (!o || typeof o !== 'object' || o.ping) return;
+    const a = this.att(ws);
+    if (a.role === 'host') {
+      if (typeof o.kick === 'string') { this.guests(o.kick).forEach(g => { try { g.close(4000, 'removed'); } catch (e) {} }); return; }
+      if (!('m' in o)) return;
+      const out = JSON.stringify(o.m);
+      (o.to === '*' ? this.guests() : typeof o.to === 'string' ? this.guests(o.to) : []).forEach(g => this.send(g, out));
+    } else if (a.role === 'guest') {
+      const h = this.host(); if (h) this.send(h, {f: a.cid, m: o});
+    }
+  }
+
+  webSocketClose(ws) { this.gone(ws); }
+  webSocketError(ws) { this.gone(ws); }
+  gone(ws) {
+    const a = this.att(ws);
+    try { ws.close(); } catch (e) {}
+    if (a.role === 'guest') { if (this.guests(a.cid).some(g => g !== ws)) return; const h = this.host(); if (h) this.send(h, {ev: 'leave', f: a.cid}); }
+    if (a.role === 'host' && !this.state.getWebSockets('host').some(h => h !== ws)) this.guests().forEach(g => this.send(g, {ev: 'hostleft'}));
+  }
 }
