@@ -258,7 +258,24 @@ p{margin:0}
 .who select{width:100%;min-width:0;border:2px solid var(--line);border-radius:var(--r-m);padding:14px 16px;font-size:20px;font-weight:700;background:var(--paper);color:var(--ink)}
 .field[hidden]{display:none}
 .roomcls{justify-self:center;display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;justify-content:center;color:#dfe4ff;font-weight:700}
-.roomcls select{min-width:min(100%,260px);border:0;border-radius:var(--r-m);padding:12px 14px;font-weight:800;font-size:16px;background:#fff;color:var(--ink)}
+.clsdd{width:min(100%,340px);color:var(--ink);text-align:left}
+.clsdd .ddbtn{min-height:58px;background:#fff;box-shadow:0 6px 0 rgba(0,0,0,.18)}
+.clsdd .ddbtn[aria-expanded=true]{box-shadow:inset 0 0 0 2px var(--marker),0 6px 0 rgba(0,0,0,.18)}
+.clsdd .ddlist{width:min(92vw,460px);right:auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:10px;max-height:min(460px,70vh)}
+.clsdd .ddlist[hidden]{display:none}
+.clsdd .ddlist li{flex-direction:column;justify-content:center;gap:2px;padding:10px 4px;text-align:center;border-radius:14px;background:var(--paper)}
+.clsdd .ddlist li .ok{display:none}
+.clsdd .ddlist li[aria-selected=true]{background:var(--board);color:#fff}
+.clsdd .ddlist li[aria-selected=true] small{color:#c8cff5}
+.clsdd .ddlist li[aria-selected=true] .tx span{color:#c8cff5}
+.clsdd .ddlist li[aria-selected=true] .cbadge.any{background:rgba(255,255,255,.16);color:#fff}
+.clsdd .ddlist li:first-child{grid-column:1/-1;flex-direction:row;justify-content:flex-start;gap:12px;padding:10px 12px;text-align:left}
+.clsdd .ddlist li b{font-size:19px;font-weight:800;line-height:1.1}
+.clsdd .ddlist li small{font-size:12px;font-weight:700;color:var(--ink2)}
+.cbadge{flex:none;min-width:44px;height:44px;padding:0 8px;border-radius:13px;display:grid;place-items:center;background:var(--board);color:#fff;font-weight:800;font-size:16px}
+.cbadge.any{background:#e9ecf6;color:var(--board);font-size:22px}
+.wcj{font-weight:800}
+@media(max-width:480px){.clsdd .ddlist{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .roomcls .ghost{padding:10px 14px}
 .missing{color:#c8cff5;font-weight:700;text-align:center;max-width:70ch}
 .ptile{position:relative}
@@ -561,8 +578,8 @@ p{margin:0}
       <button class="qr" id="qr" type="button" aria-label="Show the QR code larger"><span class="wait">Opening…</span></button>
     </section>
     <div class="roomcls">
-      <label for="clsPick">Who can join</label>
-      <select id="clsPick"></select>
+      <span class="wcj" id="lCls">Who can join</span>
+      <div class="dd clsdd" id="clsDD"></div>
       <label class="tog" id="guestTog" hidden><input type="checkbox" id="allowGuests"> Allow guests</label>
       <button class="link light" type="button" id="clsReload" hidden>Reload class lists</button>
       <button class="link light" type="button" id="pinShow" hidden>Use a class list</button>
@@ -1022,13 +1039,16 @@ async function loadClasses(pin){pin=pin||store.get('edu-teacher-pin','');if(!pin
     store.set('edu-teacher-pin',pin);store.set('edu-portal-classes-cache',(Array.isArray(l)?l:[]).filter(c=>c&&c.id&&c.name&&Array.isArray(c.students)));clsState=''}
   catch(e){clsState=classes().length?'':'offline'}
   if(session&&session.classId){const c=curRoster();if(c)session.className=c.name}paintClsPick();paintLobby();pushMode()}
-function paintClsPick(){const sp=$('clsPick'),l=classes();sp.innerHTML='';sp.append(new Option('Anyone · students type their name',''));
-  l.forEach(c=>sp.append(new Option(`${c.name} · ${c.students.length} students`,c.id)));sp.value=session&&session.classId&&l.some(c=>c.id===session.classId)?session.classId:'';
-  $('guestTog').hidden=!sp.value;$('allowGuests').checked=!!(session&&session.allowGuests);
+function paintClsPick(){const l=classes(),cur=session&&session.classId&&l.some(c=>c.id===session.classId)?session.classId:'';
+  const opts=[{value:'',any:true},...l.map(c=>({value:c.id,c}))];
+  dropdown($('clsDD'),{label:'lCls',placeholder:'Anyone',value:cur,options:opts,onChange:pickClass,
+    render:(o,inBtn)=>{if(o.any)return[el('span','cbadge any','∗'),txt('Anyone','students type their name')];
+      const n=o.c.students.length;return inBtn?[el('span','cbadge',o.c.name),txt(`Class ${o.c.name}`,`${n} students pick their name`)]:[el('b',null,o.c.name),el('small',null,`${n} students`)]}});
+  $('guestTog').hidden=!cur;$('allowGuests').checked=!!(session&&session.allowGuests);
   const needPin=clsState==='pin'||clsState==='badpin',pr=$('pinRow');pr.hidden=!(needPin&&(pinOpen||clsState==='badpin'));$('pinShow').hidden=!needPin||!pr.hidden;$('pinErr').hidden=clsState!=='badpin';
   $('clsNote').textContent=clsState==='loading'?'Loading class lists…':clsState==='offline'?'Couldn\'t load the class lists. Check the connection.':'';
   $('clsReload').hidden=!(l.length||clsState==='offline')}
-$('clsPick').onchange=()=>{if(!session)return;const c=classes().find(x=>x.id===$('clsPick').value)||null;session.classId=c?c.id:null;session.className=c?c.name:null;
+const pickClass=id=>{if(!session)return;const c=classes().find(x=>x.id===id)||null;session.classId=c?c.id:null;session.className=c?c.name:null;
   store.set('edu-portal-lastclass',session.classId||'');saveSession();paintClsPick();paintLobby();pushMode()};
 $('allowGuests').onchange=()=>{if(!session)return;session.allowGuests=$('allowGuests').checked;store.set('edu-portal-guests',session.allowGuests);saveSession();pushMode()};
 $('pinRow').onsubmit=e=>{e.preventDefault();const v=$('pinIn').value.trim();if(v){$('pinIn').value='';loadClasses(v)}};
