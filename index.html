@@ -714,18 +714,25 @@ const OWNER=Q.get('owner')||(location.hostname.endsWith('.github.io')?location.h
 /* class connection: every message goes through our class server (a Cloudflare Worker), over plain HTTPS
    WebSockets, so it works on any network that allows web pages: no direct device-to-device link is needed.
    ?peer=host:port uses a local server instead (testing). */
-const SIGNAL_HOST='edugames-class.edugames.workers.dev';
-const RELAY=(()=>{const h=Q.get('peer');return h?'ws://'+h.split(',').pop():'wss://'+SIGNAL_HOST})();
-const RELAY_HTTP=RELAY.replace(/^ws/,'http');
+/* two homes for the same server: Cloudflare first; Render for networks that block workers.dev (some schools).
+   The teacher's class opens on the first that answers; the join link names it, and students try the other too. */
+const SIGNAL_HOSTS=['edugames-class.edugames.workers.dev','edugames-class.onrender.com'];
+const RELAYS=(()=>{const h=Q.get('peer');return h?h.split(',').map(x=>'ws://'+x):SIGNAL_HOSTS.map(x=>'wss://'+x)})();
+const httpOf=r=>r.replace(/^ws/,'http');
+let relayIdx=0;
+/* Render's free plan sleeps when unused: knock early so it is awake by the time a class opens */
+const wake=i=>T_(75000,fetch(httpOf(RELAYS[i])+'/health',{cache:'no-store'})).then(r=>r.ok);
+function T_(ms,p){return Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),ms))])}
+RELAYS.slice(1).forEach((r,i)=>{try{fetch(httpOf(r)+'/health',{mode:'no-cors',cache:'no-store'}).catch(()=>{})}catch(e){}});
 const rid=n=>{const a=new Uint8Array(n);crypto.getRandomValues(a);return [...a].map(x=>'abcdefghijkmnpqrstuvwxyz23456789'[x%32]).join('')};
 const myCid=()=>{let c=store.get('edu-cid','');if(!/^[a-z0-9]{12}$/.test(c)){c=rid(12);store.set('edu-cid',c)}return c};
 /* teacher: hosts the room; each student arrives as a conn {open, send, on('data'|'close'|'reopen'), close()} */
-function hostRoom(code,h){const key=rid(16);let ws=null,alive=true,opened=false,retry=0;const cs=new Map();
+function hostRoom(code,h,base){const key=rid(16);let ws=null,alive=true,opened=false,retry=0;const cs=new Map();
   const H={open:false,code,send(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))},broadcast(m){H.send({to:'*',m})},
     destroy(){alive=false;clearInterval(ping);try{ws&&ws.close()}catch(e){}}};
   const mk=cid=>{const L={},c={cid,open:true,on(ev,fn){(L[ev]=L[ev]||[]).push(fn)},emit(ev,x){(L[ev]||[]).forEach(f=>{try{f(x)}catch(e){console.error(e)}})},
     send(m){H.send({to:cid,m})},close(){c.open=false;H.send({kick:cid});c.emit('close')}};cs.set(cid,c);return c};
-  const go=()=>{ws=new WebSocket(`${RELAY}/room/${code}?role=host&key=${key}`);
+  const go=()=>{try{ws=new WebSocket(`${base}/room/${code}?role=host&key=${key}`)}catch(e){alive=false;h.error&&h.error();return}
     ws.onmessage=e=>{let o;try{o=JSON.parse(e.data)}catch(x){return}
       if(o.ev==='open'){retry=0;H.open=true;const live=new Set(o.guests||[]);cs.forEach((c,id)=>{const was=c.open;c.open=live.has(id);if(was&&!c.open)c.emit('close')});
         if(!opened){opened=true;h.open&&h.open()}else h.status&&h.status('ok');return}
@@ -734,12 +741,12 @@ function hostRoom(code,h){const key=rid(16);let ws=null,alive=true,opened=false,
       if(o.ev==='leave'){const c=cs.get(o.f);if(c&&c.open){c.open=false;c.emit('close')}return}
       if(o.f){const c=cs.get(o.f);if(c)c.emit('data',o.m)}};
     ws.onclose=()=>{H.open=false;if(!alive)return;if(!opened&&retry>=2){alive=false;h.error&&h.error();return}
-      h.status&&h.status('reconnecting');setTimeout(()=>{if(alive)go()},Math.min(8000,800*2**retry++))}};
+      if(opened)h.status&&h.status('reconnecting');setTimeout(()=>{if(alive)go()},Math.min(8000,800*2**retry++))}};
   const ping=setInterval(()=>H.send({ping:1}),25000);go();return H}
 /* student: one line to the teacher, reconnecting by itself */
-function guestRoom(code,h){const cid=myCid();let ws=null,alive=true,opened=false,retry=0;
+function guestRoom(code,h,base){const cid=myCid();let ws=null,alive=true,opened=false,retry=0;
   const G={open:false,send(m){if(ws&&ws.readyState===1)ws.send(JSON.stringify(m))},close(){alive=false;clearInterval(ping);try{ws&&ws.close()}catch(e){}}};
-  const go=()=>{ws=new WebSocket(`${RELAY}/room/${code}?role=guest&cid=${cid}`);
+  const go=()=>{try{ws=new WebSocket(`${base}/room/${code}?role=guest&cid=${cid}`)}catch(e){alive=false;h.error&&h.error();return}
     ws.onmessage=e=>{let o;try{o=JSON.parse(e.data)}catch(x){return}
       if(o.ev==='open'){retry=0;G.open=true;const first=!opened;opened=true;h.open&&h.open(first);return}
       if(o.ev==='nohost'){alive=false;h.nohost&&h.nohost();return}
@@ -748,7 +755,7 @@ function guestRoom(code,h){const cid=myCid();let ws=null,alive=true,opened=false
       h.data&&h.data(o)};
     ws.onclose=e=>{G.open=false;if(!alive)return;if(e.code===4000){alive=false;h.removed&&h.removed();return}
       if(!opened&&retry>=2){alive=false;h.error&&h.error();return}
-      h.status&&h.status('reconnecting');setTimeout(()=>{if(alive)go()},Math.min(8000,800*2**retry++))}};
+      if(opened)h.status&&h.status('reconnecting');setTimeout(()=>{if(alive)go()},Math.min(8000,800*2**retry++))}};
   const ping=setInterval(()=>G.send({ping:1}),25000);go();return G}
 const ROOM_PREFIX='edugames-v1-';
 const CODE_ABC='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -972,20 +979,23 @@ const settingLine=r=>`${r.subjectName}${r.regionsLabel?' · '+r.regionsLabel:''}
 
 /* Class tab = the class room. It opens straight away; students join the class, not a game. */
 function enterClass(){if(session){show(round&&!round.closed?'liveScr':'lobby');paintLobby();paintLive();return}openClass()}
-function openClass(tries=0){
+function openClass(tries=0,ri=0){
   show('lobby');renderRoomGames();
   const code=newCode();
   session={id:'s'+Date.now().toString(36),code,startedAt:new Date().toISOString(),rounds:[],players:[],guests:[]};
   {const lc=classes().find(c=>c.id===store.get('edu-portal-lastclass',''));if(lc){session.classId=lc.id;session.className=lc.name}session.allowGuests=store.get('edu-portal-guests',true)!==false}
   $('code').textContent='·····';$('qr').innerHTML='<span class="wait">Opening the class…</span>';$('lobbyNote').textContent='';paintLobby();loadClasses();
-  peer=hostRoom(code,{
-    open(){$('lobbyNote').textContent='';drawQR();paintLobby()},
+  if(ri>0)$('lobbyNote').textContent='Connecting through the backup class server… it can take up to a minute to wake up.';
+  const start=()=>{peer=hostRoom(code,{
+    open(){relayIdx=ri;$('lobbyNote').textContent='';drawQR();paintLobby()},
     connection:onStudent,
-    taken(){session=null;if(tries<4)openClass(tries+1)},
+    taken(){session=null;if(tries<4)openClass(tries+1,ri)},
     status(st){$('lobbyNote').textContent=st==='reconnecting'?'Connection lost. Reconnecting… students stay in the class.':''},
-    error(){$('qr').innerHTML='<span class="wait">No connection</span>';
-      $('lobbyNote').textContent=`Couldn't reach the class server (${SIGNAL_HOST}). Check that this device is online. If other sites work, this network may block it: ask the school's IT to allow it, or try another network.`}})}
-function joinLink(){const u=new URL('./',location.href);u.hash='join='+session.code;if(Q.get('peer'))u.search='?peer='+Q.get('peer');return u.href}
+    error(){if(ri+1<RELAYS.length){session=null;openClass(tries,ri+1);return}
+      $('qr').innerHTML='<span class="wait">No connection</span>';
+      $('lobbyNote').textContent=`Couldn't reach the class server. Check that this device is online. If other sites work, this network blocks it: ask the school's IT to allow ${SIGNAL_HOSTS.join(' and ')}.`}},RELAYS[ri])};
+  if(ri>0)wake(ri).then(start,start);else start()}
+function joinLink(){const u=new URL('./',location.href);u.hash='join='+session.code+(relayIdx?'&b='+relayIdx:'');if(Q.get('peer'))u.search='?peer='+Q.get('peer');return u.href}
 function drawQR(){const q=qrcode(0,'M');q.addData(joinLink());q.make();const svg=q.createSvgTag({cellSize:6,margin:0,scalable:true});
   $('qr').innerHTML=svg;$('qrBigBox').innerHTML=svg;$('code').textContent=session.code;$('qrBigCode').textContent=session.code;
   const u=new URL('./',location.href),jb=$('joinUrl');jb.textContent='';(u.host+u.pathname).replace(/\/$/,'').split('/').forEach((part,i)=>{if(i){jb.append('/',document.createElement('wbr'))}jb.append(part)})}
@@ -1003,7 +1013,8 @@ const curRoster=()=>session&&session.classId?classes().find(c=>c.id===session.cl
 let clsState='';
 async function loadClasses(pin){pin=pin||store.get('edu-teacher-pin','');if(!pin){clsState='pin';paintClsPick();return}
   clsState='loading';paintClsPick();
-  try{const r=await fetch(`${RELAY_HTTP}/classes?pin=${encodeURIComponent(pin)}`,{cache:'no-store'});
+  try{let r=null;for(const i of [relayIdx,...RELAYS.map((x,j)=>j).filter(j=>j!==relayIdx)]){try{r=await T_(i?75000:8000,fetch(`${httpOf(RELAYS[i])}/classes?pin=${encodeURIComponent(pin)}`,{cache:'no-store'}));break}catch(e){r=null}}
+    if(!r)throw new Error('offline');
     if(r.status===403){clsState='badpin';store.set('edu-teacher-pin','');paintClsPick();return}
     if(!r.ok)throw new Error(r.status);const l=await r.json();
     store.set('edu-teacher-pin',pin);store.set('edu-portal-classes-cache',(Array.isArray(l)?l:[]).filter(c=>c&&c.id&&c.name&&Array.isArray(c.students)));clsState=''}
@@ -1187,7 +1198,7 @@ $('jPic').onclick=openAvSheet;$('avDone').onclick=closeAvSheet;
 $('avSheet').addEventListener('click',e=>{if(e.target===$('avSheet'))closeAvSheet()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('avSheet').hidden)closeAvSheet()});
 /* join: the QR gives the code, so we connect at once and ask the teacher who may join (class list or anyone) */
-let jMode=null,jGuest=false;
+let jMode=null,jGuest=false,joinRelay=0;
 function openJoin(code){show('join');paintAvPick();$('jErr').hidden=true;code=(code||'').toUpperCase();$('jCode').value=code;
   $('jCodeL').hidden=!!code;$('jWho').hidden=true;$('jBtn').disabled=!code;$('jBtn').textContent=code?'Connecting…':'Next';
   if(code)startJoin(code);else $('jCode').focus()}
@@ -1209,7 +1220,8 @@ $('joinForm').onsubmit=e=>{e.preventDefault();const code=$('jCode').value.trim()
   $('jErr').hidden=true;store.set('edu-avatar',myAvatar);$('wAv').innerHTML=avatarSVG(myAvatar);$('jBtn').disabled=true;$('jBtn').textContent='Joining…';
   student.want={name,guest:!list};student.conn.send({t:'hello',name,avatar:myAvatar,guest:!list})};
 function jErr(t){$('jErr').textContent=t;$('jErr').hidden=false}
-function startJoin(code){if(student&&student.conn)student.conn.close();jMode=null;jGuest=false;$('jWho').hidden=true;$('jBtn').disabled=true;$('jBtn').textContent='Connecting…';
+function startJoin(code,order){order=order||[joinRelay,...RELAYS.map((x,j)=>j).filter(j=>j!==joinRelay)];const ri=order[0],rest=order.slice(1);
+  if(student&&student.conn)student.conn.close();jMode=null;jGuest=false;$('jWho').hidden=true;$('jBtn').disabled=true;$('jBtn').textContent='Connecting…';
   const st={code,name:null,want:null,conn:null,cur:null,
     fromGame(m){const conn=st.conn,cur=st.cur;if(!conn||!cur||!st.name)return;
       if(m.type==='edu-progress')conn.send({t:'progress',round:cur.id,score:m.score,right:m.right,asked:m.asked,last:m.last||null});
@@ -1220,8 +1232,8 @@ function startJoin(code){if(student&&student.conn)student.conn.close();jMode=nul
   const ord=n=>n+(n%10===1&&n%100!==11?'st':n%10===2&&n%100!==12?'nd':n%10===3&&n%100!==13?'rd':'th');
   st.conn=guestRoom(code,{
     open(){if(st.name)st.conn.send({t:'hello',name:st.name,avatar:myAvatar,guest:!!(st.want&&st.want.guest)});else st.conn.send({t:'hi'})},
-    nohost(){if(student!==st)return;student=null;show('join');$('jCodeL').hidden=false;$('jBtn').disabled=false;$('jBtn').textContent='Next';jErr(`No open class with code ${code}. Check the code on the board.`)},
-    error(){if(student!==st)return;student=null;show('join');$('jCodeL').hidden=false;$('jBtn').disabled=false;$('jBtn').textContent='Next';jErr('Can\'t reach the class. Check the internet connection and try again.')},
+    nohost(){if(student!==st)return;if(rest.length){student=null;startJoin(code,rest);return}student=null;show('join');$('jCodeL').hidden=false;$('jBtn').disabled=false;$('jBtn').textContent='Next';jErr(`No open class with code ${code}. Check the code on the board.`)},
+    error(){if(student!==st)return;if(rest.length){student=null;startJoin(code,rest);return}student=null;show('join');$('jCodeL').hidden=false;$('jBtn').disabled=false;$('jBtn').textContent='Next';jErr('Can\'t reach the class. Check the internet connection and try again.')},
     removed(){},
     status(x){const e=$('wErr');if(x==='ok'){e.hidden=true;return}e.textContent=x==='hostleft'?'Your teacher\'s screen lost its connection. Waiting for it to come back…':'Reconnecting…';e.hidden=false},
     data(m){if(!m||student!==st)return;
@@ -1234,7 +1246,7 @@ function startJoin(code){if(student&&student.conn)student.conn.close();jMode=nul
       if(m.t==='kgo'&&st.cur&&st.cur.race){st.cur.raceStarted=true;toGame({type:'edu-go'});return}
       if(m.t==='stop'){st.cur=null;closeStage();$('wHi').textContent=m.rank?`You came ${ord(m.rank)} of ${m.of}`:'Round over';$('wMsg').textContent='Your teacher is picking the next game. Keep this page open.';show('waitScr');return}
       if(m.t==='kicked'){st.cur=null;closeStage();st.conn.close();student=null;show('waitScr');$('wHi').textContent='You were removed from the class';$('wMsg').textContent='Ask your teacher if this was a mistake, then scan the code again.';$('wErr').hidden=true;return}
-      if(m.t==='bye'){st.cur=null;closeStage();show('waitScr');$('wHi').textContent='Class finished';$('wMsg').textContent='Thanks for playing. You can close this page.';st.conn.close();return}}})}
+      if(m.t==='bye'){st.cur=null;closeStage();show('waitScr');$('wHi').textContent='Class finished';$('wMsg').textContent='Thanks for playing. You can close this page.';st.conn.close();return}}},RELAYS[ri])}
 
 /* =====================================================================
    REPORTS
@@ -1330,7 +1342,7 @@ $('expXlsx').onclick=async()=>{$('expXlsx').disabled=true;$('expXlsx').textConte
 
 /* ---------------- start ---------------- */
 renderHeroCats();
-const hj=location.hash.match(/join=([A-Z0-9]{5})/i);
+const hj=location.hash.match(/join=([A-Z0-9]{5})/i);{const hb=location.hash.match(/[&#]b=(\d)/);joinRelay=hb&&RELAYS[+hb[1]]?+hb[1]:0}
 if(hj){openJoin(hj[1]);history.replaceState(null,'',location.pathname+location.search)}else setMode('play');
 discover();
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
