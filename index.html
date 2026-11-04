@@ -244,6 +244,18 @@ p{margin:0}
 .qrbox svg{width:100%;height:100%;display:block}
 .qrbig .code{font-size:clamp(48px,9vw,110px)}
 .qrbig p{color:#c8cff5}
+.roomcls .tog{display:flex;align-items:center;gap:8px;cursor:pointer}
+.roomcls .tog input{width:22px;height:22px;accent-color:var(--marker)}
+.roomcls .tog[hidden],.roomcls [hidden]{display:none}
+.pinrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pinrow input{border:0;border-radius:var(--r-m);padding:12px 14px;font-size:16px;font-weight:700;width:150px}
+.pinrow .err{color:#ffb4ae}
+.clsnote{color:#c8cff5;font-weight:600}.clsnote:empty{display:none}
+.link.light{color:#dfe4ff}.link.light:hover{color:#fff}
+.who{display:grid;gap:12px}.who[hidden]{display:none}
+.who .clsname{font-weight:800;font-size:20px;color:var(--board)}.who .clsname:empty{display:none}
+.who select{width:100%;min-width:0;border:2px solid var(--line);border-radius:var(--r-m);padding:14px 16px;font-size:20px;font-weight:700;background:var(--paper);color:var(--ink)}
+.field[hidden]{display:none}
 .roomcls{justify-self:center;display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;justify-content:center;color:#dfe4ff;font-weight:700}
 .roomcls select{min-width:min(100%,260px);border:0;border-radius:var(--r-m);padding:12px 14px;font-weight:800;font-size:16px;background:#fff;color:var(--ink)}
 .roomcls .ghost{padding:10px 14px}
@@ -258,7 +270,6 @@ p{margin:0}
 .names button:hover:not(:disabled){border-color:var(--board)}
 .names button:disabled{opacity:.45;cursor:not-allowed}
 .names button small{display:block;font-size:12px;font-weight:700;color:var(--ink2)}
-#pickScr .panel{width:min(100%,640px)}
 .clssheet{width:min(100%,560px);align-self:center;border-radius:var(--r-l)}
 .clsinfo{font-size:14px;color:var(--ink2)}
 .clslist{display:grid;gap:8px}
@@ -551,7 +562,10 @@ p{margin:0}
     <div class="roomcls">
       <label for="clsPick">Who can join</label>
       <select id="clsPick"></select>
-      <button class="ghost" type="button" id="clsManage">Manage classes</button>
+      <label class="tog" id="guestTog" hidden><input type="checkbox" id="allowGuests"> Allow guests</label>
+      <button class="link light" type="button" id="clsReload" hidden>Reload class lists</button>
+      <form class="pinrow" id="pinRow" hidden><input id="pinIn" type="password" inputmode="numeric" autocomplete="off" placeholder="Teacher PIN" aria-label="Teacher PIN"><button class="ghost" type="submit">Load classes</button><span class="err" id="pinErr" hidden>Wrong PIN</span></form>
+      <span class="clsnote" id="clsNote"></span>
     </div>
     <p class="roomnote" id="lobbyNote"></p>
     <section class="players" aria-live="polite">
@@ -647,21 +661,17 @@ p{margin:0}
         <i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></i></button>
       <span class="mehint">Tap to change</span>
     </div>
-    <label class="field">Class code<input class="codein" id="jCode" maxlength="5" inputmode="text" autocapitalize="characters" required></label>
-    <label class="field">Your name<input id="jName" maxlength="24" required placeholder="First name"></label>
+    <label class="field" id="jCodeL">Class code<input class="codein" id="jCode" maxlength="5" inputmode="text" autocapitalize="characters" required></label>
+    <div class="who" id="jWho" hidden>
+      <p class="clsname" id="jCls"></p>
+      <label class="field" id="jSelL">Your name<select id="jSel"></select></label>
+      <label class="field" id="jNameL">Your name<input id="jName" maxlength="24" placeholder="First name"></label>
+      <button class="link" type="button" id="jGuest" hidden>I'm not on the list · join as a guest</button>
+    </div>
     <p class="err" id="jErr" hidden></p>
     <button class="cta class" type="submit" id="jBtn">Join</button>
     <button class="link" type="button" data-nav="home" style="justify-self:center">Back to games</button>
   </form>
-</main>
-
-<main id="pickScr" class="solo" hidden>
-  <div class="panel">
-    <h1>Who are you?</h1>
-    <p id="pickSub">Tap your name.</p>
-    <p class="err" id="pickErr" hidden></p>
-    <div class="names" id="pickNames" role="list"></div>
-  </div>
 </main>
 
 <main id="waitScr" class="solo" hidden>
@@ -681,25 +691,8 @@ p{margin:0}
   </div>
 </div>
 
-<div class="sheetbg" id="clsSheet" hidden>
-  <div class="avsheet clssheet" role="dialog" aria-modal="true" aria-labelledby="clsT">
-    <div class="avhead"><h2 id="clsT">Classes</h2><button type="button" class="link" id="clsDone">Done</button></div>
-    <p class="clsinfo">Saved only on this device, never online. Students in a class pick their name instead of typing it, so reports stay clean.</p>
-    <div id="clsList" class="clslist"></div>
-    <form id="clsForm" class="clsform" hidden>
-      <label class="field">Class name<input id="clsName" maxlength="30" required placeholder="e.g. 7A"></label>
-      <label class="field">Students, one per line<textarea id="clsNames" rows="10" required placeholder="Ana Popescu&#10;Matei Ionescu"></textarea></label>
-      <p class="err" id="clsErr" hidden></p>
-      <div class="clsbtns"><button class="cta class" type="submit">Save class</button><button class="ghost dark" type="button" id="clsCancel">Cancel</button><span class="sp"></span><button class="link" type="button" id="clsDel" hidden>Delete class</button></div>
-    </form>
-    <div class="clsbtns" id="clsTools"><button class="cta class" type="button" id="clsNew">New class</button><span class="sp"></span>
-      <button class="link" type="button" id="clsExport">Export</button><label class="link" style="cursor:pointer">Import<input type="file" id="clsImport" accept=".json,.txt,.csv" hidden></label></div>
-  </div>
-</div>
-
 <div class="toast" id="toast" hidden role="status"></div>
 
-<script src="lib/peerjs.min.js"></script>
 <script src="lib/qrcode.js"></script>
 <script>
 'use strict';
@@ -718,13 +711,52 @@ const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=nu
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const Q=new URLSearchParams(location.search);
 const OWNER=Q.get('owner')||(location.hostname.endsWith('.github.io')?location.hostname.split('.')[0]:'aosmann');
-/* class connection servers, tried in order: our own (not on ad-blocker lists), then the public PeerJS cloud.
-   ?peer=host:port[,host:port] replaces the list (local testing). */
-const SIGNAL_HOST='edugames-class.edugames.workers.dev';
-const SIGNALS=(()=>{const h=Q.get('peer');if(h)return h.split(',').map(x=>{const [host,port]=x.split(':');return{host,port:+port||9000,path:'/',secure:false,debug:0}});
-  const l=[];if(SIGNAL_HOST)l.push({host:SIGNAL_HOST,port:443,path:'/',secure:true,debug:0});l.push({debug:0});return l})();
-const NET_ERR=['network','server-error','socket-error','socket-closed','disconnected'];
-let sigIdx=0;
+/* class connection: every message goes through our class server (a Cloudflare Worker), over plain HTTPS
+   WebSockets, so it works on any network that allows web pages: no direct device-to-device link is needed.
+   ?peer=host:port uses a local server instead (testing). */
+/* two homes for the same server: Cloudflare first; Render for networks that block workers.dev (some schools).
+   The teacher's class opens on the first that answers; the join link names it, and students try the other too. */
+const SIGNAL_HOSTS=['edugames-class.edugames.workers.dev','edugames-class.onrender.com'];
+const RELAYS=(()=>{const h=Q.get('peer');return h?h.split(',').map(x=>'ws://'+x):SIGNAL_HOSTS.map(x=>'wss://'+x)})();
+const httpOf=r=>r.replace(/^ws/,'http');
+let relayIdx=0;
+/* Render's free plan sleeps when unused: knock early so it is awake by the time a class opens */
+const wake=i=>T_(75000,fetch(httpOf(RELAYS[i])+'/health',{cache:'no-store'})).then(r=>r.ok);
+function T_(ms,p){return Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),ms))])}
+RELAYS.slice(1).forEach((r,i)=>{try{fetch(httpOf(r)+'/health',{mode:'no-cors',cache:'no-store'}).catch(()=>{})}catch(e){}});
+const rid=n=>{const a=new Uint8Array(n);crypto.getRandomValues(a);return [...a].map(x=>'abcdefghijkmnpqrstuvwxyz23456789'[x%32]).join('')};
+const myCid=()=>{let c=store.get('edu-cid','');if(!/^[a-z0-9]{12}$/.test(c)){c=rid(12);store.set('edu-cid',c)}return c};
+/* teacher: hosts the room; each student arrives as a conn {open, send, on('data'|'close'|'reopen'), close()} */
+function hostRoom(code,h,base){const key=rid(16);let ws=null,alive=true,opened=false,retry=0;const cs=new Map();
+  const H={open:false,code,send(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))},broadcast(m){H.send({to:'*',m})},
+    destroy(){alive=false;clearInterval(ping);try{ws&&ws.close()}catch(e){}}};
+  const mk=cid=>{const L={},c={cid,open:true,on(ev,fn){(L[ev]=L[ev]||[]).push(fn)},emit(ev,x){(L[ev]||[]).forEach(f=>{try{f(x)}catch(e){console.error(e)}})},
+    send(m){H.send({to:cid,m})},close(){c.open=false;H.send({kick:cid});c.emit('close')}};cs.set(cid,c);return c};
+  const go=()=>{try{ws=new WebSocket(`${base}/room/${code}?role=host&key=${key}`)}catch(e){alive=false;h.error&&h.error();return}
+    ws.onmessage=e=>{let o;try{o=JSON.parse(e.data)}catch(x){return}
+      if(o.ev==='open'){retry=0;H.open=true;const live=new Set(o.guests||[]);cs.forEach((c,id)=>{const was=c.open;c.open=live.has(id);if(was&&!c.open)c.emit('close')});
+        if(!opened){opened=true;h.open&&h.open()}else h.status&&h.status('ok');return}
+      if(o.ev==='taken'){alive=false;h.taken&&h.taken();return}
+      if(o.ev==='join'){let c=cs.get(o.f);if(c){c.open=true;c.emit('reopen')}else h.connection(mk(o.f));return}
+      if(o.ev==='leave'){const c=cs.get(o.f);if(c&&c.open){c.open=false;c.emit('close')}return}
+      if(o.f){const c=cs.get(o.f);if(c)c.emit('data',o.m)}};
+    ws.onclose=()=>{H.open=false;if(!alive)return;if(!opened&&retry>=2){alive=false;h.error&&h.error();return}
+      if(opened)h.status&&h.status('reconnecting');setTimeout(()=>{if(alive)go()},Math.min(8000,800*2**retry++))}};
+  const ping=setInterval(()=>H.send({ping:1}),25000);go();return H}
+/* student: one line to the teacher, reconnecting by itself */
+function guestRoom(code,h,base){const cid=myCid();let ws=null,alive=true,opened=false,retry=0;
+  const G={open:false,send(m){if(ws&&ws.readyState===1)ws.send(JSON.stringify(m))},close(){alive=false;clearInterval(ping);try{ws&&ws.close()}catch(e){}}};
+  const go=()=>{try{ws=new WebSocket(`${base}/room/${code}?role=guest&cid=${cid}`)}catch(e){alive=false;h.error&&h.error();return}
+    ws.onmessage=e=>{let o;try{o=JSON.parse(e.data)}catch(x){return}
+      if(o.ev==='open'){retry=0;G.open=true;const first=!opened;opened=true;h.open&&h.open(first);return}
+      if(o.ev==='nohost'){alive=false;h.nohost&&h.nohost();return}
+      if(o.ev==='hostleft'){h.status&&h.status('hostleft');return}
+      if(o.ev==='host'){h.status&&h.status('ok');h.open&&h.open(false);return}
+      h.data&&h.data(o)};
+    ws.onclose=e=>{G.open=false;if(!alive)return;if(e.code===4000){alive=false;h.removed&&h.removed();return}
+      if(!opened&&retry>=2){alive=false;h.error&&h.error();return}
+      if(opened)h.status&&h.status('reconnecting');setTimeout(()=>{if(alive)go()},Math.min(8000,800*2**retry++))}};
+  const ping=setInterval(()=>G.send({ping:1}),25000);go();return G}
 const ROOM_PREFIX='edugames-v1-';
 const CODE_ABC='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const LEVELS={1:'Easy',2:'Medium',3:'Hard'};
@@ -733,7 +765,7 @@ const dayKey=d=>{const x=new Date(d);return `${x.getFullYear()}-${String(x.getMo
 function toast(t,ms=2600){const e=$('toast');e.textContent=t;e.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>e.hidden=true,ms)}
 
 /* ---------------- screens ---------------- */
-const SCREENS=['home','setup','lobby','liveScr','reports','join','waitScr','pickScr'];
+const SCREENS=['home','setup','lobby','liveScr','reports','join','waitScr'];
 function show(id){SCREENS.forEach(s=>$(s).hidden=s!==id);window.scrollTo(0,0)}
 let mode='play';
 function setMode(m){mode=m;document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===m));
@@ -947,29 +979,23 @@ const settingLine=r=>`${r.subjectName}${r.regionsLabel?' · '+r.regionsLabel:''}
 
 /* Class tab = the class room. It opens straight away; students join the class, not a game. */
 function enterClass(){if(session){show(round&&!round.closed?'liveScr':'lobby');paintLobby();paintLive();return}openClass()}
-function openClass(tries=0,si=0){
+function openClass(tries=0,ri=0){
   show('lobby');renderRoomGames();
-  if(typeof Peer==='undefined'){$('lobbyNote').textContent='The class connection didn\'t load. Check that this device is online, then reload the page.';return}
   const code=newCode();
-  session={id:'s'+Date.now().toString(36),code,startedAt:new Date().toISOString(),rounds:[],players:[]};
-  {const lc=classes().find(c=>c.id===store.get('edu-portal-lastclass',''));if(lc){session.classId=lc.id;session.className=lc.name}}
-  $('code').textContent='·····';$('qr').innerHTML='<span class="wait">Opening the class…</span>';$('lobbyNote').textContent='';paintLobby();
-  peer=new Peer(ROOM_PREFIX+code,SIGNALS[si]);const thisPeer=peer;let moved=false;
-  const next=()=>{if(moved||thisPeer.open||si+1>=SIGNALS.length)return false;moved=true;clearTimeout(slow);try{thisPeer.destroy()}catch(e){}session=null;openClass(tries,si+1);return true};
-  const slow=setTimeout(()=>{if(thisPeer.open||peer!==thisPeer)return;if(next())return;$('lobbyNote').textContent='Still connecting… If the code doesn\'t appear in a few seconds, something on this device or network is blocking the class connection: usually an ad or tracker blocker extension, a VPN, or a school firewall. Turn it off for this page, or use another browser.'},8000);
-  peer.on('open',()=>{clearTimeout(slow);sigIdx=si;$('lobbyNote').textContent='';drawQR();paintLobby()});
-  peer.on('connection',onStudent);
-  peer.on('disconnected',()=>{try{peer.reconnect()}catch(e){}});
-  peer.on('error',err=>{
-    if(err.type==='unavailable-id'&&tries<4){moved=true;peer.destroy();session=null;openClass(tries+1,si);return}
-    if(!thisPeer.open&&NET_ERR.includes(err.type)&&next())return;
-    if(err.type==='peer-unavailable')return;
-    clearTimeout(slow);console.warn('EduGames class error',err.type,err);
-    if(thisPeer.open&&['network','disconnected'].includes(err.type))return; // already open: PeerJS reconnects by itself
-    $('qr').innerHTML='<span class="wait">No connection</span>';
-    $('lobbyNote').textContent=err.type==='browser-incompatible'?'This browser can\'t run class mode. Use a current Chrome, Safari, Edge or Firefox.'
-      :`Couldn't open the class (${err.type}). Something on this device or network is blocking the class connection: usually an ad or tracker blocker extension, a VPN, or a firewall. Turn it off for this page or use another browser, then reload.`})}
-function joinLink(){const u=new URL('./',location.href);u.hash='join='+session.code+(sigIdx?'&s='+sigIdx:'')+(curRoster()?'&r=1':'');if(Q.get('peer'))u.search='?peer='+Q.get('peer');return u.href}
+  session={id:'s'+Date.now().toString(36),code,startedAt:new Date().toISOString(),rounds:[],players:[],guests:[]};
+  {const lc=classes().find(c=>c.id===store.get('edu-portal-lastclass',''));if(lc){session.classId=lc.id;session.className=lc.name}session.allowGuests=store.get('edu-portal-guests',true)!==false}
+  $('code').textContent='·····';$('qr').innerHTML='<span class="wait">Opening the class…</span>';$('lobbyNote').textContent='';paintLobby();loadClasses();
+  if(ri>0)$('lobbyNote').textContent='Connecting through the backup class server… it can take up to a minute to wake up.';
+  const start=()=>{peer=hostRoom(code,{
+    open(){relayIdx=ri;$('lobbyNote').textContent='';drawQR();paintLobby()},
+    connection:onStudent,
+    taken(){session=null;if(tries<4)openClass(tries+1,ri)},
+    status(st){$('lobbyNote').textContent=st==='reconnecting'?'Connection lost. Reconnecting… students stay in the class.':''},
+    error(){if(ri+1<RELAYS.length){session=null;openClass(tries,ri+1);return}
+      $('qr').innerHTML='<span class="wait">No connection</span>';
+      $('lobbyNote').textContent=`Couldn't reach the class server. Check that this device is online. If other sites work, this network blocks it: ask the school's IT to allow ${SIGNAL_HOSTS.join(' and ')}.`}},RELAYS[ri])};
+  if(ri>0)wake(ri).then(start,start);else start()}
+function joinLink(){const u=new URL('./',location.href);u.hash='join='+session.code+(relayIdx?'&b='+relayIdx:'');if(Q.get('peer'))u.search='?peer='+Q.get('peer');return u.href}
 function drawQR(){const q=qrcode(0,'M');q.addData(joinLink());q.make();const svg=q.createSvgTag({cellSize:6,margin:0,scalable:true});
   $('qr').innerHTML=svg;$('qrBigBox').innerHTML=svg;$('code').textContent=session.code;$('qrBigCode').textContent=session.code;
   const u=new URL('./',location.href),jb=$('joinUrl');jb.textContent='';(u.host+u.pathname).replace(/\/$/,'').split('/').forEach((part,i)=>{if(i){jb.append('/',document.createElement('wbr'))}jb.append(part)})}
@@ -981,44 +1007,40 @@ function renderRoomGames(){const box=$('roomGames');box.innerHTML='';
   GAMES.forEach(g=>{const b=el('button','game');b.type='button';b.style.setProperty('--c',g.color||'#2b3990');
     const ic=el('span','ic');const im=el('img');im.src=g.base+(g.icon||'icon-512.png');im.alt='';ic.append(im);
     b.append(ic,el('span',null,g.name));b.onclick=()=>openSetup(g);box.append(b)})}
-/* ---------------- class lists: saved only on the teacher's device ---------------- */
-const classes=()=>store.get('edu-portal-classes',[]);
-const saveClasses=l=>store.set('edu-portal-classes',l);
-const cleanNames=t=>{const seen=new Set();return String(t||'').split(/\r?\n|[,;\t]/).map(x=>x.trim().replace(/\s+/g,' ').slice(0,24)).filter(x=>{const k=x.toLowerCase();if(!x||seen.has(k))return false;seen.add(k);return true})};
+/* ---------------- class lists: kept on the class server (not in this public page), behind the teacher PIN ---------------- */
+const classes=()=>store.get('edu-portal-classes-cache',[]);
 const curRoster=()=>session&&session.classId?classes().find(c=>c.id===session.classId)||null:null;
+let clsState='';
+async function loadClasses(pin){pin=pin||store.get('edu-teacher-pin','');if(!pin){clsState='pin';paintClsPick();return}
+  clsState='loading';paintClsPick();
+  try{let r=null;for(const i of [relayIdx,...RELAYS.map((x,j)=>j).filter(j=>j!==relayIdx)]){try{r=await T_(i?75000:8000,fetch(`${httpOf(RELAYS[i])}/classes?pin=${encodeURIComponent(pin)}`,{cache:'no-store'}));if(r.ok||r.status===403)break;r=null}catch(e){r=null}}
+    if(!r)throw new Error('offline');
+    if(r.status===403){clsState='badpin';store.set('edu-teacher-pin','');paintClsPick();return}
+    if(!r.ok)throw new Error(r.status);const l=await r.json();
+    store.set('edu-teacher-pin',pin);store.set('edu-portal-classes-cache',(Array.isArray(l)?l:[]).filter(c=>c&&c.id&&c.name&&Array.isArray(c.students)));clsState=''}
+  catch(e){clsState=classes().length?'':'offline'}
+  if(session&&session.classId){const c=curRoster();if(c)session.className=c.name}paintClsPick();paintLobby();pushMode()}
 function paintClsPick(){const sp=$('clsPick'),l=classes();sp.innerHTML='';sp.append(new Option('Anyone · students type their name',''));
-  l.forEach(c=>sp.append(new Option(`${c.name} · ${c.students.length} students`,c.id)));sp.value=session&&session.classId&&l.some(c=>c.id===session.classId)?session.classId:''}
-$('clsPick').onchange=()=>{if(!session)return;const c=classes().find(x=>x.id===$('clsPick').value)||null;session.classId=c?c.id:null;session.className=c?c.name:null;store.set('edu-portal-lastclass',session.classId||'');saveSession();
-  if(peer&&peer.open)drawQR();paintLobby()};
-let clsEdit=null;
-function openClsSheet(){$('clsSheet').hidden=false;showClsList()}
-function showClsList(){$('clsForm').hidden=true;$('clsTools').hidden=false;const box=$('clsList');box.hidden=false;box.innerHTML='';const l=classes();
-  if(!l.length)box.append(el('p','none','No classes yet. Add one with its students, then pick it above the class code.'));
-  l.forEach(c=>{const r=el('div','ci');r.append(el('b',null,c.name),el('span',null,`${c.students.length} students`),el('span','sp'));const e=el('button','link','Edit');e.type='button';e.onclick=()=>editCls(c);r.append(e);box.append(r)})}
-function editCls(c){clsEdit=c||null;$('clsList').hidden=true;$('clsTools').hidden=true;$('clsForm').hidden=false;$('clsErr').hidden=true;$('clsDel').hidden=!c;
-  $('clsName').value=c?c.name:'';$('clsNames').value=c?c.students.join('\n'):'';$('clsName').focus()}
-$('clsManage').onclick=openClsSheet;$('clsDone').onclick=()=>{$('clsSheet').hidden=true;paintClsPick();paintLobby()};
-$('clsSheet').addEventListener('click',e=>{if(e.target===$('clsSheet'))$('clsDone').click()});
-$('clsNew').onclick=()=>editCls(null);$('clsCancel').onclick=showClsList;
-$('clsForm').onsubmit=e=>{e.preventDefault();const name=$('clsName').value.trim().slice(0,30),st=cleanNames($('clsNames').value);
-  if(!name||!st.length){$('clsErr').textContent='Give the class a name and at least one student.';$('clsErr').hidden=false;return}
-  const l=classes();if(l.some(c=>c.name.toLowerCase()===name.toLowerCase()&&(!clsEdit||c.id!==clsEdit.id))){$('clsErr').textContent='There is already a class with that name.';$('clsErr').hidden=false;return}
-  if(clsEdit){const c=l.find(x=>x.id===clsEdit.id);if(c){c.name=name;c.students=st}}else l.push({id:'c'+Date.now().toString(36),name,students:st});
-  saveClasses(l);if(session&&clsEdit&&session.classId===clsEdit.id)session.className=name;showClsList();paintClsPick();paintLobby()};
-$('clsDel').onclick=()=>{if(!clsEdit||!confirm(`Delete the class ${clsEdit.name}? Its past results stay in Reports.`))return;saveClasses(classes().filter(c=>c.id!==clsEdit.id));
-  if(session&&session.classId===clsEdit.id){session.classId=null;session.className=null}showClsList();paintClsPick();paintLobby()};
-$('clsExport').onclick=()=>download(new Blob([JSON.stringify({edugamesClasses:1,classes:classes()},null,2)],{type:'application/json'}),`edugames-classes-${dayKey(Date.now())}.json`);
-$('clsImport').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const t=await f.text();let add=[];
-  try{const j=JSON.parse(t);add=(j.classes||j).filter(c=>c&&c.name&&Array.isArray(c.students)).map(c=>({name:String(c.name).slice(0,30),students:cleanNames(c.students.join('\n'))}))}
-  catch(x){/* plain text: one class per block, first line is the class name */add=t.split(/\r?\n\s*\r?\n/).map(b=>b.split(/\r?\n/).map(x=>x.trim()).filter(Boolean)).filter(b=>b.length>1).map(b=>({name:b[0].replace(/:$/,'').slice(0,30),students:cleanNames(b.slice(1).join('\n'))}))}
-  if(!add.length)return toast('No classes found in that file.');const l=classes();
-  add.forEach(c=>{const ex=l.find(x=>x.name.toLowerCase()===c.name.toLowerCase());if(ex)ex.students=c.students;else l.push(Object.assign({id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)},c))});
-  saveClasses(l);showClsList();paintClsPick();toast(`${add.length} class${add.length===1?'':'es'} imported`)};
+  l.forEach(c=>sp.append(new Option(`${c.name} · ${c.students.length} students`,c.id)));sp.value=session&&session.classId&&l.some(c=>c.id===session.classId)?session.classId:'';
+  $('guestTog').hidden=!sp.value;$('allowGuests').checked=!!(session&&session.allowGuests);
+  const pr=$('pinRow');pr.hidden=!(clsState==='pin'||clsState==='badpin');$('pinErr').hidden=clsState!=='badpin';
+  $('clsNote').textContent=clsState==='loading'?'Loading class lists…':clsState==='offline'?'Couldn\'t load the class lists. Check the connection.':'';
+  $('clsReload').hidden=!(l.length||clsState==='offline')}
+$('clsPick').onchange=()=>{if(!session)return;const c=classes().find(x=>x.id===$('clsPick').value)||null;session.classId=c?c.id:null;session.className=c?c.name:null;
+  store.set('edu-portal-lastclass',session.classId||'');saveSession();paintClsPick();paintLobby();pushMode()};
+$('allowGuests').onchange=()=>{if(!session)return;session.allowGuests=$('allowGuests').checked;store.set('edu-portal-guests',session.allowGuests);saveSession();pushMode()};
+$('pinRow').onsubmit=e=>{e.preventDefault();const v=$('pinIn').value.trim();if(v){$('pinIn').value='';loadClasses(v)}};
+$('clsReload').onclick=()=>loadClasses();
+/* what a student who hasn't picked a name yet sees; refreshed for everyone still choosing when it changes */
+const pending=new Set();
+function modeMsg(conn,msg){const R=curRoster(),taken=n=>{const c=conns.get(n);return!!(c&&online(c)&&c.conn!==conn)};
+  return{t:'mode',cls:R?R.name:null,names:R?R.students.map(n=>({n,taken:taken(n)})):null,guests:!R||!!session.allowGuests,msg:msg||''}}
+function pushMode(){pending.forEach(c=>{if(c.open)c.send(modeMsg(c))})}
 function kickStudent(n){const c=conns.get(n);if(!c||!confirm(`Remove ${n} from the class?`))return;
-  try{c.conn.send({t:'kicked'})}catch(e){}setTimeout(()=>{try{c.conn.close()}catch(e){}},300);
+  try{c.conn.send({t:'kicked'})}catch(e){}const cc=c.conn;setTimeout(()=>{try{cc.close()}catch(e){}},300);
   conns.delete(n);if(session&&!(session.rounds||[]).some(r=>(r.results||[]).some(x=>x.player===n)))session.players=session.players.filter(x=>x!==n);
   LB.delete&&LB.delete(n);saveSession();paintLobby();paintLive()}
-function paintLobby(){if(!session)return;paintClsPick();
+function paintLobby(){if(!session)return;
   const names=[...conns.keys()],on=names.filter(n=>online(conns.get(n))).length;$('joinedN').textContent=on;
   $('joinedL').textContent=on===1?'student':'students';
   const box=$('chips'),have=new Map([...box.querySelectorAll('.ptile')].map(t=>[t.dataset.n,t]));
@@ -1035,16 +1057,23 @@ function uniqueName(n,conn){n=(n||'Student').trim().slice(0,24)||'Student';
   const cur=conns.get(n);if(!cur||!online(cur)||cur.conn===conn)return n;let i=2;while(online(conns.get(`${n} ${i}`)))i++;return `${n} ${i}`}
 function onStudent(conn){let name=null;
   conn.on('data',m=>{if(!m||typeof m!=='object')return;
-    if(m.t==='hello'){const R=curRoster();
-      if(R){const want=String(m.name||'').trim().toLowerCase(),match=R.students.find(x=>x.toLowerCase()===want);
-        const taken=n=>{const c=conns.get(n);return!!(c&&online(c)&&c.conn!==conn)};
-        if(!match||taken(match)){conn.send({t:'pick',cls:R.name,names:R.students.map(n=>({n,taken:taken(n)})),msg:match?`${match} is already in the class. Pick your own name.`:(want?'Your name isn\'t on the class list. Pick it below.':'')});return}
+    if(m.t==='hi'){if(!name){pending.add(conn);conn.send(modeMsg(conn))}else conn.send({t:'welcome',name,code:session.code});return}
+    if(m.t==='hello'){const R=curRoster(),want=String(m.name||'').trim().replace(/\s+/g,' ').slice(0,24);let guest=false;
+      if(!R||m.guest){
+        if(R&&!session.allowGuests){conn.send(modeMsg(conn,'Guests can\'t join this class. Pick your name from the list.'));return}
+        if(!want){conn.send(modeMsg(conn,'Type a name so your teacher knows who you are.'));return}
+        if(R&&R.students.some(x=>x.toLowerCase()===want.toLowerCase())){conn.send(modeMsg(conn,`${want} is on the class list. Pick it from the list instead.`));return}
+        name=uniqueName(want,conn);guest=!!R}
+      else{const match=R.students.find(x=>x.toLowerCase()===want.toLowerCase());const c0=match&&conns.get(match);
+        if(!match){conn.send(modeMsg(conn,'Pick your name from the list.'));return}
+        if(c0&&online(c0)&&c0.conn!==conn){conn.send(modeMsg(conn,`${match} is already in the class. Pick your own name.`));return}
         name=match}
-      else name=uniqueName(String(m.name||''),conn);const prev=conns.get(name)||{status:'waiting',score:0,right:0,asked:0,streak:0};prev.conn=conn;prev.avatar=AVMAP[m.avatar]?m.avatar:(prev.avatar||randomAvatar());conns.set(name,prev);
+      pending.delete(conn);if(guest&&!(session.guests||(session.guests=[])).includes(name))session.guests.push(name);
+      const prev=conns.get(name)||{status:'waiting',score:0,right:0,asked:0,streak:0};prev.conn=conn;prev.avatar=AVMAP[m.avatar]?m.avatar:(prev.avatar||randomAvatar());conns.set(name,prev);
       if(!session.players.includes(name))session.players.push(name);
       conn.send({t:'welcome',name,code:session.code});
       if(round&&!round.closed&&!(round.results||[]).some(x=>x.player===name)){Object.assign(prev,{status:'playing',score:0,right:0,asked:0,streak:0});conn.send({t:'start',round:pub(round)})}
-      paintLobby();paintLive();return}
+      paintLobby();paintLive();pushMode();return}
     if(!name)return;const s=conns.get(name);if(!s)return;
     if(m.t==='progress'&&round&&m.round===round.id){
       const dA=(m.asked||0)-(s.asked||0),dR=(m.right||0)-(s.right||0),dS=(m.score||0)-(s.score||0);
@@ -1060,7 +1089,7 @@ function onStudent(conn){let name=null;
       Object.assign(s,{status:'done',score:res.score||0,right:res.right||0,asked:res.asked||0});paintLive();
       const playing=[...conns.values()].filter(c=>online(c)&&c.status==='playing').length;
       if(!playing&&!round.closed)setTimeout(()=>{if(round&&!round.closed&&![...conns.values()].some(c=>online(c)&&c.status==='playing'))endRound()},1800)}});
-  conn.on('close',()=>{if(name&&conns.get(name)&&conns.get(name).conn===conn){paintLobby();paintLive()}})}
+  conn.on('close',()=>{pending.delete(conn);if(name&&conns.get(name)&&conns.get(name).conn===conn){paintLobby();paintLive();pushMode()}})}
 const pub=r=>({id:r.id,url:gameURL(r,true),gameName:r.gameName,topicName:r.topicName,race:!!r.race,raceStarted:!!r.raceStarted});
 
 /* start a round on every connected device */
@@ -1091,10 +1120,10 @@ function setupRace(){clearInterval(raceT);raceT=null;const on=!!(round&&round.ra
   if(projWin&&!projWin.closed)projWin.location.href=specURL(round);
   raceT=setInterval(()=>{if(!round||!round.race){clearInterval(raceT);return}const now=Date.now(),peers=[];
     conns.forEach((c,n)=>{if(c.k&&now-c.k.at<5000)peers.push({id:n,name:n,avatar:avURL(c.avatar),d:c.k.d,x:c.k.x,lap:c.k.lap,fin:!!c.k.fin})});
-    conns.forEach(c=>{if(online(c))try{c.conn.send({t:'kpeers',peers})}catch(e){}});toSpec({type:'edu-peers',peers})},166)}
+    if(peer&&peer.open)peer.broadcast({t:'kpeers',peers});toSpec({type:'edu-peers',peers})},166)}
 function stopRace(){clearInterval(raceT);raceT=null}
 $('startRace').onclick=()=>{if(!round||!round.race||round.raceStarted)return;round.raceStarted=true;
-  conns.forEach(c=>{if(online(c))c.conn.send({t:'kgo'})});toSpec({type:'edu-go'});$('startRace').hidden=true;$('raceNote').textContent='Race on! Late joiners start from the grid.'};
+  if(peer)peer.broadcast({t:'kgo'});toSpec({type:'edu-go'});$('startRace').hidden=true;$('raceNote').textContent='Race on! Late joiners start from the grid.'};
 $('projRace').onclick=()=>{if(!round||!round.race)return;projWin=window.open(specURL(round),'kartfall-track');
   if(projWin&&round.raceStarted)setTimeout(()=>{try{projWin.postMessage({type:'edu-go'},'*')}catch(e){}},2500)};
 function paintLive(){if(!round||$('liveScr').hidden)return;
@@ -1168,60 +1197,65 @@ function closeAvSheet(){$('avSheet').hidden=true;$('jPic').focus()}
 $('jPic').onclick=openAvSheet;$('avDone').onclick=closeAvSheet;
 $('avSheet').addEventListener('click',e=>{if(e.target===$('avSheet'))closeAvSheet()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('avSheet').hidden)closeAvSheet()});
-function openJoin(code){show('join');paintAvPick();$('jErr').hidden=true;$('jCode').value=(code||'').toUpperCase();$('jName').value=joinPick?'':store.get('edu-player','');
-  $('jName').required=!joinPick;$('jName').closest('label').hidden=joinPick;
-  (code?$('jName'):$('jCode')).focus()}
-$('joinForm').onsubmit=e=>{e.preventDefault();const code=$('jCode').value.trim().toUpperCase(),name=$('jName').value.trim();
-  if(code.length!==5){return jErr('The class code has 5 characters.')}if(!name&&!joinPick)return jErr('Type your name so your teacher knows who you are.');
-  if(typeof Peer==='undefined')return jErr('Can\'t connect: check the internet connection, then reload this page.');
-  store.set('edu-player',name);store.set('edu-avatar',myAvatar);$('wAv').innerHTML=avatarSVG(myAvatar);$('jBtn').disabled=true;$('jBtn').textContent='Joining…';joinClass(code,name,joinSig)};
+/* join: the QR gives the code, so we connect at once and ask the teacher who may join (class list or anyone) */
+let jMode=null,jGuest=false,joinRelay=0;
+function openJoin(code){show('join');paintAvPick();$('jErr').hidden=true;code=(code||'').toUpperCase();$('jCode').value=code;
+  $('jCodeL').hidden=!!code;$('jWho').hidden=true;$('jBtn').disabled=!code;$('jBtn').textContent=code?'Connecting…':'Next';
+  if(code)startJoin(code);else $('jCode').focus()}
+$('jCode').addEventListener('input',()=>{const v=$('jCode').value.trim().toUpperCase();$('jCode').value=v;$('jErr').hidden=true;if(v.length===5&&(!student||student.code!==v))startJoin(v)});
+function paintWho(){const m=jMode;if(!m)return;$('jWho').hidden=false;$('jCls').textContent=m.cls?`Class ${m.cls}`:'';
+  const list=!!(m.names&&!jGuest);$('jSelL').hidden=!list;$('jNameL').hidden=list;$('jGuest').hidden=!(m.names&&m.guests);
+  $('jGuest').textContent=jGuest?'Back to the class list':'I\'m not on the list · join as a guest';
+  if(list){const sel=$('jSel'),keep=sel.value;sel.innerHTML='';sel.append(new Option('Choose your name',''));
+    m.names.forEach(x=>{const o=new Option(x.taken?`${x.n} · already in`:x.n,x.n);o.disabled=x.taken;sel.append(o)});
+    const want=keep||store.get('edu-player','');if(m.names.some(x=>x.n===want&&!x.taken))sel.value=want}
+  else if(!$('jName').value)$('jName').value=store.get('edu-player','');
+  $('jBtn').disabled=false;$('jBtn').textContent='Join';if(m.msg)jErr(m.msg)}
+$('jGuest').onclick=()=>{jGuest=!jGuest;$('jErr').hidden=true;paintWho();(jGuest?$('jName'):$('jSel')).focus()};
+$('joinForm').onsubmit=e=>{e.preventDefault();const code=$('jCode').value.trim().toUpperCase();
+  if(code.length!==5)return jErr('The class code has 5 characters.');
+  if(!student||student.code!==code||!jMode){startJoin(code);return}
+  const list=!!(jMode.names&&!jGuest),name=list?$('jSel').value:$('jName').value.trim();
+  if(!name)return jErr(list?'Choose your name from the list.':'Type your name so your teacher knows who you are.');
+  $('jErr').hidden=true;store.set('edu-avatar',myAvatar);$('wAv').innerHTML=avatarSVG(myAvatar);$('jBtn').disabled=true;$('jBtn').textContent='Joining…';
+  student.want={name,guest:!list};student.conn.send({t:'hello',name,avatar:myAvatar,guest:!list})};
 function jErr(t){$('jErr').textContent=t;$('jErr').hidden=false}
-let joinSig=0,joinPick=false;
-/* try the server the join link names first, then the others: the class is on exactly one of them */
-function joinClass(code,name,first=0,tried=[]){
-  const si=tried.length?SIGNALS.findIndex((x,i)=>!tried.includes(i)):Math.min(first,SIGNALS.length-1);tried=tried.concat(si);
-  const more=()=>SIGNALS.some((x,i)=>!tried.includes(i));
-  const me=new Peer(SIGNALS[si]);let conn=null,opened=false,cur=null,tries=0,gone=false;
-  const other=()=>{if(opened||gone||!more())return false;gone=true;try{me.destroy()}catch(e){}joinClass(code,name,first,tried);return true};
-  student={code,name,me,fromGame(m){if(!conn||!cur)return;
+function startJoin(code,order){order=order||[joinRelay,...RELAYS.map((x,j)=>j).filter(j=>j!==joinRelay)];const ri=order[0],rest=order.slice(1);
+  if(student&&student.conn)student.conn.close();jMode=null;jGuest=false;$('jWho').hidden=true;$('jBtn').disabled=true;$('jBtn').textContent='Connecting…';
+  const st={code,name:null,want:null,conn:null,cur:null,
+    fromGame(m){const conn=st.conn,cur=st.cur;if(!conn||!cur||!st.name)return;
       if(m.type==='edu-progress')conn.send({t:'progress',round:cur.id,score:m.score,right:m.right,asked:m.asked,last:m.last||null});
       if(m.type==='edu-state'&&cur.race&&m.state)conn.send({t:'kstate',round:cur.id,s:m.state});
       if(m.type==='edu-ready'&&cur.race&&cur.raceStarted)toGame({type:'edu-go'});
       if(m.type==='edu-result'){conn.send({t:'result',round:cur.id,result:m.result});cur.sent=true}}};
-  const connect=()=>{conn=me.connect(ROOM_PREFIX+code,{reliable:true});
-    conn.on('open',()=>{opened=true;tries=0;conn.send({t:'hello',name:student.name,avatar:myAvatar})});
-    conn.on('data',m=>{if(!m)return;
-      if(m.t==='pick'){show('pickScr');$('pickSub').textContent=`${m.cls} · tap your name`;$('pickErr').textContent=m.msg||'';$('pickErr').hidden=!m.msg;const box=$('pickNames');box.innerHTML='';
-        (m.names||[]).forEach(x=>{const b=el('button',null,x.n);b.type='button';b.setAttribute('role','listitem');if(x.taken){b.disabled=true;b.append(el('small',null,'already in'))}
-          b.onclick=()=>{box.querySelectorAll('button').forEach(y=>y.disabled=true);student.name=x.n;store.set('edu-player',x.n);conn.send({t:'hello',name:x.n,avatar:myAvatar})};box.append(b)});return}
-      if(m.t==='kicked'){cur=null;closeStage();opened=false;show('waitScr');$('wHi').textContent='You were removed from the class';$('wMsg').textContent='Ask your teacher if this was a mistake, then scan the code again.';$('wErr').hidden=true;try{me.destroy()}catch(e){}return}
-      if(m.t==='welcome'){student.name=m.name;$('wHi').textContent=`You're in, ${m.name}`;$('wMsg').textContent='Waiting for your teacher to start the game.';$('wErr').hidden=true;if(!cur)show('waitScr')}
-      if(m.t==='start'){cur=m.round;let url=m.round.url;
-        if(cur.race){const u=new URL(url);u.searchParams.set('me',student.name);const a=avURL(myAvatar);if(a)u.searchParams.set('avatar',a);url=u.href}
-        openStage(url,`${m.round.gameName} · ${m.round.topicName}`,student.name)}
-      if(m.t==='kpeers'&&cur&&cur.race)toGame({type:'edu-peers',peers:m.peers||[]});
-      if(m.t==='kgo'&&cur&&cur.race){cur.raceStarted=true;toGame({type:'edu-go'})}
-      if(m.t==='stop'){cur=null;closeStage();const ord=n=>n+(n%10===1&&n%100!==11?'st':n%10===2&&n%100!==12?'nd':n%10===3&&n%100!==13?'rd':'th');
-        $('wHi').textContent=m.rank?`You came ${ord(m.rank)} of ${m.of}`:'Round over';$('wMsg').textContent='Your teacher is picking the next game. Keep this page open.';show('waitScr')}
-      if(m.t==='bye'){cur=null;closeStage();show('waitScr');$('wHi').textContent='Class finished';$('wMsg').textContent='Thanks for playing. You can close this page.';try{me.destroy()}catch(e){}}});
-    conn.on('close',()=>{if(!opened)return;setTimeout(retry,1500)})};
-  const retry=()=>{if(me.destroyed)return;if(tries++>8){$('wErr').textContent='Lost the connection to the class. Ask your teacher if the class is still open, then reload.';$('wErr').hidden=false;return}
-    $('wErr').textContent='Reconnecting…';$('wErr').hidden=false;connect()};
-  me.on('open',connect);
-  me.on('error',err=>{$('jBtn').disabled=false;$('jBtn').textContent='Join';
-    if(gone)return;
-    if(err.type==='peer-unavailable'){if(!opened){if(other())return;show('join');jErr(`No open class with code ${code}. Check the code on the board.`);try{me.destroy()}catch(e){}}else retry()}
-    else if(!opened){if(NET_ERR.includes(err.type)&&other())return;show('join');jErr('Can\'t reach the class. Check the internet connection and try again.');try{me.destroy()}catch(e){}}});
-  $('wHi').textContent='Joining…';$('wMsg').textContent='';show('waitScr')}
+  student=st;
+  const ord=n=>n+(n%10===1&&n%100!==11?'st':n%10===2&&n%100!==12?'nd':n%10===3&&n%100!==13?'rd':'th');
+  st.conn=guestRoom(code,{
+    open(){if(st.name)st.conn.send({t:'hello',name:st.name,avatar:myAvatar,guest:!!(st.want&&st.want.guest)});else st.conn.send({t:'hi'})},
+    nohost(){if(student!==st)return;if(rest.length){student=null;startJoin(code,rest);return}student=null;show('join');$('jCodeL').hidden=false;$('jBtn').disabled=false;$('jBtn').textContent='Next';jErr(`No open class with code ${code}. Check the code on the board.`)},
+    error(){if(student!==st)return;if(rest.length){student=null;startJoin(code,rest);return}student=null;show('join');$('jCodeL').hidden=false;$('jBtn').disabled=false;$('jBtn').textContent='Next';jErr('Can\'t reach the class. Check the internet connection and try again.')},
+    removed(){},
+    status(x){const e=$('wErr');if(x==='ok'){e.hidden=true;return}e.textContent=x==='hostleft'?'Your teacher\'s screen lost its connection. Waiting for it to come back…':'Reconnecting…';e.hidden=false},
+    data(m){if(!m||student!==st)return;
+      if(m.t==='mode'){if(st.name&&!m.msg)return;jMode=m;if(!$('join').hidden||m.msg){show('join');paintWho()}return}
+      if(m.t==='welcome'){st.name=m.name;store.set('edu-player',st.want&&st.want.guest?m.name:(m.name));$('wHi').textContent=`You're in, ${m.name}`;$('wMsg').textContent='Waiting for your teacher to start the game.';$('wErr').hidden=true;if(!st.cur)show('waitScr');return}
+      if(m.t==='start'){st.cur=m.round;let url=m.round.url;
+        if(st.cur.race){const u=new URL(url);u.searchParams.set('me',st.name);const a=avURL(myAvatar);if(a)u.searchParams.set('avatar',a);url=u.href}
+        openStage(url,`${m.round.gameName} · ${m.round.topicName}`,st.name);return}
+      if(m.t==='kpeers'&&st.cur&&st.cur.race){toGame({type:'edu-peers',peers:m.peers||[]});return}
+      if(m.t==='kgo'&&st.cur&&st.cur.race){st.cur.raceStarted=true;toGame({type:'edu-go'});return}
+      if(m.t==='stop'){st.cur=null;closeStage();$('wHi').textContent=m.rank?`You came ${ord(m.rank)} of ${m.of}`:'Round over';$('wMsg').textContent='Your teacher is picking the next game. Keep this page open.';show('waitScr');return}
+      if(m.t==='kicked'){st.cur=null;closeStage();st.conn.close();student=null;show('waitScr');$('wHi').textContent='You were removed from the class';$('wMsg').textContent='Ask your teacher if this was a mistake, then scan the code again.';$('wErr').hidden=true;return}
+      if(m.t==='bye'){st.cur=null;closeStage();show('waitScr');$('wHi').textContent='Class finished';$('wMsg').textContent='Thanks for playing. You can close this page.';st.conn.close();return}}},RELAYS[ri])}
 
 /* =====================================================================
    REPORTS
    ===================================================================== */
 function allRows(){const rows=[];
-  sessions().forEach(s=>(s.rounds||[]).forEach(r=>(r.results||[]).forEach(x=>rows.push(row(x,{session:s.code,sessionId:s.id,cls:s.className||'',round:r,player:x.player})))));
+  sessions().forEach(s=>(s.rounds||[]).forEach(r=>(r.results||[]).forEach(x=>rows.push(row(x,{session:s.code,sessionId:s.id,cls:s.className||'',round:r,player:x.player,label:(s.guests||[]).includes(x.player)?x.player+' (guest)':x.player})))));
   if($('fSolo').checked)store.get('edu-results',[]).forEach(x=>rows.push(row(x,{session:'Solo',sessionId:'solo',player:'Me'})));
   return rows.sort((a,b)=>b.at.localeCompare(a.at))}
-function row(x,ctx){const g=GAMES.find(g=>g.id===x.game);return{at:x.at||x.receivedAt,session:ctx.session,sessionId:ctx.sessionId,cls:ctx.cls||'',student:ctx.player,
+function row(x,ctx){const g=GAMES.find(g=>g.id===x.game);return{at:x.at||x.receivedAt,session:ctx.session,sessionId:ctx.sessionId,cls:ctx.cls||'',student:ctx.label||ctx.player,
   game:x.game,gameName:g?g.name:(x.game||''),subject:x.subject,topic:x.topic,topicName:(x.topicName||x.topic)+(x.regionsLabel&&x.regionsLabel!=='All continents'?` · ${x.regionsLabel}`:''),level:LEVELS[x.level]||x.level||'',
   score:x.score??0,right:x.right??0,asked:x.asked??0,pct:x.asked?Math.round((x.right||0)/x.asked*100):0,bestStreak:x.bestStreak??0,
   seconds:x.timeUsed??x.duration??'',missed:x.missed||[],log:ctx.round&&ctx.round.log?ctx.round.log.filter(e=>e.p===ctx.player):null}}
@@ -1308,7 +1342,7 @@ $('expXlsx').onclick=async()=>{$('expXlsx').disabled=true;$('expXlsx').textConte
 
 /* ---------------- start ---------------- */
 renderHeroCats();
-const hj=location.hash.match(/join=([A-Z0-9]{5})/i);{const hs=location.hash.match(/[&#]s=(\d)/);joinSig=hs?+hs[1]:0;joinPick=/[&#]r=1/.test(location.hash)}
+const hj=location.hash.match(/join=([A-Z0-9]{5})/i);{const hb=location.hash.match(/[&#]b=(\d)/);joinRelay=hb&&RELAYS[+hb[1]]?+hb[1]:0}
 if(hj){openJoin(hj[1]);history.replaceState(null,'',location.pathname+location.search)}else setMode('play');
 discover();
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
