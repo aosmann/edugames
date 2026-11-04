@@ -86,6 +86,14 @@ Count topics with `subject.topics.filter(t => !t.unit).length`. Unit questions c
 
 The flag images live in `flags/<iso>.webp` next to `questions.js` (195 files, ~550 KB). Copy the folder with the bank and add it to the service worker so flags work offline.
 
+### Topic settings and teacher question sets (EduQ v5.1)
+
+Nothing to build in the game: the shared `questions.js` reads these from the address by itself.
+- `o_<key>=<value>`: settings of a topic (`topic.opts`). Basic math: `o_ops=+-xd` (any of + - x d) and `o_max=1000`; Times tables: `o_tables=7,8` and `o_ops=x|d|xd`.
+- `qset=<base64url JSON>`: a teacher's own question set. It appears as the subject `mine` ("My questions") with one topic whose id is the `topic` parameter, so the game's normal `?topic=` lookup finds it. It never goes into Mix.
+
+Just keep `questions.js` byte-identical to the other games and use `EduQ.SUBJECTS` / `EduQ.stream` as usual.
+
 ### Language (Romanian / English)
 
 The portal opens every game with `&lang=ro` or `&lang=en`. The shared bank (EduQ v5) does the work: with `lang=ro`, or the choice saved on the site (`localStorage['edu-lang']`), it calls `EduQ.setLang('ro')` before the game's script runs. That switches the questions of every subject except English to Romanian, and the subject, topic, level and continent names. It also swaps the game's own menus and labels for Romanian as they appear. Question and answer text is never translated.
@@ -138,6 +146,7 @@ The portal adds the student's name and session itself. Games never ask for a nam
 - [ ] `edu-result` arrives with the fields above (test by opening the game inside the portal).
 - [ ] `questions.js` and the `flags/` folder are identical to the other games' copies.
 - [ ] `edu-progress` carries `last` after every answer, and English shows the Topics / Units tabs.
+- [ ] `?topic=basic&o_ops=%2B-&o_max=1000&lock=1` asks only + and − up to 1000.
 - [ ] Capitals / Guess the flag show the continent chips, and `?topic=flags&regions=af&lock=1` only shows African flags.
 - [ ] Service worker cache name bumped whenever files change.
 - [ ] `game.json` is valid JSON and `id` equals the repo name.
