@@ -1,7 +1,9 @@
 /* EduGames class server for Render: the same rooms and class lists as the Cloudflare Worker (../server),
    for networks that block workers.dev. Everything lives in memory; nothing is written to disk.
    Env: PORT (Render sets it), AUTH_SECRET (the same secret as the Cloudflare Worker, so a teacher's sign-in works here too),
-   CLASSES_JSON (the class lists, as JSON text). auth.js is a copy of ../server/src/auth.js. */
+   CLASSES_JSON (the class lists, as JSON text). auth.js is a copy of ../server/src/auth.js.
+   Sign-in, reports, teachers, question sets, Google Sheets and class lists are passed through to the Cloudflare Worker
+   (UPSTREAM), so they work on networks that block workers.dev; the class lists fall back to CLASSES_JSON. */
 import http from 'node:http';
 import {WebSocketServer} from 'ws';
 import {webcrypto} from 'node:crypto';
@@ -11,14 +13,31 @@ const {verifyToken} = await import('./auth.js');
 const SECRET = process.env.AUTH_SECRET || '';
 let CLASSES = [];
 try { CLASSES = JSON.parse(process.env.CLASSES_JSON || '[]'); } catch (e) { console.error('CLASSES_JSON is not valid JSON'); }
-const CORS = {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS', 'Access-Control-Allow-Headers': '*'};
+const CORS = {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': '*'};
+const UPSTREAM = (process.env.UPSTREAM || 'https://edugames-class.edugames.workers.dev').replace(/\/+$/, '');
+const PASS = /^\/(login|reports|account|teachers|sets|classes|google(\/.*)?)$/;
+async function pass(req, res, url, onFail) {
+  try {
+    let body; if (req.method === 'POST') { const ch = []; let n = 0; for await (const c of req) { n += c.length; if (n > 2e6) { res.writeHead(413, CORS); return res.end('Too big'); } ch.push(c); } body = Buffer.concat(ch); }
+    const h = {}; if (req.headers['authorization']) h.Authorization = req.headers['authorization']; if (body) h['Content-Type'] = 'text/plain';
+    const r = await fetch(UPSTREAM + url.pathname + url.search, {method: req.method, headers: h, body, redirect: 'manual', signal: AbortSignal.timeout(25000)});
+    const out = Buffer.from(await r.arrayBuffer()), hd = {...CORS, 'Cache-Control': 'no-store', 'Content-Type': r.headers.get('content-type') || 'application/json'};
+    if (r.headers.get('location')) hd.Location = r.headers.get('location');
+    res.writeHead(r.status, hd); res.end(out);
+  } catch (e) { if (onFail) return onFail(); res.writeHead(502, CORS); res.end('Upstream unreachable'); }
+}
 const CID_OK = /^[A-Za-z0-9_-]{4,40}$/;
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x'), p = url.pathname.replace(/\/+$/, '');
   if (req.method === 'OPTIONS') { res.writeHead(204, CORS); return res.end(); }
   if (p === '' || p === '/health') { res.writeHead(200, {...CORS, 'Content-Type': 'text/plain'}); return res.end('EduGames class server: ok'); }
-  if (p === '/classes') {
+  if (PASS.test(p) && p !== '/classes') { pass(req, res, url); return; }
+  if (p === '/classes') { pass(req, res, url, () => localClasses(req, res)); return; }
+  res.writeHead(404, CORS); res.end('Not found');
+});
+function localClasses(req, res) {
+  {
     if (!SECRET) { res.writeHead(503, CORS); return res.end('No AUTH_SECRET set on the server'); }
     const m = /^Bearer (.+)$/.exec(req.headers['authorization'] || '');
     verifyToken(m ? m[1] : '', SECRET).then(t => {
@@ -27,8 +46,7 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-  res.writeHead(404, CORS); res.end('Not found');
-});
+}
 
 /* rooms: code -> {host: ws|null, key, guests: Map(cid -> ws)} */
 const rooms = new Map();

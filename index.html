@@ -782,7 +782,7 @@ p{margin:0}
     </header>
     <section class="intro" style="padding-bottom:6px"><h1>Reports</h1><p>Results are saved on this device and online in your account. Filter by game, day, session or student, then export.</p></section>
     <div class="panel filters">
-      <label>Game<select id="fGame"></select></label>
+      <label>Subject<select id="fSubj"></select></label>
       <label>Class<select id="fClass"></select></label>
       <label>Session<select id="fSession"></select></label>
       <label>From<input type="date" id="fFrom"></label>
@@ -1245,7 +1245,7 @@ const MI={people:'<circle cx="9" cy="8.5" r="3.3"/><path d="M3 19.5c.9-3.2 3.3-4
  out:'<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M10 16l-4-4 4-4M6 12h10"/>',devices:'<rect x="3" y="4" width="13" height="9.5" rx="1.5"/><path d="M7 17.5h5M9.5 13.5v4"/><rect x="17" y="8" width="4.5" height="10" rx="1.2"/>'};
 const authH=()=>{const a=auth();return a?{Authorization:'Bearer '+a.token}:{}};
 async function signIn(u,p){
-  const r=await T_(20000,fetch(`${REPORTS_HTTP()}/login`,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({u:u.trim().toLowerCase(),p})}));
+  const r=await cfetch('/login',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({u:u.trim().toLowerCase(),p})},20000);
   const d=await r.json().catch(()=>({}));
   if(r.status===429)throw new Error(T('Too many wrong tries. Try again in {n} minutes.').replace('{n}',d.minutes||15));
   if(r.status===403)throw new Error(T('Wrong username or password'));
@@ -1257,7 +1257,7 @@ function signedOut(ended){store.set('edu-teacher-auth',null);remoteSessions=[];l
   store.set('edu-portal-classes-cache',[]);store.set('edu-sets-cache',{mine:[],shared:[]});const pend=pendingSync();store.set('edu-portal-sessions',localSessions().filter(s=>pend.includes(s.id)||(session&&s.id===session.id)));
   clsState='pin';paintClsPick();paintSync();if(!$('reports').hidden)renderReports(true)}
 /* ---- account button (top right), sign-in and password dialogs ---- */
-const api=async(path,o={})=>{const r=await T_(20000,fetch(`${REPORTS_HTTP()}${path}`,{method:o.body?'POST':'GET',cache:'no-store',headers:{'Content-Type':'text/plain',...authH()},body:o.body?JSON.stringify(o.body):undefined}));
+const api=async(path,o={})=>{const r=await cfetch(path,{method:o.body?'POST':'GET',cache:'no-store',headers:{'Content-Type':'text/plain',...authH()},body:o.body?JSON.stringify(o.body):undefined},20000);
   const d=await r.json().catch(()=>({}));if(r.status===401&&path!=='/login'){signedOut(true);throw new Error(T('Your sign-in ended. Sign in again.'))}return{r,d}};
 const NET_ERR=()=>T('Couldn\'t reach the class server. Check the connection.');
 const firstName=n=>String(n||'').trim().split(/\s+/)[0]||'';
@@ -1505,18 +1505,22 @@ const localSessions=()=>store.get('edu-portal-sessions',[]);
 let remoteSessions=[],lastPull=0,pulling=false,syncState='';
 const sessions=()=>{const m=new Map(localSessions().map(s=>[s.id,s]));remoteSessions.forEach(r=>{const l=m.get(r.id);if(!l||(+r.updatedAt||0)>(+l.updatedAt||0))m.set(r.id,r)});
   return [...m.values()].sort((a,b)=>String(a.startedAt).localeCompare(String(b.startedAt)))};
-const REPORTS_HTTP=()=>httpOf(RELAYS[0]);
+const REPORTS_HTTP=()=>httpOf(RELAYS[apiIdx]||RELAYS[0]);
+/* account, reports, sets, Sheets: Cloudflare first; if this network can't reach it, the backup server passes them through */
+let apiIdx=0;
+async function cfetch(path,opts,ms){const order=[apiIdx,...RELAYS.map((x,j)=>j).filter(j=>j!==apiIdx)];let last;
+  for(const i of order){try{const r=await T_(i?Math.max(ms,75000):ms,fetch(`${httpOf(RELAYS[i])}${path}`,opts));if(r.status===502&&i)throw new Error('upstream');apiIdx=i;return r}catch(e){last=e}}throw last||new Error('offline')}
 const pendingSync=()=>store.get('edu-sync-pending',[]);
 let syncT=null;const syncSoon=(ms=8000)=>{clearTimeout(syncT);syncT=setTimeout(syncNow,ms)};
 async function syncNow(){let pend=pendingSync();if(!auth()||!pend.length){paintSync();return}
   const loc=new Map(localSessions().map(s=>[s.id,s]));
   for(const id of pend.slice()){const s=loc.get(id);if(!s){pend=pend.filter(x=>x!==id);continue}
-    try{const r=await T_(15000,fetch(`${REPORTS_HTTP()}/reports`,{method:'POST',headers:{'Content-Type':'text/plain',...authH()},body:JSON.stringify({session:s})}));
+    try{const r=await cfetch('/reports',{method:'POST',headers:{'Content-Type':'text/plain',...authH()},body:JSON.stringify({session:s})},15000);
       if(r.ok){pend=pend.filter(x=>x!==id);syncState='ok'}else if(r.status===401){syncState='badpin';break}else if(r.status===403){pend=pend.filter(x=>x!==id)}else{syncState='offline';break}}
     catch(e){syncState='offline';break}}
   store.set('edu-sync-pending',pend);paintSync();if(pend.length)syncSoon(60000)}
 async function pullReports(force){if(!auth()||pulling||(!force&&Date.now()-lastPull<60000))return;pulling=true;
-  try{const r=await T_(15000,fetch(`${REPORTS_HTTP()}/reports`,{cache:'no-store',headers:authH()}));
+  try{const r=await cfetch('/reports',{cache:'no-store',headers:authH()},15000);
     if(r.ok){const l=await r.json();remoteSessions=Array.isArray(l)?l:[];lastPull=Date.now();if(syncState!=='offline')syncState='ok'}else if(r.status===401){signedOut(true)}else syncState='offline'}
   catch(e){syncState='offline'}
   pulling=false;if(!$('reports').hidden)renderReports(true)}
@@ -1831,12 +1835,13 @@ function allRows(){const rows=[];
   sessions().forEach(s=>(s.rounds||[]).forEach(r=>(r.results||[]).forEach(x=>rows.push(row(x,{session:s.code,sessionId:s.id,cls:s.className||'',round:r,player:x.player,label:(s.guests||[]).includes(x.player)?x.player+' (guest)':x.player})))));
   if($('fSolo').checked)store.get('edu-results',[]).forEach(x=>rows.push(row(x,{session:'Solo',sessionId:'solo',player:'Me'})));
   return rows.sort((a,b)=>b.at.localeCompare(a.at))}
-function row(x,ctx){const g=GAMES.find(g=>g.id===x.game);return{at:x.at||x.receivedAt,session:ctx.session,sessionId:ctx.sessionId,cls:ctx.cls||'',student:ctx.label||ctx.player,
+const SUBJ_NAMES={english:'English',math:'Math',geo:'Geography',science:'Science',info:'Informatics',mix:'Mix it up',mine:'My questions'};
+function row(x,ctx){const g=GAMES.find(g=>g.id===x.game);return{subjName:(x.subject!=='mine'&&SUBJ_NAMES[x.subject])||(ctx.round&&ctx.round.subjectName)||SUBJ_NAMES[x.subject]||x.subject||'',at:x.at||x.receivedAt,session:ctx.session,sessionId:ctx.sessionId,cls:ctx.cls||'',student:ctx.label||ctx.player,
   game:x.game,gameName:g?g.name:(x.game||''),subject:x.subject,topic:x.topic,topicName:(x.topicName||x.topic)+(x.regionsLabel&&x.regionsLabel!=='All continents'?` · ${x.regionsLabel}`:''),level:LEVELS[x.level]||x.level||'',
   score:x.score??0,right:x.right??0,asked:x.asked??0,pct:x.asked?Math.round((x.right||0)/x.asked*100):0,bestStreak:x.bestStreak??0,
   seconds:x.timeUsed??x.duration??'',missed:x.missed||[],log:ctx.round&&ctx.round.log?ctx.round.log.filter(e=>e.p===ctx.player):null}}
-function filtered(){const g=$('fGame').value,s=$('fSession').value,c=$('fClass').value,f=$('fFrom').value,t=$('fTo').value,n=$('fStudent').value.trim().toLowerCase();
-  return allRows().filter(r=>(!g||r.game===g)&&(!s||r.sessionId===s)&&(!c||r.cls===c)&&(!f||dayKey(r.at)>=f)&&(!t||dayKey(r.at)<=t)&&(!n||r.student.toLowerCase().includes(n)))}
+function filtered(){const g=$('fSubj').value,s=$('fSession').value,c=$('fClass').value,f=$('fFrom').value,t=$('fTo').value,n=$('fStudent').value.trim().toLowerCase();
+  return allRows().filter(r=>(!g||r.subjName===g)&&(!s||r.sessionId===s)&&(!c||r.cls===c)&&(!f||dayKey(r.at)>=f)&&(!t||dayKey(r.at)<=t)&&(!n||r.student.toLowerCase().includes(n)))}
 let gsInfo=null,gsAt=0;
 async function paintGsPill(){const p=$('gsPill');if(!auth()){p.hidden=true;return}
   if(Date.now()-gsAt>60000){gsAt=Date.now();try{const {r,d}=await api('/google');gsInfo=r.ok?d:null}catch(e){gsInfo=null}}
@@ -1844,9 +1849,8 @@ async function paintGsPill(){const p=$('gsPill');if(!auth()){p.hidden=true;retur
   if(gsInfo.connected&&gsInfo.url){p.href=gsInfo.url;p.target='_blank';p.rel='noopener';p.className='gspill';$('gsPillT').textContent=T('Open in Google Sheets');p.onclick=null}
   else{p.href='#';p.removeAttribute('target');p.className='gspill off';$('gsPillT').textContent=T('Connect Google Sheets');p.onclick=e=>{e.preventDefault();openSheets()}}}
 function renderReports(fromPull){if(!fromPull)pullReports();paintSync();paintGsPill();
-  const gs=$('fGame'),gv=gs.value;gs.innerHTML='';gs.append(new Option('All games',''));
-  const ids=new Set([...GAMES.map(g=>g.id),...sessions().flatMap(s=>(s.rounds||[]).map(r=>r.game))]);
-  ids.forEach(id=>{const g=GAMES.find(x=>x.id===id);gs.append(new Option(g?g.name:id,id))});gs.value=gv;
+  {const gs=$('fSubj'),gv=gs.value;gs.innerHTML='';gs.append(new Option(T('All subjects'),''));
+   [...new Set(allRows().map(r=>r.subjName).filter(Boolean))].sort((a,b)=>a.localeCompare(b)).forEach(n=>gs.append(new Option(T(n),n)));gs.value=[...gs.options].some(o=>o.value===gv)?gv:''}
   const ss=$('fSession'),sv=ss.value;ss.innerHTML='';ss.append(new Option('All sessions',''));
   sessions().slice().reverse().forEach(s=>ss.append(new Option(`${fmtDate(s.startedAt)} · ${s.className?s.className+' · ':''}${s.code} · ${(s.players||[]).length} students`,s.id)));
   {const cs=$('fClass'),cv=cs.value;cs.innerHTML='';cs.append(new Option('All classes',''));[...new Set(sessions().map(x=>x.className).filter(Boolean))].sort().forEach(c=>cs.append(new Option(c,c)));cs.value=[...cs.options].some(o=>o.value===cv)?cv:''}
@@ -2004,12 +2008,12 @@ function openStudent(name,rows){const mine=rows.filter(r=>r.student===name);if(!
     const row=el('div','mrow'),ex=el('button','plain','Export Excel'),ok=el('button','cta','Close');ex.type=ok.type='button';ok.onclick=closeModal;
     ex.onclick=()=>exportXlsx(mine,`edugames-${name.replace(/[^\p{L}\p{N}]+/gu,'-')}-${dayKey(Date.now())}.xlsx`,ex);row.append(ex,ok);p.append(row);box.append(p)});
 }
-['fGame','fClass','fSession','fFrom','fTo','fStudent','fSolo'].forEach(id=>$(id).addEventListener('input',renderReports));
+['fSubj','fClass','fSession','fFrom','fTo','fStudent','fSolo'].forEach(id=>$(id).addEventListener('input',renderReports));
 
 const COLS=[['Date','d'],['Class','cls'],['Session','session'],['Student','student'],['Game','gameName'],['Subject','subject'],['Topic','topicName'],['Level','level'],['Score','score'],['Right','right'],['Asked','asked'],['% right','pct'],['Best streak','bestStreak'],['Seconds','seconds']];
 const flat=rows=>rows.map(r=>Object.fromEntries(COLS.map(([h,k])=>[h,k==='d'?new Date(r.at).toLocaleString():r[k]])));
 const missedRows=rows=>rows.flatMap(r=>r.missed.map(m=>({Date:new Date(r.at).toLocaleString(),Session:r.session,Student:r.student,Game:r.gameName,Topic:r.topicName,Question:m.q,'Right answer':m.answer,'They picked':m.picked})));
-function fileName(ext){const s=$('fSession').value,g=$('fGame').value;return `edugames-report${g?'-'+g:''}${s&&s!=='solo'?'-'+(sessions().find(x=>x.id===s)||{}).code:''}-${dayKey(Date.now())}.${ext}`}
+function fileName(ext){const s=$('fSession').value,g=$('fSubj').value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-');return `edugames-report${g?'-'+g:''}${s&&s!=='solo'?'-'+(sessions().find(x=>x.id===s)||{}).code:''}-${dayKey(Date.now())}.${ext}`}
 function download(blob,name){const a=el('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
 $('expCsv').onclick=()=>{const data=flat(filtered());const esc=v=>{v=v==null?'':String(v);return /[",\n;]/.test(v)?`"${v.replace(/"/g,'""')}"`:v};
   const csv=[COLS.map(c=>esc(T(c[0]))).join(','),...data.map(r=>COLS.map(c=>esc(r[c[0]])).join(','))].join('\r\n');
