@@ -161,33 +161,46 @@ export class Room {
    GET  /reports?after=<ms>         -> sessions changed after that time, newest first (up to 300) */
 const U_OK = /^[a-z0-9._-]{2,30}$/;
 /* rows for Google Sheets: one result -> its class tab (or Guests), All results, and one Mistakes row per missed question */
+/* Sheet layout v2: every tab is a Google Sheets table with typed columns, plus an "Overview" tab of formulas.
+   A column: [key, English name, Romanian name, type]; types are the Sheets table column types. */
+const COLS = {
+  date: ['Date', 'Data', 'DATE'], time: ['Time', 'Ora', 'TEXT'], teacher: ['Teacher', 'Profesor', 'TEXT'], cls: ['Class', 'Clasa', 'TEXT'],
+  student: ['Student', 'Elev', 'TEXT'], game: ['Game', 'Joc', 'TEXT'], subject: ['Subject', 'Materie', 'TEXT'], topic: ['Topic', 'Temă', 'TEXT'],
+  level: ['Level', 'Nivel', 'TEXT'], score: ['Score', 'Scor', 'DOUBLE'], right: ['Right', 'Corecte', 'DOUBLE'], asked: ['Asked', 'Întrebări', 'DOUBLE'],
+  pct: ['% right', '% corecte', 'PERCENT'], early: ['Ended early', 'Oprit mai devreme', 'BOOLEAN'], guest: ['Guest', 'Invitat', 'BOOLEAN'],
+  q: ['Question', 'Întrebare', 'TEXT'], picked: ['Their answer', 'Răspunsul lui', 'TEXT'], answer: ['Right answer', 'Răspuns corect', 'TEXT']};
+const LAYOUT = admin => ({
+  all: ['date', 'time', ...(admin ? ['teacher'] : []), 'cls', 'student', 'game', 'subject', 'topic', 'level', 'score', 'right', 'asked', 'pct', 'early', 'guest'],
+  cls: ['date', 'time', ...(admin ? ['teacher'] : []), 'student', 'game', 'subject', 'topic', 'level', 'score', 'right', 'asked', 'pct', 'early'],
+  mis: ['date', 'time', ...(admin ? ['teacher'] : []), 'cls', 'student', 'game', 'topic', 'q', 'picked', 'answer']});
 const SHEET_TX = {
-  en: {class: ['Date', 'Time', 'Teacher', 'Class', 'Student', 'Game', 'Subject', 'Topic', 'Level', 'Score', 'Right', 'Asked', '% right', 'Ended early'],
-    all: ['Date', 'Time', 'Teacher', 'Class', 'Student', 'Game', 'Subject', 'Topic', 'Level', 'Score', 'Right', 'Asked', '% right', 'Ended early', 'Guest'],
-    mis: ['Date', 'Time', 'Teacher', 'Class', 'Student', 'Game', 'Topic', 'Question', 'Their answer', 'Right answer'],
-    tabs: {all: 'All results', mis: 'Mistakes', guests: 'Guests', none: 'No class list'}, level: {1: 'Easy', 2: 'Medium', 3: 'Hard'}, yes: 'yes'},
-  ro: {class: ['Data', 'Ora', 'Profesor', 'Clasa', 'Elev', 'Joc', 'Materie', 'Temă', 'Nivel', 'Scor', 'Corecte', 'Întrebări', '% corecte', 'Oprit mai devreme'],
-    all: ['Data', 'Ora', 'Profesor', 'Clasa', 'Elev', 'Joc', 'Materie', 'Temă', 'Nivel', 'Scor', 'Corecte', 'Întrebări', '% corecte', 'Oprit mai devreme', 'Invitat'],
-    mis: ['Data', 'Ora', 'Profesor', 'Clasa', 'Elev', 'Joc', 'Temă', 'Întrebare', 'Răspunsul lui', 'Răspuns corect'],
-    tabs: {all: 'Toate rezultatele', mis: 'Greșeli', guests: 'Invitați', none: 'Fără listă de clasă'}, level: {1: 'Ușor', 2: 'Mediu', 3: 'Greu'}, yes: 'da'}};
-const headOf = (L, name) => name === L.tabs.all ? L.all : name === L.tabs.mis ? L.mis : L.class;
+  en: {tabs: {ov: 'Overview', all: 'All results', mis: 'Mistakes', guests: 'Guests', none: 'No class list'}, level: {1: 'Easy', 2: 'Medium', 3: 'Hard'}, lang: 0,
+    ov: {title: 'EduGames reports', note: 'Fills in by itself after every class. EduGames adds the rows; you can sort, filter and colour them as you like.', students: 'Students', classes: 'Classes', missed: 'Most missed questions', results: 'Results', wrong: 'Wrong'}},
+  ro: {tabs: {ov: 'Pe scurt', all: 'Toate rezultatele', mis: 'Greșeli', guests: 'Invitați', none: 'Fără listă de clasă'}, level: {1: 'Ușor', 2: 'Mediu', 3: 'Greu'}, lang: 1,
+    ov: {title: 'Rapoarte EduGames', note: 'Se completează singur după fiecare oră. EduGames adaugă rândurile; le poți sorta, filtra și colora cum vrei.', students: 'Elevi', classes: 'Clase', missed: 'Cele mai greșite întrebări', results: 'Rezultate', wrong: 'Greșeli'}}};
 function when(t) {
-  const d = new Date(t || Date.now()), f = o => new Intl.DateTimeFormat('en-GB', {timeZone: 'Europe/Bucharest', ...o}).formatToParts(d).reduce((a, p) => (a[p.type] = p.value, a), {});
-  const x = f({year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false});
-  return [`${x.year}-${x.month}-${x.day}`, `${x.hour}:${x.minute}`];
+  const d = new Date(t || Date.now()), x = new Intl.DateTimeFormat('en-GB', {timeZone: 'Europe/Bucharest', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false})
+    .formatToParts(d).reduce((a, p) => (a[p.type] = p.value, a), {});
+  const serial = Date.UTC(+x.year, +x.month - 1, +x.day) / 864e5 + 25569;   // a Sheets date: days since 30 Dec 1899
+  return {day: `${x.year}-${x.month}-${x.day}`, serial, time: `${x.hour}:${x.minute}`};
 }
-const tabName = n => String(n || '').replace(/[\[\]\*\?\/\\:']/g, ' ').trim().slice(0, 90) || 'No class list';
+const tabName = n => String(n || '').replace(/[\[\]\*\?\/\\:']/g, ' ').trim().slice(0, 90);
+/* one result -> rows: {tab: 'all' | 'mis' | 'cls', name (class tab name), v: {key: value}} */
 function sheetRows(s, rd, res, accs, L) {
-  const [day, time] = when(res.at || rd.startedAt || s.startedAt), acc = accs.find(a => a.u === s.owner), teacher = acc ? acc.name : (s.owner || '');
-  const cls = s.className || '', guest = (s.guests || []).includes(res.player) || !s.className;
-  const lvl = rd.values && rd.values.level != null ? (L.level[rd.values.level] || rd.values.level) : '';
-  const pct = res.asked ? Math.round(100 * (res.right || 0) / res.asked) : '';
-  const base = [day, time, teacher, cls || '—', res.player, rd.gameName || rd.game || '', rd.subjectName || rd.subject || '', rd.topicName || rd.topic || '', lvl, res.score || 0, res.right || 0, res.asked || 0, pct, res.partial ? L.yes : ''];
-  const out = [[L.tabs.all, [...base, (s.guests || []).includes(res.player) ? L.yes : '']]];
-  out.push([guest ? (cls ? L.tabs.guests : L.tabs.none) : tabName(cls), base]);
-  (res.missed || []).forEach(m => out.push([L.tabs.mis, [day, time, teacher, cls || '—', res.player, rd.gameName || rd.game || '', rd.topicName || rd.topic || '', m.q || '', m.picked == null ? '' : String(m.picked), m.answer == null ? '' : String(m.answer)]]));
+  const w = when(res.at || rd.startedAt || s.startedAt), acc = accs.find(a => a.u === s.owner), teacher = acc ? acc.name : (s.owner || '');
+  const cls = s.className || '', isGuest = (s.guests || []).includes(res.player), noList = !s.className;
+  const lvl = rd.values && rd.values.level != null && !rd.setId ? (L.level[rd.values.level] || String(rd.values.level)) : '';
+  const topic = (rd.topicName || rd.topic || '') + (rd.regionsLabel && rd.regionsLabel !== 'All continents' ? ' · ' + rd.regionsLabel : '');
+  const base = {date: w.serial, time: w.time, teacher, cls: cls || '—', student: res.player, game: rd.gameName || rd.game || '', subject: rd.subjectName || rd.subject || '', topic, level: lvl,
+    score: +res.score || 0, right: +res.right || 0, asked: +res.asked || 0, pct: res.asked ? (+res.right || 0) / res.asked : 0, early: !!res.partial, guest: isGuest};
+  const out = [{tab: 'all', v: base}, {tab: 'cls', name: noList ? L.tabs.none : isGuest ? L.tabs.guests : tabName(cls), v: base}];
+  (res.missed || []).forEach(m => out.push({tab: 'mis', v: {...base, q: m.q || '', picked: m.picked == null ? '' : String(m.picked), answer: m.answer == null ? '' : String(m.answer)}}));
   return out;
 }
+const cellOf = (type, v) => type === 'BOOLEAN' ? {userEnteredValue: {boolValue: !!v}} : (type === 'DOUBLE' || type === 'PERCENT' || type === 'DATE') ? {userEnteredValue: {numberValue: +v || 0}}
+  : {userEnteredValue: {stringValue: v == null ? '' : String(v)}};
+const colLetter = i => String.fromCharCode(65 + i);
+const tblName = n => 'T_' + String(n).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 40);
 const ABC = 'abcdefghjkmnpqrstuvwxyz23456789';
 const makePassword = () => [...crypto.getRandomValues(new Uint8Array(10))].map(x => ABC[x % ABC.length]).join('').replace(/(.{5})/, '$1-');
 const month = t => new Date(t).toISOString().slice(0, 7);
@@ -326,7 +339,7 @@ export class Store {
   gRedirect() { return (this.env.PUBLIC_URL || 'https://edugames-class.edugames.workers.dev') + '/google/callback'; }
   async google(req, me) {
     const key = 'gs:' + me.u, g = await this.state.storage.get(key);
-    if (req.method !== 'POST') return this.json({available: this.gOn(), connected: !!(g && g.refresh), url: g && g.url, email: g && g.email, at: g && g.at, err: g && g.err, all: me.role === 'admin'});
+    if (req.method !== 'POST') return this.json({available: this.gOn(), connected: !!(g && g.refresh), url: g && g.url, email: g && g.email, at: g && g.at, err: g && g.err, all: me.role === 'admin', old: g && g.old || null, v: g && g.v || 1});
     const b = await this.body(req);
     if (b.action === 'start') {
       if (!this.gOn()) return this.json({error: 'not set up'}, 503);
@@ -339,6 +352,12 @@ export class Store {
     if (b.action === 'disconnect') {
       if (g && g.refresh) fetch((this.env.GOOGLE_TEST_URL || 'https://oauth2.googleapis.com') + '/revoke?token=' + encodeURIComponent(g.refresh), {method: 'POST'}).catch(() => {});
       await this.state.storage.delete(key); const old = await this.state.storage.list({prefix: 'gx:' + me.u + ':'}); if (old.size) await this.state.storage.delete([...old.keys()]);
+      return this.json({ok: true});
+    }
+    if (b.action === 'rebuild') {
+      if (!g || !g.refresh) return this.json({error: 'not connected'}, 400);
+      try { const acc = await this.state.storage.get('acct:' + me.u), tok = await this.gToken(me.u, g); await this.gNewSheet(me.u, acc, b.lang === 'en' || b.lang === 'ro' ? b.lang : g.lang, tok, {refresh: g.refresh, email: g.email, old: g.url}); }
+      catch (e) { return this.json({error: 'google'}, 502); }
       return this.json({ok: true});
     }
     if (b.action === 'resend') {
@@ -374,16 +393,10 @@ export class Store {
     const dom = this.env.GOOGLE_DOMAIN || 'spectrum.ro';
     if (email && !email.toLowerCase().endsWith('@' + dom)) return this.page('School account needed', `Please connect with your @${dom} Google account.`, false);
     this.gTok = this.gTok || new Map(); this.gTok.set(info.u, {token: t.access_token, exp: Date.now() + (t.expires_in - 120) * 1000});
-    const L = SHEET_TX[info.lang] || SHEET_TX.en, ro = info.lang === 'ro';
-    const title = acc.role === 'admin' ? (ro ? 'Rapoarte EduGames – toți profesorii' : 'EduGames reports – all teachers') : (ro ? 'Rapoarte EduGames – ' : 'EduGames reports – ') + acc.name;
-    const c = await fetch((this.env.GOOGLE_TEST_URL || 'https://sheets.googleapis.com') + '/v4/spreadsheets', {method: 'POST', headers: {Authorization: 'Bearer ' + t.access_token, 'Content-Type': 'application/json'},
-      body: JSON.stringify({properties: {title, locale: 'ro_RO', timeZone: 'Europe/Bucharest'}, sheets: [{properties: {title: L.tabs.all, gridProperties: {frozenRowCount: 1}}}]})});
-    const sh = await c.json().catch(() => ({}));
-    if (!c.ok || !sh.spreadsheetId) return this.page('Not connected', 'Google Sheets could not create the sheet. Check that Google Sheets is turned on for your school account.', false);
-    { const old = await this.state.storage.list({prefix: 'gx:' + info.u + ':'}); if (old.size) await this.state.storage.delete([...old.keys()]); }
-    await this.state.storage.put('gs:' + info.u, {refresh: t.refresh_token, sheet: sh.spreadsheetId, url: sh.spreadsheetUrl, email, lang: info.lang, tabs: {[L.tabs.all]: sh.sheets[0].properties.sheetId}, fresh: [L.tabs.all], at: null, err: null});
-    const meta = await this.state.storage.list({prefix: 'm:'});
-    await this.gQueue([...meta].filter(([, m]) => acc.role === 'admin' || m.owner === acc.u).sort((a, b) => (a[1].started || a[1].at) - (b[1].started || b[1].at)).map(([k]) => k.slice(2)), 1000);
+    const ro = info.lang === 'ro';
+    let sh; try { sh = await this.gNewSheet(info.u, acc, info.lang, t.access_token, {refresh: t.refresh_token, email}); } catch (e) { sh = null; }
+    if (!sh) return this.page('Not connected', 'Google Sheets could not create the sheet. Check that Google Sheets is turned on for your school account.', false);
+    const title = sh.title;
     return ro ? this.page('Google Sheets conectat', `Rapoartele tale merg în „${title}”, în Google Drive-ul tău. Rapoartele de până acum se adaugă acum. Poți închide fereastra.`, true)
       : this.page('Google Sheets connected', `Your reports go to “${title}” in your Google Drive. Past reports are being added now. You can close this window.`, true);
   }
@@ -401,22 +414,99 @@ export class Store {
     if (!r.ok || !t.access_token) { const e = new Error(t.error === 'invalid_grant' ? 'revoked' : 'token'); e.fatal = t.error === 'invalid_grant'; throw e; }
     this.gTok.set(u, {token: t.access_token, exp: Date.now() + (t.expires_in - 120) * 1000}); return t.access_token;
   }
+  /* a new spreadsheet in the teacher's Drive: Overview (formulas), All results and Mistakes as tables; then every past session is queued */
+  async gNewSheet(u, acc, lang, tok, extra) {
+    const L = SHEET_TX[lang] || SHEET_TX.en, ro = lang === 'ro', admin = acc.role === 'admin', LY = LAYOUT(admin);
+    const title = admin ? (ro ? 'Rapoarte EduGames – toți profesorii' : 'EduGames reports – all teachers') : (ro ? 'Rapoarte EduGames – ' : 'EduGames reports – ') + acc.name;
+    const c = await fetch((this.env.GOOGLE_TEST_URL || 'https://sheets.googleapis.com') + '/v4/spreadsheets', {method: 'POST', headers: {Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json'},
+      body: JSON.stringify({properties: {title, locale: 'en_GB', timeZone: 'Europe/Bucharest'}, sheets: [
+        {properties: {sheetId: 0, title: L.tabs.ov, tabColorStyle: {rgbColor: {red: .17, green: .22, blue: .56}}, gridProperties: {hideGridlines: true}}},
+        {properties: {sheetId: 1, title: L.tabs.all, tabColorStyle: {rgbColor: {red: .1, green: .61, blue: .37}}}},
+        {properties: {sheetId: 2, title: L.tabs.mis, tabColorStyle: {rgbColor: {red: .84, green: .26, blue: .23}}}}]})});
+    const sh = await c.json().catch(() => ({}));
+    if (!c.ok || !sh.spreadsheetId) throw new Error('create');
+    const g = {v: 2, refresh: extra.refresh, sheet: sh.spreadsheetId, url: sh.spreadsheetUrl, email: extra.email || '', lang, admin, old: extra.old || null, tabs: {}, next: 10, at: null, err: null};
+    const base = (this.env.GOOGLE_TEST_URL || 'https://sheets.googleapis.com') + '/v4/spreadsheets/' + g.sheet;
+    await this.gTable(tok, g, base, 'all', 1, L.tabs.all, LY.all, false);
+    await this.gTable(tok, g, base, 'mis', 2, L.tabs.mis, LY.mis, false);
+    await this.gOverview(tok, g, base, L, LY).catch(() => {});
+    { const old = await this.state.storage.list({prefix: 'gx:' + u + ':'}); if (old.size) await this.state.storage.delete([...old.keys()]); }
+    await this.state.storage.put('gs:' + u, g);
+    const meta = await this.state.storage.list({prefix: 'm:'});
+    await this.gQueue([...meta].filter(([, m]) => admin || m.owner === u).sort((a, b) => (a[1].started || a[1].at) - (b[1].started || b[1].at)).map(([k]) => k.slice(2)), 1000);
+    return {title, url: g.url};
+  }
+  async gBatch(tok, base, requests) {
+    const r = await fetch(base + ':batchUpdate', {method: 'POST', headers: {Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json'}, body: JSON.stringify({requests})});
+    if (r.status === 404) { const e = new Error('gone'); e.gone = true; throw e; }
+    const d = await r.json().catch(() => ({})); return {ok: r.ok, status: r.status, d};
+  }
+  /* a tab as a table with typed columns; if Google refuses tables, a plain tab with a coloured header row */
+  async gTable(tok, g, base, key, sheetId, title, cols, addSheet) {
+    const L = SHEET_TX[g.lang] || SHEET_TX.en;
+    const hdr = cols.map(k => L.lang ? COLS[k][1] : COLS[k][0]), tableId = 't' + sheetId;
+    const pre = addSheet ? [{addSheet: {properties: {sheetId, title, gridProperties: {frozenRowCount: 1}}}}] : [];
+    const pi = cols.indexOf('pct');
+    const look = [{updateDimensionProperties: {range: {sheetId, dimension: 'COLUMNS', startIndex: 0, endIndex: cols.length}, properties: {pixelSize: 120}, fields: 'pixelSize'}},
+      ...cols.map((k, i) => ['q', 'picked', 'answer', 'topic'].includes(k) ? {updateDimensionProperties: {range: {sheetId, dimension: 'COLUMNS', startIndex: i, endIndex: i + 1}, properties: {pixelSize: k === 'q' ? 320 : 190}, fields: 'pixelSize'}} : null).filter(Boolean),
+      ...(pi >= 0 ? [{addConditionalFormatRule: {index: 0, rule: {ranges: [{sheetId, startRowIndex: 1, endRowIndex: 20000, startColumnIndex: pi, endColumnIndex: pi + 1}],
+        gradientRule: {minpoint: {colorStyle: {rgbColor: {red: .96, green: .55, blue: .52}}, type: 'NUMBER', value: '0.3'}, midpoint: {colorStyle: {rgbColor: {red: 1, green: .87, blue: .55}}, type: 'NUMBER', value: '0.65'},
+          maxpoint: {colorStyle: {rgbColor: {red: .55, green: .83, blue: .63}}, type: 'NUMBER', value: '0.95'}}}}}] : [])];
+    const table = {addTable: {table: {name: tblName(title), tableId, range: {sheetId, startRowIndex: 0, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: cols.length},
+      columnProperties: cols.map((k, i) => ({columnIndex: i, columnName: hdr[i], columnType: COLS[k][2]})),
+      rowsProperties: {headerColorStyle: {rgbColor: {red: .17, green: .22, blue: .56}}, firstBandColorStyle: {rgbColor: {red: 1, green: 1, blue: 1}}, secondBandColorStyle: {rgbColor: {red: .96, green: .97, blue: .99}}}}}};
+    let r = await this.gBatch(tok, base, [...pre, table, ...look]);
+    if (!r.ok) { const t2 = JSON.parse(JSON.stringify(table)); delete t2.addTable.table.rowsProperties; r = await this.gBatch(tok, base, [...pre, t2, ...look]); }
+    if (r.ok) { g.tabs[key] = {sheetId, tableId, title}; return; }
+    /* fallback: a plain tab */
+    if (pre.length) { const p = await this.gBatch(tok, base, pre); if (!p.ok && !/already exists/i.test(JSON.stringify(p.d))) throw new Error('addSheet'); }
+    await fetch(`${base}/values/${encodeURIComponent(`'${title}'!A1`)}?valueInputOption=RAW`, {method: 'PUT', headers: {Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json'}, body: JSON.stringify({values: [hdr]})});
+    await this.gBatch(tok, base, [{repeatCell: {range: {sheetId, startRowIndex: 0, endRowIndex: 1}, cell: {userEnteredFormat: {textFormat: {bold: true, foregroundColor: {red: 1, green: 1, blue: 1}}, backgroundColor: {red: .17, green: .22, blue: .56}}}, fields: 'userEnteredFormat(textFormat,backgroundColor)'}},
+      {updateSheetProperties: {properties: {sheetId, gridProperties: {frozenRowCount: 1}}, fields: 'gridProperties.frozenRowCount'}},
+      ...cols.map((k, i) => COLS[k][2] === 'DATE' || COLS[k][2] === 'PERCENT' ? {repeatCell: {range: {sheetId, startRowIndex: 1, startColumnIndex: i, endColumnIndex: i + 1}, cell: {userEnteredFormat: {numberFormat: COLS[k][2] === 'DATE' ? {type: 'DATE', pattern: 'dd.mm.yyyy'} : {type: 'PERCENT', pattern: '0%'}}}, fields: 'userEnteredFormat.numberFormat'}} : null).filter(Boolean), ...look]).catch(() => {});
+    g.tabs[key] = {sheetId, tableId: null, title};
+  }
+  /* Overview: students, classes and the most missed questions, as live formulas over the tables */
+  async gOverview(tok, g, base, L, LY) {
+    const A = LY.all, M = LY.mis, ca = k => colLetter(A.indexOf(k)), cm = k => colLetter(M.indexOf(k)), O = L.ov, all = `'${L.tabs.all}'!A:${colLetter(A.length - 1)}`, mis = `'${L.tabs.mis}'!A:${colLetter(M.length - 1)}`;
+    const h = k => (L.lang ? COLS[k][1] : COLS[k][0]);
+    const q1 = `=IFERROR(QUERY(${all},"select ${ca('cls')}, ${ca('student')}, count(${ca('date')}), sum(${ca('right')}), sum(${ca('asked')}), sum(${ca('right')})/sum(${ca('asked')}) where ${ca('student')} is not null group by ${ca('cls')}, ${ca('student')} order by ${ca('cls')}, ${ca('student')} label ${ca('cls')} '${h('cls')}', ${ca('student')} '${h('student')}', count(${ca('date')}) '${O.results}', sum(${ca('right')}) '${h('right')}', sum(${ca('asked')}) '${h('asked')}', sum(${ca('right')})/sum(${ca('asked')}) '${h('pct')}' format sum(${ca('right')})/sum(${ca('asked')}) '0%'",1),"")`;
+    const q2 = `=IFERROR(QUERY(${all},"select ${ca('cls')}, count(${ca('date')}), sum(${ca('right')})/sum(${ca('asked')}) where ${ca('cls')} is not null group by ${ca('cls')} order by ${ca('cls')} label ${ca('cls')} '${h('cls')}', count(${ca('date')}) '${O.results}', sum(${ca('right')})/sum(${ca('asked')}) '${h('pct')}' format sum(${ca('right')})/sum(${ca('asked')}) '0%'",1),"")`;
+    const q3 = `=IFERROR(QUERY(${mis},"select ${cm('q')}, ${cm('answer')}, count(${cm('date')}) where ${cm('q')} is not null group by ${cm('q')}, ${cm('answer')} order by count(${cm('date')}) desc limit 25 label ${cm('q')} '${h('q')}', ${cm('answer')} '${h('answer')}', count(${cm('date')}) '${O.wrong}'",1),"")`;
+    const val = x => typeof x === 'string' && x[0] === '=' ? {userEnteredValue: {formulaValue: x}} : {userEnteredValue: {stringValue: x}};
+    const put = (r, c, list) => ({updateCells: {start: {sheetId: 0, rowIndex: r, columnIndex: c}, rows: list.map(row => ({values: row.map(val)})), fields: 'userEnteredValue'}});
+    const bold = (r, c, size, color) => ({repeatCell: {range: {sheetId: 0, startRowIndex: r, endRowIndex: r + 1, startColumnIndex: c, endColumnIndex: c + 1}, cell: {userEnteredFormat: {textFormat: {bold: true, fontSize: size, foregroundColorStyle: {rgbColor: color || {red: .09, green: .13, blue: .24}}}}}, fields: 'userEnteredFormat.textFormat'}});
+    const hrow = (c, n) => ({repeatCell: {range: {sheetId: 0, startRowIndex: 4, endRowIndex: 5, startColumnIndex: c, endColumnIndex: c + n}, cell: {userEnteredFormat: {textFormat: {bold: true, foregroundColorStyle: {rgbColor: {red: 1, green: 1, blue: 1}}}, backgroundColorStyle: {rgbColor: {red: .17, green: .22, blue: .56}}}}, fields: 'userEnteredFormat(textFormat,backgroundColorStyle)'}});
+    const w = (c, px) => ({updateDimensionProperties: {range: {sheetId: 0, dimension: 'COLUMNS', startIndex: c, endIndex: c + 1}, properties: {pixelSize: px}, fields: 'pixelSize'}});
+    const grad = (c) => ({addConditionalFormatRule: {index: 0, rule: {ranges: [{sheetId: 0, startRowIndex: 5, endRowIndex: 2000, startColumnIndex: c, endColumnIndex: c + 1}],
+      gradientRule: {minpoint: {colorStyle: {rgbColor: {red: .96, green: .55, blue: .52}}, type: 'NUMBER', value: '0.3'}, midpoint: {colorStyle: {rgbColor: {red: 1, green: .87, blue: .55}}, type: 'NUMBER', value: '0.65'}, maxpoint: {colorStyle: {rgbColor: {red: .55, green: .83, blue: .63}}, type: 'NUMBER', value: '0.95'}}}}});
+    await this.gBatch(tok, base, [put(0, 0, [[O.title], [O.note]]), put(3, 0, [[O.students]]), put(4, 0, [[q1]]), put(3, 7, [[O.classes]]), put(4, 7, [[q2]]), put(3, 11, [[O.missed]]), put(4, 11, [[q3]]),
+      bold(0, 0, 18), bold(3, 0, 13), bold(3, 7, 13), bold(3, 11, 13), hrow(0, 6), hrow(7, 3), hrow(11, 3),
+      {repeatCell: {range: {sheetId: 0, startRowIndex: 1, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: 1}, cell: {userEnteredFormat: {textFormat: {foregroundColorStyle: {rgbColor: {red: .35, green: .38, blue: .54}}}}}, fields: 'userEnteredFormat.textFormat'}},
+      w(0, 70), w(1, 150), w(2, 80), w(3, 80), w(4, 90), w(5, 90), w(6, 30), w(7, 70), w(8, 80), w(9, 90), w(10, 30), w(11, 360), w(12, 170), w(13, 70), grad(5), grad(9),
+      {updateSheetProperties: {properties: {sheetId: 0, gridProperties: {frozenRowCount: 2}}, fields: 'gridProperties.frozenRowCount'}}]);
+  }
   async alarm() {
     let q = (await this.state.storage.get('gq')) || []; if (!q.length) return;
     const accs = [...(await this.state.storage.list({prefix: 'acct:'})).values()], admins = accs.filter(a => a.role === 'admin').map(a => a.u);
     const conns = new Map(); for (const [k, g] of await this.state.storage.list({prefix: 'gs:'})) if (g && g.refresh) conns.set(k.slice(3), g);
     if (!conns.size) { await this.state.storage.put('gq', []); return; }
-    const batch = q.slice(0, 40), rows = new Map(), marks = [];   // target -> tab -> rows
+    /* sheets made before layout v2 get a fresh, clean sheet (the old one stays in the teacher's Drive) */
+    for (const [u, g] of conns) if (g.v !== 2) {
+      try { const acc = accs.find(a => a.u === u); if (acc) await this.gNewSheet(u, acc, g.lang || 'ro', await this.gToken(u, g), {refresh: g.refresh, email: g.email, old: g.url}); } catch (e) {}
+      return this.state.storage.setAlarm(Date.now() + 2000);
+    }
+    const batch = q.slice(0, 40), rows = new Map(), marks = [];   // target -> tab key -> {name, list}
     for (const sid of batch) {
       const raw = await this.state.storage.get('s:' + sid); if (!raw) continue;
       let s; try { s = JSON.parse(raw); } catch (e) { continue; }
       const targets = [...new Set([s.owner, ...admins].filter(u => u && conns.has(u)))];
       for (const t of targets) {
-        const done = new Set((await this.state.storage.get(`gx:${t}:${sid}`)) || []), add = [];
+        const g = conns.get(t), L = SHEET_TX[g.lang] || SHEET_TX.en, done = new Set((await this.state.storage.get(`gx:${t}:${sid}`)) || []), add = [];
         for (const rd of s.rounds || []) for (const res of rd.results || []) {
           const k = rd.id + '|' + res.player; if (done.has(k)) continue; add.push(k);
-          const out = sheetRows(s, rd, res, accs, SHEET_TX[conns.get(t).lang] || SHEET_TX.en), tab = rows.get(t) || new Map(); rows.set(t, tab);
-          out.forEach(([name, row]) => { if (!tab.has(name)) tab.set(name, []); tab.get(name).push(row); });
+          const tabs = rows.get(t) || new Map(); rows.set(t, tabs);
+          sheetRows(s, rd, res, accs, L).forEach(o => { const key = o.tab === 'cls' ? 'cls:' + o.name : o.tab; if (!tabs.has(key)) tabs.set(key, {name: o.name, kind: o.tab, list: []}); tabs.get(key).list.push(o.v); });
         }
         if (add.length) marks.push([`gx:${t}:${sid}`, [...done, ...add]]);
       }
@@ -424,36 +514,27 @@ export class Store {
     const failed = new Set();
     for (const [t, tabs] of rows) {
       const g = conns.get(t);
-      try { const tok = await this.gToken(t, g); for (const [name, list] of tabs) await this.gAppend(tok, g, name, list); g.at = Date.now(); g.err = null; }
+      try { const tok = await this.gToken(t, g); for (const [key, x] of tabs) await this.gAppend(tok, g, key, x); g.at = Date.now(); g.err = null; }
       catch (e) { failed.add(t); g.err = e.fatal ? 'revoked' : e.gone ? 'deleted' : 'failed'; if (e.fatal || e.gone) g.refresh = null; }
       await this.state.storage.put('gs:' + t, g);
     }
     for (const [k, v] of marks) if (!failed.has(k.split(':')[1])) await this.state.storage.put(k, v);
-    q = ((await this.state.storage.get('gq')) || []).filter(id => !batch.includes(id) || [...failed].length);
-    if ([...failed].length) { await this.state.storage.put('gq', q); await this.state.storage.setAlarm(Date.now() + 10 * 60000); return; }
+    q = ((await this.state.storage.get('gq')) || []).filter(id => !batch.includes(id) || failed.size);
     await this.state.storage.put('gq', q);
+    if (failed.size) { await this.state.storage.setAlarm(Date.now() + 10 * 60000); return; }
     if (q.length) await this.state.storage.setAlarm(Date.now() + 2000);
   }
-  async gAppend(tok, g, name, list) {
-    const H = {Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json'}, base = (this.env.GOOGLE_TEST_URL || 'https://sheets.googleapis.com') + '/v4/spreadsheets/' + g.sheet;
-    const head = headOf(SHEET_TX[g.lang] || SHEET_TX.en, name);
-    if (!(name in (g.tabs || {}))) {
-      const r = await fetch(base + ':batchUpdate', {method: 'POST', headers: H, body: JSON.stringify({requests: [{addSheet: {properties: {title: name, gridProperties: {frozenRowCount: 1}}}}]})});
-      const d = await r.json().catch(() => ({}));
+  async gAppend(tok, g, key, x) {
+    const base = (this.env.GOOGLE_TEST_URL || 'https://sheets.googleapis.com') + '/v4/spreadsheets/' + g.sheet, LY = LAYOUT(!!g.admin);
+    const cols = x.kind === 'cls' ? LY.cls : LY[x.kind];
+    if (!g.tabs[key]) { const id = g.next = (g.next || 10) + 1; await this.gTable(tok, g, base, key, id, x.name, cols, true); }
+    const tb = g.tabs[key], rowsData = x.list.map(v => ({values: cols.map(k => cellOf(COLS[k][2], v[k]))}));
+    if (tb.tableId) {
+      const r = await this.gBatch(tok, base, [{appendCells: {tableId: tb.tableId, rows: rowsData, fields: 'userEnteredValue'}}]);
+      if (r.ok) return;
       if (r.status === 404) { const e = new Error('gone'); e.gone = true; throw e; }
-      if (!r.ok && !/already exists/i.test(JSON.stringify(d))) throw new Error('addSheet');
-      g.tabs = g.tabs || {}; g.tabs[name] = d.replies ? d.replies[0].addSheet.properties.sheetId : null; g.fresh = [...(g.fresh || []), name];
     }
-    const tabId = g.tabs[name];
-    if ((g.fresh || []).includes(name)) {
-      await fetch(`${base}/values/${encodeURIComponent(`'${name}'!A1`)}?valueInputOption=RAW`, {method: 'PUT', headers: H, body: JSON.stringify({values: [head]})});
-      if (tabId != null) await fetch(base + ':batchUpdate', {method: 'POST', headers: H, body: JSON.stringify({requests: [
-        {repeatCell: {range: {sheetId: tabId, startRowIndex: 0, endRowIndex: 1}, cell: {userEnteredFormat: {textFormat: {bold: true, foregroundColor: {red: 1, green: 1, blue: 1}}, backgroundColor: {red: .17, green: .22, blue: .56}}}, fields: 'userEnteredFormat(textFormat,backgroundColor)'}},
-        {autoResizeDimensions: {dimensions: {sheetId: tabId, dimension: 'COLUMNS', startIndex: 0, endIndex: head.length}}}]})});
-      g.fresh = g.fresh.filter(x => x !== name);
-    }
-    const r = await fetch(`${base}/values/${encodeURIComponent(`'${name}'!A1`)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, {method: 'POST', headers: H, body: JSON.stringify({values: list})});
-    if (r.status === 404) { const e = new Error('gone'); e.gone = true; throw e; }
+    const r = await this.gBatch(tok, base, [{appendCells: {sheetId: tb.sheetId, rows: rowsData, fields: 'userEnteredValue'}}]);
     if (!r.ok) throw new Error('append ' + r.status);
   }
   /* ---------------- question sets ("My questions") ----------------

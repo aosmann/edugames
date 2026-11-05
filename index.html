@@ -548,7 +548,8 @@ p{margin:0}
 .acctmenu{position:absolute;right:0;top:calc(100% + 8px);z-index:30;background:var(--card);border-radius:var(--r-m);box-shadow:0 1px 0 var(--line),0 18px 40px -12px rgba(24,32,61,.35);padding:6px;min-width:240px;display:grid}
 .acctmenu[hidden]{display:none}
 .acctmenu .mh{padding:10px 12px 8px;border-bottom:1px solid var(--line);margin-bottom:4px}.acctmenu .mh b{display:block;font-size:16px}.acctmenu .mh span{font-size:13px;color:var(--ink2)}
-.acctmenu button{border:0;background:none;text-align:left;padding:11px 12px;border-radius:10px;font-weight:700;font-size:15px;color:var(--ink)}
+.acctmenu button{border:0;background:none;text-align:left;padding:10px 12px;border-radius:10px;font-weight:700;font-size:15px;color:var(--ink);display:flex;align-items:center;gap:12px}
+.acctmenu button svg{width:20px;height:20px;flex:none;color:var(--ink2)}.acctmenu button.danger svg{color:var(--bad)}.acctmenu hr{border:0;border-top:1px solid var(--line);margin:4px 6px}
 .acctmenu button:hover,.acctmenu button:focus-visible{background:var(--paper)}.acctmenu button.danger{color:var(--bad)}
 .board .acctbtn{background:rgba(255,255,255,.14);color:#fff;box-shadow:none}.board .acctbtn .ai{background:#fff;color:var(--board);box-shadow:none}.board .acctbtn .chev,.board .acctbtn.out svg{color:#fff}
 .modal{position:fixed;inset:0;z-index:50;background:rgba(18,24,48,.55);display:grid;place-items:center;padding:16px}
@@ -1234,6 +1235,10 @@ let peer=null,round=null,clockT=null;
 try{localStorage.removeItem('edu-teacher-pin')}catch(e){}
 const auth=()=>{const a=store.get('edu-teacher-auth',null);return a&&a.token&&a.exp>Date.now()?a:null};
 const ICON_USER='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.2-3.6 4.1-5.4 7.5-5.4s6.3 1.8 7.5 5.4"/></svg>';
+const MI={people:'<circle cx="9" cy="8.5" r="3.3"/><path d="M3 19.5c.9-3.2 3.3-4.8 6-4.8s5.1 1.6 6 4.8"/><path d="M15.5 5.6a3.1 3.1 0 0 1 0 5.8M17.6 14.9c1.6.6 2.8 2.1 3.4 4.6"/>',
+ star:'<path d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>',chart:'<path d="M4 20V4M4 20h16"/><path d="M8 16v-4M12 16V8M16 16v-6"/>',
+ sheet:'<rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M4 9h16M4 14.5h16M10 9v11.5"/>',key:'<circle cx="8" cy="15" r="4"/><path d="M11 12l8-8M16 7l2.5 2.5M14 9l2 2"/>',
+ out:'<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M10 16l-4-4 4-4M6 12h10"/>',devices:'<rect x="3" y="4" width="13" height="9.5" rx="1.5"/><path d="M7 17.5h5M9.5 13.5v4"/><rect x="17" y="8" width="4.5" height="10" rx="1.2"/>'};
 const authH=()=>{const a=auth();return a?{Authorization:'Bearer '+a.token}:{}};
 async function signIn(u,p){
   const r=await T_(20000,fetch(`${REPORTS_HTTP()}/login`,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({u:u.trim().toLowerCase(),p})}));
@@ -1259,10 +1264,11 @@ function paintAcct(){const a=auth();document.querySelectorAll('[data-acct]').for
   b.setAttribute('aria-haspopup','menu');b.setAttribute('aria-expanded','false');
   const m=el('div','acctmenu');m.hidden=true;m.setAttribute('role','menu');
   const h=el('div','mh');h.append(el('b',null,a.name),el('span',null,a.role==='admin'?'Admin · sees every teacher\'s reports':'@'+a.u));m.append(h);
-  const item=(t,f,cls)=>{const x=el('button',cls||null,t);x.type='button';x.setAttribute('role','menuitem');x.onclick=()=>{m.hidden=true;f()};m.append(x)};
-  if(a.role==='admin')item('Teachers',openTeachers);
-  item('My questions',openSets);item('My reports',()=>setMode('reports'));item('Google Sheets',openSheets);item('Change password',()=>openPassword(false));
-  item('Sign out',()=>{signedOut();toast(T('Signed out'))});item('Sign out on all devices',signOutAll,'danger');
+  const item=(t,f,cls,ic)=>{const x=el('button',cls||null);x.type='button';x.setAttribute('role','menuitem');if(ic)x.insertAdjacentHTML('beforeend',`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MI[ic]}</svg>`);x.append(el('span',null,t));x.onclick=()=>{m.hidden=true;f()};m.append(x)};
+  if(a.role==='admin')item('Teachers',openTeachers,null,'people');
+  item('My questions',openSets,null,'star');item('My reports',()=>setMode('reports'),null,'chart');item('Google Sheets',openSheets,null,'sheet');
+  m.append(el('hr'));item('Change password',()=>openPassword(false),null,'key');
+  item('Sign out',()=>{signedOut();toast(T('Signed out'))},null,'out');item('Sign out on all devices',signOutAll,'danger','devices');
   b.onclick=e=>{e.stopPropagation();const open=m.hidden;document.querySelectorAll('.acctmenu').forEach(x=>x.hidden=true);m.hidden=!open;b.setAttribute('aria-expanded',String(open))};
   box.append(b,m)})}
 document.addEventListener('click',e=>{if(!e.target.closest('.acct'))document.querySelectorAll('.acctmenu').forEach(x=>x.hidden=true)});
@@ -1322,7 +1328,11 @@ async function openSheets(){modal(box=>box.append(el('h2',null,'Google Sheets'),
       if(g.err==='failed')box.append(el('p','merr',T('Couldn\'t reach Google last time. It tries again by itself in a few minutes.')));
       const row=el('div','mrow'),dis=el('button','plain','Disconnect'),open=el('a','cta','Open my sheet');dis.type='button';open.href=g.url;open.target='_blank';open.rel='noopener';open.style.textDecoration='none';
       dis.onclick=()=>confirmBox(T('Disconnect Google Sheets?'),T('New results stop going to the sheet. The sheet and everything in it stays in your Google Drive.'),T('Disconnect'),async()=>{const {r}=await api('/google',{body:{action:'disconnect'}});if(!r.ok)throw 0;closeModal();toast(T('Disconnected'))},true);
-      row.append(dis,open);box.append(row);return}
+      const fresh=el('button','plain','Make a fresh sheet');fresh.type='button';
+      fresh.onclick=()=>confirmBox(T('Make a fresh sheet?'),T('EduGames makes a new, clean sheet in your Google Drive with all your reports so far, and keeps filling that one. The current sheet stays in your Drive.'),T('Make a fresh sheet'),async()=>{
+        const {r}=await api('/google',{body:{action:'rebuild',lang:I18N.lang}});if(!r.ok)throw 0;toast(T('The new sheet is being filled. Open it in a minute.'),4000);openSheets()});
+      if(g.old){const o=el('p','inote');const a2=el('a',null,T('Your previous sheet'));a2.href=g.old;a2.target='_blank';a2.rel='noopener';o.append(a2,document.createTextNode(' '+T('is still in your Drive.')));box.append(o)}
+      row.append(dis,fresh,open);box.append(row);return}
     if(g.err==='revoked')box.append(el('p','merr',T('Google access was removed. Connect again to keep your sheet up to date.')));
     if(g.err==='deleted')box.append(el('p','merr',T('Your sheet was deleted. Connect again and a new one is made.')));
     box.append(el('p',null,'Connect once with your @spectrum.ro Google account. EduGames makes a sheet in your Google Drive and adds every class to it by itself: a tab per class, All results, Mistakes and Guests. Your past reports are added too.'));
