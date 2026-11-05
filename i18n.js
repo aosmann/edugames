@@ -282,6 +282,8 @@ const UI={
  "No answers yet for these filters.":"Niciun răspuns pentru aceste filtre.",
  "of":"din",
  "No class list":"Fără listă de clasă",
+ "+ − × ÷ · you pick how big the numbers get":"+ − × ÷ · alegi cât de mari sunt numerele",
+ "pick the tables · × and ÷":"alegi tablele · × și ÷",
  'Sign in to use class lists':'Conectează-te pentru listele claselor','Sign in':'Conectare','Sign out':'Deconectare','Username':'Utilizator','Password':'Parolă','Wrong username or password':'Utilizator sau parolă greșită',
  'Too many wrong tries. Try again in {n} minutes.':'Prea multe încercări greșite. Încearcă din nou peste {n} minute.','Couldn\'t reach the class server. Check the connection.':'Nu ne putem conecta la serverul clasei. Verifică conexiunea.',
  'Results are only on this device. Sign in to see your reports from any device and save them online.':'Rezultatele sunt doar pe acest dispozitiv. Conectează-te ca să-ți vezi rapoartele de pe orice dispozitiv și să le salvezi online.',
