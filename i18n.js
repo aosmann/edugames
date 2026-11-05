@@ -335,6 +335,7 @@ const UI={
  "Other":"Altele",
  "Română":"Română",
  'Remove all':'Șterge tot','Remove all questions?':'Ștergi toate întrebările?','The list is emptied. Nothing is saved until you click Save.':'Lista se golește. Nimic nu se salvează până nu apeși Salvează.',
+ 'Change avatar':'Schimbă avatarul','Change your avatar':'Schimbă-ți avatarul',
  'Sign in to use class lists':'Conectează-te pentru listele claselor','Sign in':'Conectare','Sign out':'Deconectare','Username':'Utilizator','Password':'Parolă','Wrong username or password':'Utilizator sau parolă greșită',
  'Too many wrong tries. Try again in {n} minutes.':'Prea multe încercări greșite. Încearcă din nou peste {n} minute.','Couldn\'t reach the class server. Check the connection.':'Nu ne putem conecta la serverul clasei. Verifică conexiunea.',
  'Results are only on this device. Sign in to see your reports from any device and save them online.':'Rezultatele sunt doar pe acest dispozitiv. Conectează-te ca să-ți vezi rapoartele de pe orice dispozitiv și să le salvezi online.',
