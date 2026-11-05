@@ -497,6 +497,8 @@ p{margin:0}
 .rpin{display:flex;gap:8px;flex-wrap:wrap}.rpin[hidden]{display:none}.rpin input{border:1.5px solid var(--line);border-radius:var(--r-m);padding:12px 14px;font-size:16px;font-weight:700;width:170px;background:var(--card)}.rpin .cta{width:auto;padding:12px 18px;font-size:16px}.syncnote.ok{color:var(--good)}.syncnote.ok::before{content:'☁ ';}.syncnote.warn{color:#9a6700;background:#fff6dc}
 .exp{display:flex;gap:10px;flex-wrap:wrap}
 .exp .cta,.exp .ghost{width:auto;flex:0 1 auto;padding:12px 18px;font-size:16px}
+.clrpill{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:11px 16px;font-weight:800;font-size:15px;background:var(--card);color:var(--bad);box-shadow:0 1px 0 var(--line),0 4px 14px -6px rgba(24,32,61,.25)}.clrpill svg{width:18px;height:18px}
+.clropts{display:grid;gap:8px}.msheet .clropts label{display:flex;grid-template-columns:none;font-size:15px;align-items:center;gap:12px;border:1.5px solid var(--line);border-radius:var(--r-m);padding:12px 14px;font-weight:700;color:var(--ink);cursor:pointer}.clropts label:has(input:checked){border-color:var(--bad);background:#fff5f4}.clropts small{margin-left:auto;color:var(--ink2);font-weight:700}.msheet .clropts input{accent-color:var(--bad);width:18px;height:18px;padding:0;flex:none;margin:0}
 @media(max-width:480px){.exp .cta,.exp .ghost{flex:1 1 0}}
 
 /* ---------- student join ---------- */
@@ -809,7 +811,7 @@ p{margin:0}
     <p class="syncnote" id="syncNote"></p>
     <button class="link" type="button" id="rSignIn" hidden>Sign in</button>
     <div class="sum" id="sum"></div>
-    <div class="rtabrow"><div class="rtabs" role="tablist" id="rTabs"><button type="button" role="tab" data-rtab="overview">Overview</button><button type="button" role="tab" data-rtab="students">Students</button><button type="button" role="tab" data-rtab="questions">Questions</button><button type="button" role="tab" data-rtab="table">All results</button></div><a class="gspill" id="gsPill" href="#" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M4 9h16M4 14.5h16M10 9v11.5"/></svg><span id="gsPillT">Google Sheets</span></a></div>
+    <div class="rtabrow"><div class="rtabs" role="tablist" id="rTabs"><button type="button" role="tab" data-rtab="overview">Overview</button><button type="button" role="tab" data-rtab="students">Students</button><button type="button" role="tab" data-rtab="questions">Questions</button><button type="button" role="tab" data-rtab="table">All results</button></div><a class="gspill" id="gsPill" href="#" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M4 9h16M4 14.5h16M10 9v11.5"/></svg><span id="gsPillT">Google Sheets</span></a><span class="sp" style="flex:1"></span><button class="clrpill" type="button" id="clrRep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg><span>Clear reports</span></button></div>
     <div class="ins" id="rOv" data-rpane="overview"></div>
     <div id="rStu" data-rpane="students"></div>
     <div class="ins" id="ins" data-rpane="questions" hidden></div>
@@ -2128,6 +2130,23 @@ async function exportXlsx(rows,fname,btn){const lbl=btn.textContent;btn.disabled
   catch(e){xlsxP=null;toast('Couldn\'t prepare the Excel file. Check the connection, or export CSV instead.')}
   btn.disabled=false;btn.textContent=lbl}
 $('expXlsx').onclick=()=>exportXlsx(filtered(),fileName('xlsx'),$('expXlsx'));
+/* clear reports: this teacher's own sessions, online and on this device; Google Sheets refill with what is left */
+$('clrRep').onclick=()=>{const me=auth(),now=Date.now(),d0=new Date();d0.setHours(0,0,0,0);const wk=new Date(d0);wk.setDate(wk.getDate()-((wk.getDay()+6)%7));
+  const mine=sessions().filter(x=>!x.owner||!me||x.owner===me.u||(me.role==='admin'&&!x.owner)),at=x=>Date.parse(x.startedAt)||+x.updatedAt||0;
+  const opts=[['hour',T('Last hour'),now-36e5],['today',T('Today'),d0.getTime()],['week',T('This week'),wk.getTime()],['all',T('Everything'),0]];
+  modal(box=>{let pick='today';const ul=el('div','clropts'),go=el('button','cta'),err=el('p','merr');
+    const n=since=>mine.filter(x=>at(x)>=since&&!(session&&x.id===session.id)).length;
+    const paint=()=>{const o=opts.find(o=>o[0]===pick),c=n(o[2]);go.textContent=c?`${T('Delete')} ${c} ${T(c===1?'session':'sessions')}`:T('Nothing to delete');go.disabled=!c};
+    opts.forEach(([id,l,since])=>{const lab=el('label'),r=el('input');r.type='radio';r.name='clr';r.checked=id===pick;r.onchange=()=>{pick=id;paint()};lab.append(r,el('span',null,l),el('small',null,`${n(since)} ${T(n(since)===1?'session':'sessions')}`));ul.append(lab)});
+    const row=el('div','mrow'),c=el('button','plain','Cancel');c.type=go.type='button';c.onclick=closeModal;go.style.background='var(--bad)';row.append(c,go);
+    box.append(el('h2',null,'Clear reports'),el('p',null,me?(me.role==='admin'?T('Deletes your own class sessions, online and on this device. Other teachers\' reports are not touched. Your Google Sheet is refilled with what is left.'):T('Deletes your class sessions, online and on this device. Your Google Sheet is refilled with what is left.')):T('Deletes the class sessions saved on this device.')),ul,err,row);paint();
+    go.onclick=async()=>{const o=opts.find(o=>o[0]===pick),since=o[2];go.disabled=true;
+      try{let ids=[];if(me){const {r,d}=await api('/reports',{body:{action:'delete',since}});if(!r.ok)throw 0;ids=d.ids||[]}
+        const drop=x=>at(x)>=since&&!(session&&x.id===session.id);
+        const loc=localSessions(),gone=new Set([...ids,...loc.filter(drop).map(x=>x.id)]);store.set('edu-portal-sessions',loc.filter(x=>!gone.has(x.id)));
+        store.set('edu-sync-pending',pendingSync().filter(id=>!gone.has(id)));remoteSessions=remoteSessions.filter(x=>!gone.has(x.id));
+        closeModal();toast(`${gone.size} ${T(gone.size===1?'session deleted':'sessions deleted')}`);gsAt=0;renderReports(true)}
+      catch(e){err.textContent=e&&e.message?e.message:NET_ERR();go.disabled=false}}})};
 
 /* ---------------- start ---------------- */
 renderHeroCats();

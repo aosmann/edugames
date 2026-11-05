@@ -257,7 +257,8 @@ export class Store {
     if (req.method === 'POST') {
       const body = await req.text();
       if (body.length > 1900000) return this.json({error: 'Too big'}, 413);
-      let s; try { s = JSON.parse(body).session; } catch (e) { return this.json({error: 'Bad JSON'}, 400); }
+      let s, bj; try { bj = JSON.parse(body); s = bj.session; } catch (e) { return this.json({error: 'Bad JSON'}, 400); }
+      if (bj && bj.action === 'delete') return this.deleteReports(me, +bj.since || 0, bj.ids);
       if (!s || typeof s.id !== 'string' || !/^s[a-z0-9]{4,20}$/.test(s.id)) return this.json({error: 'Bad session'}, 400);
       const at = +s.updatedAt || Date.now(), old = await this.state.storage.get('m:' + s.id);
       if (old && old.owner && old.owner !== me.u && !admin) return this.json({error: 'Not your session'}, 403);
@@ -513,6 +514,32 @@ export class Store {
       {updateDimensionProperties: {range: {sheetId: OV, dimension: 'ROWS', startIndex: 3, endIndex: 4}, properties: {pixelSize: 44}, fields: 'pixelSize'}}, ...this.pctFix(g),
       {updateSheetProperties: {properties: {sheetId: OV, gridProperties: {frozenRowCount: 0, hideGridlines: true}}, fields: 'gridProperties.frozenRowCount,gridProperties.hideGridlines'}}]);
   }
+  /* delete this teacher's own sessions started after `since` (0 = all); the admin's unowned older ones count as theirs.
+     Connected Google Sheets are emptied and refilled with what is left. */
+  async deleteReports(me, since, ids) {
+    const meta = await this.state.storage.list({prefix: 'm:'}), admin = me.role === 'admin', gone = [];
+    for (const [k, m] of meta) { const id = k.slice(2), mineS = m.owner === me.u || (admin && !m.owner);
+      if (!mineS) continue; if (Array.isArray(ids) ? ids.includes(id) : (m.started || m.at) >= since) gone.push(id); }
+    for (let i = 0; i < gone.length; i += 64) { const part = gone.slice(i, i + 64); await this.state.storage.delete([...part.map(id => 's:' + id), ...part.map(id => 'm:' + id)]); }
+    if (gone.length && this.gOn()) {
+      const accs = [...(await this.state.storage.list({prefix: 'acct:'})).values()], targets = [me.u, ...accs.filter(a => a.role === 'admin').map(a => a.u)];
+      for (const u of [...new Set(targets)]) { const g = await this.state.storage.get('gs:' + u); if (g && g.refresh) { g.reset = true; await this.state.storage.put('gs:' + u, g); } }
+      await this.gQueue(['__reset'], 1000);
+    }
+    return this.json({ok: true, deleted: gone.length, ids: gone});
+  }
+  /* empty a sheet's data tabs (keeps the tabs, tables and Overview) and send every session again */
+  async gReset(u, g, tok) {
+    const base = (this.env.GOOGLE_TEST_URL || 'https://sheets.googleapis.com') + '/v4/spreadsheets/' + g.sheet;
+    const reqs = Object.values(g.tabs || {}).map(t => ({updateCells: {range: {sheetId: t.sheetId, startRowIndex: 1, startColumnIndex: 0}, fields: 'userEnteredValue'}}));
+    if (reqs.length) { const r = await this.gBatch(tok, base, reqs); if (!r.ok && r.status !== 400) throw new Error('reset'); }
+    { const old = await this.state.storage.list({prefix: 'gx:' + u + ':'}); if (old.size) await this.state.storage.delete([...old.keys()]); }
+    const meta = await this.state.storage.list({prefix: 'm:'});
+    const q = (await this.state.storage.get('gq')) || [];
+    [...meta].filter(([, m]) => g.admin || m.owner === u).sort((a, b) => (a[1].started || a[1].at) - (b[1].started || b[1].at)).forEach(([k]) => { const id = k.slice(2); if (!q.includes(id)) q.push(id); });
+    await this.state.storage.put('gq', q.filter(x => x !== '__reset'));
+    g.reset = false;
+  }
   /* the Overview's % columns (F and J) as percentages: QUERY's own format is not always kept */
   pctFix(g) { const OV = g.ov ?? 0; return [5, 9].map(c => ({repeatCell: {range: {sheetId: OV, startRowIndex: 9, endRowIndex: 2000, startColumnIndex: c, endColumnIndex: c + 1}, cell: {userEnteredFormat: {numberFormat: {type: 'PERCENT', pattern: '0%'}}}, fields: 'userEnteredFormat.numberFormat'}})); }
   async alarm() {
@@ -525,6 +552,8 @@ export class Store {
       try { const acc = accs.find(a => a.u === u); if (acc) await this.gNewSheet(u, acc, g.lang || 'ro', await this.gToken(u, g), {refresh: g.refresh, email: g.email, old: g.url}); } catch (e) {}
       return this.state.storage.setAlarm(Date.now() + 2000);
     }
+    for (const [u, g] of conns) if (g.reset) { try { await this.gReset(u, g, await this.gToken(u, g)); await this.state.storage.put('gs:' + u, g); } catch (e) {} }
+    q = (await this.state.storage.get('gq')) || []; if (!q.length) return;
     for (const [u, g] of conns) if (!g.pct) { try { const base = (this.env.GOOGLE_TEST_URL || 'https://sheets.googleapis.com') + '/v4/spreadsheets/' + g.sheet; const r = await this.gBatch(await this.gToken(u, g), base, this.pctFix(g)); if (r.ok) { g.pct = true; await this.state.storage.put('gs:' + u, g); } } catch (e) {} }
     const batch = q.slice(0, 40), rows = new Map(), marks = [];   // target -> tab key -> {name, list}
     for (const sid of batch) {
