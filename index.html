@@ -874,7 +874,7 @@ p{margin:0}
         <div class="edmeta one"><label class="wide">Name of the set<input id="edName" maxlength="80" placeholder="Biology · The cell"></label></div>
         <div class="edrow"><label class="check"><input type="checkbox" id="edShared"> Share with the other teachers</label></div>
       </div></section>
-      <div class="sethead"><h2><span id="edCount">0</span> <span id="edCountL">questions</span></h2></div>
+      <div class="sethead"><h2><span id="edCount">0</span> <span id="edCountL">questions</span></h2><button class="link" type="button" id="clearQ">Remove all</button></div>
       <div class="qrows" id="qRows"></div>
       <div class="edbar"><button class="ghost2" type="button" id="addQ">+ Add a question</button><span class="sp"></span><span class="cnt" id="edState"></span><button class="cta" type="button" id="edSave">Save</button></div>
     </div>
@@ -1462,6 +1462,7 @@ function paintRows(){const box=$('qRows');box.innerHTML='';
     row.append(el('span','qn',String(i+1)),f);box.append(row)});paintCount()}
 function addRow(){ed.rows.push(['','','','','','']);paintRows();const l=$('qRows').lastElementChild;l.querySelector('input').focus();l.scrollIntoView({block:'center'})}
 $('addQ').onclick=addRow;
+$('clearQ').onclick=()=>{if(!ed||!ed.rows.some(r=>r.slice(0,5).some(Boolean)))return;confirmBox(T('Remove all questions?'),T('The list is emptied. Nothing is saved until you click Save.'),T('Remove all'),async()=>{ed.rows=[];ed.dirty=true;paintRows();closeModal()},true)};
 const okRows=()=>ed.rows.filter((r,i)=>r.slice(0,5).some(Boolean)&&!rowErr(r,i,ed.rows));
 function paintCount(){const n=okRows().length,bad=ed.rows.filter((r,i)=>r.slice(0,5).some(Boolean)&&rowErr(r,i,ed.rows)).length;
   $('edCount').textContent=n;$('edCountL').textContent=T(n===1?'question':'questions');
@@ -1476,7 +1477,7 @@ $('edSave').onclick=async()=>{autoName();const name=$('edName').value.trim()||($
     ed.id=d.id;ed.dirty=false;toast(T('Saved')+' · '+q.length+' '+T(q.length===1?'question':'questions'));await pullSets()}
   catch(e){toast(e.message||NET_ERR())}$('edSave').disabled=false};
 /* import: blocks with * for the right answer, a pasted Excel/Sheets table, CSV, JSON, or "A) … Answer: B" */
-function parseQuestions(text){text=String(text||'').replace(/\r/g,'').replace(/ /g,' ').replace(/\*\*([^*\n]+)\*\*/g,'$1').replace(/__([^_\n]+)__/g,'$1').replace(/^```\w*$/gm,'').replace(/^#+\s.*$/gm,'').trim();if(!text)return[];
+function parseQuestions(text){text=String(text||'').replace(/\r/g,'').replace(/ /g,' ').replace(/\\[ \t]*$/gm,'').replace(/\\([\\`*_{}\[\]()#+\-.!|~>])/g,'$1').replace(/\*\*([^*\n]+)\*\*/g,'$1').replace(/^```\w*$/gm,'').replace(/^#+\s.*$/gm,'').trim();if(!text)return[];
   const tidy=x=>String(x==null?'':x).replace(/^\s*(?:[-•–]|\d+[.)]|[A-Fa-f][.)])\s+/,'').trim();
   const fromObj=o=>{if(!o||typeof o!=='object')return null;const q=o.question||o.q||o.text||o.prompt||o['întrebare'];
     let right=o.answer!=null?o.answer:o.correct!=null?o.correct:o.right!=null?o.right:o.correct_answer!=null?o.correct_answer:o['răspuns'];
@@ -1497,7 +1498,9 @@ function parseQuestions(text){text=String(text||'').replace(/\r/g,'').replace(/�
     let rows=nonEmpty.map(csv).map(c=>c.map(x=>x.trim()));if(/^(question|întrebare|intrebare|q)$/i.test(rows[0][0]))rows=rows.slice(1);
     return rows.filter(c=>c[0]&&c[1]).map(c=>[c[0],c[1],c[2]||'',c[3]||'',c[4]||'',c[5]&&/^https?:/.test(c[5])?c[5]:''])}
   /* blocks */
-  const blocks=text.split(/\n\s*\n/).map(b=>b.split('\n').map(x=>x.trim()).filter(Boolean)).filter(b=>b.length>=2);
+  const isOpt=l=>/^(\*|✓|✔|\+|\(x\)|\[x\])\s*\S/i.test(l)||/^\(?[A-Fa-f][.)\]]\s+\S/.test(l);
+  const raw=text.split(/\n\s*\n/).map(b=>b.split('\n').map(x=>x.trim()).filter(Boolean)).filter(b=>b.length),blocks=[];
+  for(let i=0;i<raw.length;i++){const b=raw[i];if(b.length===1&&raw[i+1]&&isOpt(raw[i+1][0])&&!isOpt(b[0])){blocks.push(b.concat(raw[i+1]));i++}else if(b.length>=2)blocks.push(b)}
   const out=[];blocks.forEach(b=>{let q=tidy(b[0].replace(/^(?:q(?:uestion)?|întrebare(?:a)?)\s*\d*\s*[:.)-]\s*/i,'')),rest=b.slice(1),right=null,wrong=[],letter=null;
     const ansLine=rest.find(l=>/^(answer|correct( answer)?|răspuns(ul)?( corect)?|raspuns)\s*[:=-]/i.test(l));
     if(ansLine){letter=ansLine.replace(/^[^:=-]*[:=-]\s*/,'').trim();rest=rest.filter(l=>l!==ansLine)}
