@@ -185,6 +185,9 @@ p{margin:0}
 .ttabs button{border:0;background:none;border-radius:999px;padding:10px 20px;font-weight:800;font-size:15px;color:var(--ink2)}
 .ttabs button[aria-selected=true]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(24,32,61,.14)}
 .ttabs[hidden]{display:none}
+.tbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}.tbar[hidden]{display:none}.tbar .ttabs{margin-bottom:0}
+.tcls{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:14px;color:var(--ink2)}.tcls[hidden]{display:none}
+.tcls select{appearance:none;-webkit-appearance:none;border:1.5px solid var(--line);border-radius:999px;padding:9px 34px 9px 14px;font:inherit;font-weight:800;font-size:15px;color:var(--ink);background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2358618a' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center/14px;cursor:pointer}
 .regchips{display:flex;flex-wrap:wrap;gap:6px}
 .regchips button{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:8px 12px;font-weight:700;font-size:14px;color:var(--ink2)}
 .regchips button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
@@ -674,7 +677,7 @@ p{margin:0}
     <div class="cols">
       <div class="pick">
         <section class="pcard" id="cSubj"><h2 class="stept" id="lSubj"><b>1</b>Subject<span id="nSubj"></span></h2><div class="dd big" id="ddSubj"></div></section>
-        <section class="pcard" id="cTop"><h2 class="stept" id="lTop"><b>2</b>Topic<span id="nTop"></span></h2><div class="ttabs" id="tTabs" role="tablist" aria-label="Topics or units" hidden></div><div class="dd big" id="ddTop"></div></section>
+        <section class="pcard" id="cTop"><h2 class="stept" id="lTop"><b>2</b>Topic<span id="nTop"></span></h2><div class="tbar" id="tBar" hidden><div class="ttabs" id="tTabs" role="tablist" aria-label="Topics or my questions"></div><label class="tcls" id="tClsL"><span>Class</span><select id="tCls"></select></label></div><div class="dd big" id="ddTop"></div></section>
       </div>
       <aside class="panel summary" aria-label="Round">
         <div class="sumtop" id="sSum"></div>
@@ -1125,12 +1128,17 @@ function renderSetup(){const g=sel.game,B=sel.bank,s=curSub(),t=curTop();
     render:o=>{const im=el('img','gi');im.src=o.g.base+(o.g.icon||'icon-512.png');im.alt='';return[im,txt(o.g.name,o.g.pitch||'')]}});
   const hue=s&&B?(B.hue||{})[s.id]||'#8a93b8':'#8a93b8';$('ddTop').style.setProperty('--h',hue);
   $('cSubj').classList.toggle('done',!!s);$('cTop').classList.toggle('done',!!t);
-  $('nSubj').textContent=B&&B.length?`${B.length} subjects`:'';const grades=s?[...new Set(s.topics.flatMap(x=>x.grade||[]))].sort((a,b)=>a-b):[],hasU=grades.length>0,mine=s&&s.id==='mine';
+  $('nSubj').textContent=B&&B.length?`${B.length} subjects`:'';const mineT=s?s.topics.filter(x=>x.set):[],bankT=s?s.topics.filter(x=>!x.set):[];
+  if(t)sel.src=t.set?'mine':'bank';if(sel.src==null||!(sel.src==='mine'?mineT:bankT).length)sel.src=bankT.length?'bank':'mine';
+  const mine=sel.src==='mine',pool=mine?mineT:bankT,grades=[...new Set(pool.flatMap(x=>x.grade||[]))].sort((a,b)=>a-b),hasU=grades.length>0;
   if(hasU){const sg=gradeOf(session&&session.className);if(sel.grade==null||(sel.grade!=='all'&&!grades.includes(sel.grade)))sel.grade=grades.includes(sg)?sg:'all';
-    if(t&&t.grade&&t.grade.length&&!t.grade.includes(sel.grade)&&!(mine&&sel.grade==='all'))sel.grade=t.grade[0];if(t&&!t.grade&&sel.grade!=='all')sel.grade='all'}
-  const tab=hasU?sel.grade:'all',tList=s?s.topics.filter(x=>!hasU||(tab==='all'?(mine||!x.grade):(x.grade||[]).includes(tab))):[];
-  {const tt=$('tTabs');tt.hidden=!hasU;tt.innerHTML='';if(hasU)[['all',mine?T('All'):T('All classes')],...grades.map(g=>[g,T('Class')+' '+g])].forEach(([id,name])=>{const b=el('button',null,name);b.type='button';b.setAttribute('role','tab');b.setAttribute('aria-selected',id===tab);
-    b.onclick=e=>{e.stopPropagation();if(id===tab)return;sel.grade=id;sel.topic=null;renderSetup();setTimeout(()=>$('ddTop')._open&&$('ddTop')._open(),0)};tt.append(b)})}
+    if(t&&t.grade&&t.grade.length&&!t.grade.includes(sel.grade)&&!(mine&&sel.grade==='all'))sel.grade=t.grade[0];if(t&&!t.grade&&!mine&&sel.grade!=='all')sel.grade='all'}
+  const tab=hasU?sel.grade:'all',tList=pool.filter(x=>!hasU||(tab==='all'?(mine||!x.grade):(x.grade||[]).includes(tab)||(mine&&!x.grade)));
+  {const bar=$('tBar'),tt=$('tTabs'),both=mineT.length&&bankT.length;bar.hidden=!(both||hasU);tt.hidden=!both;tt.innerHTML='';
+    if(both)[['bank',T('Topics')],['mine',T('My questions')+' · '+mineT.length]].forEach(([id,name])=>{const b=el('button',null,name);b.type='button';b.setAttribute('role','tab');b.setAttribute('aria-selected',id===sel.src);
+      b.onclick=e=>{e.stopPropagation();if(id===sel.src)return;sel.src=id;sel.grade=null;sel.topic=null;renderSetup();setTimeout(()=>$('ddTop')._open&&$('ddTop')._open(),0)};tt.append(b)});
+    const cs=$('tCls');$('tClsL').hidden=!hasU;cs.innerHTML='';if(hasU){cs.append(new Option(mine?T('All classes'):T('All classes'),'all'));grades.forEach(g=>cs.append(new Option(T('Class')+' '+g,String(g))));cs.value=String(tab);
+      cs.onchange=()=>{sel.grade=cs.value==='all'?'all':+cs.value;sel.topic=null;renderSetup();setTimeout(()=>$('ddTop')._open&&$('ddTop')._open(),0)}}}
   $('nTop').textContent=s?`${s.name} · ${tList.length}`:'';
   const sum=$('sSum');sum.innerHTML='';const row=el('div','sumrow'),rt=el('div');
   if(t&&B){rt.append(el('small',null,s.name),el('strong',null,t.name));row.append(subjIcon(B,s.id),rt);sum.append(row,el('p',null,t.regions&&B.regionLabel&&B.getRegions?B.regionLabel(B.getRegions(t.id)):t.bl))}
@@ -1139,8 +1147,8 @@ function renderSetup(){const g=sel.game,B=sel.bank,s=curSub(),t=curTop();
     dropdown($('ddSubj'),{label:'lSubj',placeholder:m,options:[],disabled:true,render:()=>[]});dropdown($('ddTop'),{label:'lTop',placeholder:'Choose a subject first',options:[],disabled:true,render:()=>[]});
     $('sSettings').innerHTML='';paintGo();return}
   dropdown($('ddSubj'),{label:'lSubj',placeholder:'Choose a subject',value:sel.subject,options:B.map(x=>({value:x.id,x})),
-    onChange:id=>{sel.subject=id;sel.topic=null;sel.grade=null;renderSetup();setTimeout(()=>$('ddTop')._open&&$('ddTop')._open(),0)},
-    render:o=>{const u=o.x.topics.filter(x=>x.unit).length;return[subjIcon(B,o.x.id),txt(o.x.name,(o.x.id==='mine'?`${o.x.topics.length} ${o.x.topics.length===1?'set':'sets'}`:`${o.x.topics.length-u} ${o.x.topics.length-u===1?'topic':'topics'}`)+(u?` · ${u} unit${u>1?'s':''}`:''))]}});
+    onChange:id=>{sel.subject=id;sel.topic=null;sel.grade=null;sel.src=null;renderSetup();setTimeout(()=>$('ddTop')._open&&$('ddTop')._open(),0)},
+    render:o=>{const u=o.x.topics.filter(x=>x.unit).length,m=o.x.topics.filter(x=>x.set).length,g=o.x.topics.length-u-m;return[subjIcon(B,o.x.id),txt(o.x.name,[g?`${g} ${g===1?'topic':'topics'}`:'',u?`${u} ${u===1?'unit':'units'}`:'',m?`${m} ${T('my')} ${m===1?'set':'sets'}`:''].filter(Boolean).join(' · '))]}});
   dropdown($('ddTop'),{label:'lTop',placeholder:s?(tab!=='all'&&tList.some(x=>x.unit)?'Choose a unit':'Choose a topic'):'Choose a subject first',disabled:!s,value:sel.topic,options:tList.map(x=>({value:x.id,x})),
     onChange:id=>{sel.topic=id;renderSetup()},
     render:(o,inBtn)=>{const lv=(sel.picked[o.x.id]||{}).level||o.x.d;return inBtn?[subjIcon(B,s.id),txt(o.x.name,o.x.bl)]:[txt(o.x.name,o.x.bl),lvlDots(lv)]}});
@@ -1524,11 +1532,21 @@ $('impGo').onclick=()=>doImport($('impText').value);
 $('impFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;if(f.size>2e6){toast(T('That file is too big.'));return}doImport(await f.text());e.target.value=''};
 /* sets in the game setup: subject "My questions" */
 const encSet=x=>{const j=JSON.stringify({id:'set-'+x.id,n:x.name,q:x.q});return btoa(unescape(encodeURIComponent(j))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')};
+/* teachers' sets join their subject's card (a set's subject "English" goes with English); a subject only sets have gets its own card */
+const SET_SUBJ={english:['english','engleză','engleza'],math:['math','maths','matematică','matematica','mathematics'],geo:['geography','geografie'],science:['science','științe','stiinte','natural sciences'],info:['informatics','informatică','informatica','ict','tic','computer science']};
+const subjIdOf=n=>{const k=String(n||'').trim().toLowerCase();for(const [id,l] of Object.entries(SET_SUBJ))if(l.includes(k))return id;return null};
 function withMine(B){const base=B.base||B,S=mySets(),list=auth()?[...S.mine,...S.shared]:[];if(!list.length)return base;
-  const cid=session&&session.classId,sorted0=list.slice().sort((a,b)=>(b.classes.includes(cid)?1:0)-(a.classes.includes(cid)?1:0)),sorted=sorted0;
-  const out=[{id:'mine',name:'My questions',topics:sorted.map(x=>({id:'set-'+x.id,name:x.name,d:2,set:x,grade:(()=>{const g=[...new Set((x.classes||[]).map(c=>gradeOf(clsName(c))).filter(v=>v!=null))];return g.length?g:null})(),
-    bl:`${x.q.length} ${T('questions')}${x.classes.length?' · '+T('class')+' '+x.classes.map(clsName).join(', '):''}${x.owner!==(auth()||{}).u?' · '+(x.ownerName||''):''}`}))}].concat(base.filter(x=>x.id!=='mine'));
-  ['icon','hue','regions','getRegions','setRegions','regionLabel'].forEach(k=>out[k]=base[k]);out.base=base;out.icon=Object.assign({mine:'<path d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>'},base.icon||{});out.hue=Object.assign({mine:'#ffb347'},base.hue||{});return out}
+  const cid=session&&session.classId,sorted=list.slice().sort((a,b)=>(b.classes.includes(cid)?1:0)-(a.classes.includes(cid)?1:0));
+  const topic=x=>({id:'set-'+x.id,name:x.name,d:2,set:x,grade:(()=>{const g=[...new Set((x.classes||[]).map(c=>gradeOf(clsName(c))).filter(v=>v!=null))];return g.length?g:null})(),
+    bl:`${x.q.length} ${T('questions')}${x.classes.length?' · '+T('class')+' '+x.classes.map(clsName).join(', '):''}${x.owner!==(auth()||{}).u?' · '+(x.ownerName||''):''}`});
+  const out=base.filter(x=>x.id!=='mine').map(s=>Object.assign({},s,{topics:s.topics.slice()})),extra=new Map();
+  sorted.forEach(x=>{const id=subjIdOf(x.subject),home=id&&out.find(s=>s.id===id);if(home){home.topics.push(topic(x));return}
+    const nm=(x.subject||'').trim()||'My questions',key='set:'+nm.toLowerCase();if(!extra.has(key))extra.set(key,{id:key,name:T(nm),topics:[],own:true});extra.get(key).topics.push(topic(x))});
+  const mix=out.findIndex(s=>s.id==='mix'),add=[...extra.values()].sort((a,b)=>a.name.localeCompare(b.name));
+  if(mix>=0)out.splice(mix,0,...add);else out.push(...add);
+  ['icon','hue','regions','getRegions','setRegions','regionLabel'].forEach(k=>out[k]=base[k]);out.base=base;
+  const star='<path d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>';out.icon=Object.assign({},base.icon||{});out.hue=Object.assign({},base.hue||{});
+  add.forEach(s=>{out.icon[s.id]=star;out.hue[s.id]='#ffb347'});return out}
 /* ---- Teachers page (admin) ---- */
 function openTeachers(){if(!auth()||auth().role!=='admin')return;document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed','false'));show('teachers');renderTeachers()}
 const agoTxt=t=>{if(!t)return T('never signed in');const m=Math.round((Date.now()-t)/60000);if(m<2)return T('active now');if(m<60)return T('{n} min ago').replace('{n}',m);const h=Math.round(m/60);if(h<24)return T('{n} h ago').replace('{n}',h);return fmtDate(t)};

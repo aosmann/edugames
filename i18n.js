@@ -384,6 +384,7 @@ const P=[ /* patterns: numbers and names inside sentences */
  [/^(known|learning|needs work|too early) · last (\d+) answers( · (Easy|Medium|Hard))?$/,m=>`${{known:'știută',learning:'în lucru','needs work':'de lucrat','too early':'prea devreme'}[m[1]]} · ultimele ${m[2]} răspunsuri${m[4]?' · '+{Easy:'Ușor',Medium:'Mediu',Hard:'Greu'}[m[4]]:''}`],
  [/^Most students miss this too \((\d+)%\)$/,m=>`Majoritatea elevilor o greșesc și ei (${m[1]}%)`],[/^Most students get this right \((\d+)%\)$/,m=>`Majoritatea elevilor o știu (${m[1]}%)`],
  [/^(\d+)% of all answers are wrong$/,m=>`${m[1]}% din toate răspunsurile sunt greșite`],
+ [/^(\d+) my sets?$/,m=>`${m[1]} ${m[1]==='1'?'set propriu':'seturi proprii'}`],[/^(\d+) units?$/,m=>`${m[1]} ${m[1]==='1'?'unitate':'unități'}`],[/^My questions · (\d+)$/,m=>`Întrebările mele · ${m[1]}`],
  [/^up to (.+)$/,m=>`până la ${m[1]}`],
  [/^(\d+) min ago$/,m=>`acum ${m[1]} min`],[/^(\d+) h ago$/,m=>`acum ${m[1]} h`],
  [/^Welcome, (.+?)! Pick your own password now, so only you know it\. At least 6 characters\.$/,m=>`Bun venit, ${m[1]}! Alege-ți acum propria parolă, ca s-o știi doar tu. Cel puțin 6 caractere.`],
