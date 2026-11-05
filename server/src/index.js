@@ -590,7 +590,7 @@ export class Store {
       const name = clean(x.name, 80);
       if (!name) return this.json({error: 'name'}, 400);
       if (!q.length) return this.json({error: 'empty'}, 400);
-      const rec = {id, owner: old ? old.owner : me.u, ownerName: old ? old.ownerName : me.name, name, subject: clean(x.subject, 40), classes: (Array.isArray(x.classes) ? x.classes : []).map(c => clean(c, 20)).filter(Boolean).slice(0, 40),
+      const rec = {id, owner: old ? old.owner : me.u, ownerName: old ? old.ownerName : me.name, name, topic: clean(x.topic, 80), subject: clean(x.subject, 40), classes: (Array.isArray(x.classes) ? x.classes : []).map(c => clean(c, 20)).filter(Boolean).slice(0, 40),
         lang: x.lang === 'ro' ? 'ro' : 'en', shared: !!x.shared, q, at: Date.now(), created: old ? old.created : Date.now()};
       if (JSON.stringify(rec).length > 400000) return this.json({error: 'Too big'}, 413);
       await this.state.storage.put('set:' + id, rec);
