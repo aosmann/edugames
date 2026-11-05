@@ -477,7 +477,7 @@ p{margin:0}
 .chart{width:100%;height:auto;display:block;overflow:visible}.chart text{font:600 10px Inter,system-ui,sans-serif;fill:var(--ink2)}
 .chart .gl{stroke:#e6e9f3;stroke-width:1}.chart .ln{fill:none;stroke-width:2.6;stroke-linejoin:round;stroke-linecap:round}.chart .pt{stroke:#fff;stroke-width:1.6}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;font-weight:700;color:var(--ink2)}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
-.mast{display:flex;gap:8px;flex-wrap:wrap}.mast span{font-size:12px;font-weight:800;border-radius:999px;padding:3px 10px}.mast .m3{background:#e3f6ec;color:#0f7a49}.mast .m2{background:#fff1d6;color:#9a6700}.mast .m1{background:#fde8e6;color:#b3261e}
+.mast{display:flex;gap:8px;flex-wrap:wrap}.stu .mast{gap:4px;flex-wrap:nowrap}.stu .mast span{min-width:22px;text-align:center;padding:2px 7px}.mast-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}.mast-dot.m3{background:var(--good)}.mast-dot.m2{background:#e9a23b}.mast-dot.m1{background:var(--bad)}.mast-dot.m0{background:#c5cbe0}.mast span{font-size:12px;font-weight:800;border-radius:999px;padding:3px 10px}.mast .m3{background:#e3f6ec;color:#0f7a49}.mast .m2{background:#fff1d6;color:#9a6700}.mast .m1{background:#fde8e6;color:#b3261e}
 .att{list-style:none;margin:0;padding:0;display:grid;gap:8px}.att li{display:flex;justify-content:space-between;gap:10px;font-size:15px}.att li b{font-weight:700}.att li span{color:var(--ink2);font-weight:700;font-variant-numeric:tabular-nums}.att li.no span{color:var(--bad)}
 .stu table{min-width:820px}.stu tbody tr{cursor:pointer}.stu tbody tr:hover td{background:#f6f7fc}.stu th button{border:0;background:none;font:inherit;color:inherit;padding:0;cursor:pointer}
 .stu .tr-up{color:var(--good);font-weight:800}.stu .tr-dn{color:var(--bad);font-weight:800}.stu .tr-0{color:var(--ink2);font-weight:700}
@@ -1855,8 +1855,8 @@ function renderReports(fromPull){if(!fromPull)pullReports();paintSync();
 
 /* ---------- insights: what the class got wrong ---------- */
 function answersOf(rows){const out=[];rows.forEach(r=>{const g=GAMES.find(x=>x.id===r.game),base=g?g.base:'';
-  if(r.log&&r.log.length)r.log.forEach(e=>out.push({student:r.student,topic:r.topicName,base,q:e.q,a:e.a,pk:e.pk,ok:!!e.ok,img:e.img,tag:e.tag,full:true}));
-  else r.missed.forEach(m=>out.push({student:r.student,topic:r.topicName,base,q:m.q,a:m.answer,pk:m.picked,ok:false,img:m.img||null,tag:null,full:false}))});return out}
+  if(r.log&&r.log.length)r.log.forEach((e,i)=>out.push({student:r.student,topic:r.topicName,base,q:e.q,a:e.a,pk:e.pk,ok:!!e.ok,img:e.img,tag:e.tag,full:true,level:r.level,at:r.at,i}));
+  else r.missed.forEach(m=>out.push({student:r.student,topic:r.topicName,base,q:m.q,a:m.answer,pk:m.picked,ok:false,img:m.img||null,tag:null,full:false,level:r.level,at:r.at}))});return out}
 const qLabel=x=>x.img?`Which flag? ${x.a}`:x.q;
 function questionStats(A){const Q=new Map();
   A.forEach(x=>{const k=(x.img||x.q)+'|'+x.a;let o=Q.get(k);if(!o){o={x,n:0,w:0,full:0,picks:new Map(),who:new Set()};Q.set(k,o)}
@@ -1868,9 +1868,13 @@ function bar(label,pct,note){const li=el('li');li.append(el('span',null,label),e
 function renderInsights(rows){const box=$('ins');box.innerHTML='';const A=answersOf(rows);if(!A.length){box.append(el('p','inote','No answers yet for these filters.'));return}
   const full=A.some(x=>x.full);
   /* most missed questions */
-  const top=questionStats(A).slice(0,25),c1=el('section','icard wide');
+  const qs=store.get('edu-q-sort','missed'),D=difficultyMap(A);let QS=questionStats(A);
+  if(qs==='hard')QS=QS.filter(o=>o.full>=5).sort((a,b)=>b.w/b.n-a.w/a.n||b.n-a.n);
+  const top=QS.slice(0,25),c1=el('section','icard wide');
   c1.append(Object.assign(el('h3',null,'Most missed questions'),{}));c1.querySelector('h3').append(el('small',null,'The questions most students got wrong, with the wrong answer they picked most'));
-  if(!top.length)c1.append(el('p','inote','No wrong answers here. Nice work, class.'));
+  {const sw=el('div','rtabs');sw.style.margin='0';[['missed','Most missed'],['hard','Hardest for everyone']].forEach(([id,l])=>{const b=el('button',null,T(l));b.type='button';b.setAttribute('aria-selected',qs===id);b.onclick=()=>{store.set('edu-q-sort',id);renderInsights(rows)};sw.append(b)});c1.append(sw);
+   if(qs==='hard')c1.append(el('p','inote','Sorted by the share of all answers that were wrong (questions answered at least 5 times). Hard for everyone usually means: teach it again, or check the question.'))}
+  if(!top.length)c1.append(el('p','inote',qs==='hard'?'Not enough answers yet: each question needs at least 5.':'No wrong answers here. Nice work, class.'));
   const ul=el('ul','mq');top.forEach((o,i)=>{const li=el('li'),x=o.x;li.append(el('span','rk',String(i+1)));
     const qt=el('span','qt');if(x.img&&x.base){const im=el("img");im.src=/^https?:/.test(x.img)?x.img:x.base+x.img;im.alt='';im.loading='lazy';qt.append(im)}qt.append(el('span',null,qLabel(x)));li.append(qt);
     const ct=el('span','ct',o.full?Math.round(o.w/o.n*100)+'%':String(o.w));ct.append(el('small',null,o.full?`${o.w} of ${o.n} wrong`:`wrong`));li.append(ct);
@@ -1879,6 +1883,22 @@ function renderInsights(rows){const box=$('ins');box.innerHTML='';const A=answer
     const who=[...o.who];li.append(el('span','who',who.slice(0,5).join(', ')+(who.length>5?` +${who.length-5} more`:'')));ul.append(li)});
   if(top.length)c1.append(ul);box.append(c1);
 }
+/* ---------- levels, mastery and measured difficulty ---------- */
+const LVORD=['Easy','Medium','Hard'];
+/* a skill is "known" at 80%+ of its last 10 answers, "learning" at 50-79%, "needs work" below; fewer than 4 answers: too early */
+function mastery(A){const by=new Map();A.filter(x=>x.full).slice().sort((a,b)=>String(a.at).localeCompare(String(b.at))||(a.i||0)-(b.i||0)).forEach(x=>{const k=x.tag||x.topic;if(!k)return;if(!by.has(k))by.set(k,[]);by.get(k).push(x)});
+  return[...by.entries()].map(([k,l])=>{const last=l.slice(-10),ok=last.filter(x=>x.ok).length,pct=Math.round(ok/last.length*100),lv=last[last.length-1].level||'';
+    return{k,n:l.length,last:last.length,pct,lv,state:last.length<4?'early':pct>=80?'known':pct>=50?'learning':'needs'}}).sort((a,b)=>a.pct-b.pct)}
+/* how hard a question really is: the share of all answers to it that were wrong (needs 5+ answers) */
+function difficultyMap(A){const m=new Map();A.filter(x=>x.full).forEach(x=>{const k=(x.img||x.q)+'|'+x.a;const o=m.get(k)||{n:0,w:0};o.n++;if(!x.ok)o.w++;m.set(k,o)});return m}
+const diffOf=(D,x)=>{const o=D.get((x.img||x.q)+'|'+x.a);if(!o||o.n<5)return null;const p=Math.round(o.w/o.n*100);return{p,n:o.n,w:o.w,label:p>=60?'hard':p>=30?'medium':'easy'}};
+const MSTATE={known:['m3','known'],learning:['m2','learning'],needs:['m1','needs work'],early:['m0','too early']};
+function levelCard(rows){const A=answersOf(rows).filter(x=>x.full);const by=groupStats(A,x=>x.level||'');const L=by.filter(o=>o.k).sort((a,b)=>LVORD.indexOf(a.k)-LVORD.indexOf(b.k));if(L.length<1)return null;
+  const c=el('section','icard'),h=el('h3',null,'By level');h.append(el('small',null,'Share of right answers at each difficulty, and how much was played at it'));c.append(h);
+  const tot=L.reduce((a,o)=>a+o.n,0),ul=el('ul','bars');L.forEach(o=>ul.append(bar(T(o.k),o.pct,`${o.n} ${T('answers')} · ${Math.round(o.n/tot*100)}% ${T('of the play')}`)));c.append(ul);
+  const hi=L.filter(o=>o.k!=='Easy'&&o.n>=10);if(L.length===1&&L[0].k==='Easy'&&L[0].pct>=85)c.append(el('p','inote','Everything was played at Easy and it went well: try Medium next.'));
+  else if(hi.length&&hi.every(o=>o.pct>=80))c.append(el('p','inote','Strong even at the harder levels.'));return c}
+
 /* ---------- reports tabs: Overview, Students, Questions, All results ---------- */
 let rTab=store.get('edu-rtab','overview');
 function paintRTabs(){document.querySelectorAll('#rTabs [data-rtab]').forEach(b=>b.setAttribute('aria-selected',b.dataset.rtab===rTab));
@@ -1914,18 +1934,21 @@ function renderOverview(rows){const box=$('rOv');box.innerHTML='';
   if(!rows.length){box.append(el('p','inote','When you run classes, this page shows how the class is doing over time.'));return}
   /* progress over time */
   const pts=sessionPoints(rows),c0=el('section','icard wide'),h0=el('h3',null,'Progress over time');h0.append(el('small',null,'Share of right answers in each class session'));c0.append(h0);
-  const byCls=new Map();pts.forEach(p=>{const k=p.cls||T('No class list');if(!byCls.has(k))byCls.set(k,[]);byCls.get(k).push(p)});
-  const series=[...byCls.entries()].sort((a,b)=>b[1].length-a[1].length).slice(0,6).map(([k,list],i)=>({name:k,color:PAL[i%PAL.length],pts:list}));
+  const split=store.get('edu-chart-split','class'),sw=el('div','rtabs');sw.style.margin='0';[['class','By class'],['level','By level']].forEach(([id,l])=>{const b=el('button',null,T(l));b.type='button';b.setAttribute('aria-selected',split===id);b.onclick=()=>{store.set('edu-chart-split',id);renderOverview(rows)};sw.append(b)});c0.append(sw);
+  let series;if(split==='level'){series=LVORD.map((lv,i)=>({name:T(lv),color:['#1a9c5f','#e9a23b','#d6423a'][i],pts:sessionPoints(rows.filter(r=>r.level===lv))})).filter(s=>s.pts.length)}
+  else{const byCls=new Map();pts.forEach(p=>{const k=p.cls||T('No class list');if(!byCls.has(k))byCls.set(k,[]);byCls.get(k).push(p)});
+    series=[...byCls.entries()].sort((a,b)=>b[1].length-a[1].length).slice(0,6).map(([k,list],i)=>({name:k,color:PAL[i%PAL.length],pts:list}))}
   const ch=lineChart(series);if(ch)c0.append(ch);if(series.length>1){const lg=el('div','legend');series.forEach(s=>{const x=el('span');x.append(el('i'),document.createTextNode(s.name));x.firstChild.style.background=s.color;lg.append(x)});c0.append(lg)}
   const tr=(()=>{const c=pts.slice().sort((a,b)=>a.t-b.t);if(c.length<4)return null;const k=Math.min(3,Math.floor(c.length/2)),a=c.slice(-k),b=c.slice(0,-k),av=l=>Math.round(l.reduce((x,p)=>x+p.y,0)/l.length);return av(a)-av(b)})();
   if(tr!=null)c0.append(el('p','inote',tr>2?`${T('Going up')}: +${tr} ${T('points in the last sessions')}`:tr<-2?`${T('Going down')}: ${tr} ${T('points in the last sessions')}`:T('Steady over the last sessions')));
-  box.append(c0);
+  box.append(c0);{const lc=levelCard(rows);if(lc)box.append(lc)}
   /* topic mastery */
   const A=answersOf(rows),full=A.filter(x=>x.full),tags=groupStats(A,x=>x.tag),byTopic=groupStats(A,x=>x.topic),G=(tags.length>1?tags:byTopic).filter(g=>g.n>=3).sort((a,b)=>a.pct-b.pct);
   if(G.length){const c2=el('section','icard'),h=el('h3',null,tags.length>1?'Skills':'Topics');h.append(el('small',null,'How well the class knows each one, weakest first'));c2.append(h);
     const m3=G.filter(g=>g.pct>=80).length,m2=G.filter(g=>g.pct>=50&&g.pct<80).length,m1=G.filter(g=>g.pct<50).length,mb=el('div','mast');
     [[m3,'m3','known'],[m2,'m2','learning'],[m1,'m1','needs work']].forEach(([n,c,l])=>{if(n)mb.append(el('span',c,`${n} ${T(l)}`))});c2.append(mb);
-    const ul=el('ul','bars');G.slice(0,12).forEach(o=>ul.append(bar(o.k,o.pct,`${o.ok} ${T('of')} ${o.n} ${T('right')}`)));c2.append(ul);box.append(c2)}
+    const key=tags.length>1?(x=>x.tag):(x=>x.topic),ul=el('ul','bars');G.slice(0,12).forEach(o=>{const lv=groupStats(full.filter(x=>key(x)===o.k),x=>x.level||'').filter(g=>g.k).sort((a,b)=>LVORD.indexOf(a.k)-LVORD.indexOf(b.k));
+      ul.append(bar(o.k,o.pct,`${o.ok} ${T('of')} ${o.n} ${T('right')}`+(lv.length>1?' · '+lv.map(g=>`${T(g.k)} ${g.pct}%`).join(' · '):'')))});c2.append(ul);box.append(c2)}
   else if(!full.length)box.append(el('p','inote','Skill and student breakdowns appear for class rounds played with the latest game versions.'));
   /* students to help */
   const S=studentStats(rows).filter(o=>o.asked>=5&&(o.pct<75||(o.trend!=null&&o.trend<=-5))).sort((a,b)=>a.pct-b.pct||((a.trend||0)-(b.trend||0)));
@@ -1948,23 +1971,27 @@ function renderStudents(rows){const box=$('rStu');box.innerHTML='';const S=stude
   const sorts={name:(a,b)=>a.name.localeCompare(b.name),cls:(a,b)=>String(a.cls).localeCompare(String(b.cls),undefined,{numeric:true})||a.name.localeCompare(b.name),pct:(a,b)=>a.pct-b.pct,trend:(a,b)=>(a.trend??0)-(b.trend??0),sessions:(a,b)=>b.sessions-a.sessions,last:(a,b)=>b.last.localeCompare(a.last)};
   S.sort(sorts[stuSort]||sorts.name);
   const w=el('div','tablewrap stu'),tb=el('table'),th=el('thead'),hr=el('tr');
-  [['name','Student'],['cls','Class'],['sessions','Sessions'],[null,'Answers'],['pct','% right'],['trend','Trend'],[null,'Strongest'],[null,'Weakest'],['last','Last played']].forEach(([k,l])=>{const c=el('th',['sessions','pct'].includes(k)||l==='Answers'?'n':null);
+  [['name','Student'],['cls','Class'],['sessions','Sessions'],[null,'Answers'],['pct','% right'],['trend','Trend'],[null,'Skills'],[null,'Weakest'],['last','Last played']].forEach(([k,l])=>{const c=el('th',['sessions','pct'].includes(k)||l==='Answers'?'n':null);
     if(k){const b=el('button',null,T(l)+(stuSort===k?' ▾':''));b.type='button';b.onclick=()=>{stuSort=k;store.set('edu-stu-sort',k);renderStudents(rows)};c.append(b)}else c.textContent=T(l);hr.append(c)});th.append(hr);tb.append(th);
   const body=el('tbody');S.forEach(o=>{const r=el('tr');r.tabIndex=0;r.onclick=()=>openStudent(o.name,rows);r.onkeydown=e=>{if(e.key==='Enter')openStudent(o.name,rows)};
     const td=(x,c)=>{const d=el('td',c||null);if(x instanceof Node)d.append(x);else d.textContent=x;r.append(d);return d};
     td(o.name);td(o.cls||'—');td(String(o.sessions),'n');td(String(o.asked),'n');td(pctEl(o.pct),'n');
     const t=el('span');t.append(spark(o.spark),document.createTextNode(' '));t.append(o.trend==null?el('span','tr-0','—'):el('span',o.trend>2?'tr-up':o.trend<-2?'tr-dn':'tr-0',(o.trend>0?'+':'')+o.trend));td(t);
-    td(o.strong?`${o.strong.k} (${o.strong.pct}%)`:'—');td(o.weak?`${o.weak.k} (${o.weak.pct}%)`:'—');td(fmtDate(o.last));body.append(r)});
-  tb.append(body);w.append(tb);box.append(w);box.append(el('p','inote','Trend: the last 3 results compared with the ones before, in points. Click a student to see their profile.'))}
-function openStudent(name,rows){const mine=rows.filter(r=>r.student===name);if(!mine.length)return;const o=studentStats(mine)[0];
+    {const M=mastery(answersOf(o.list)),mb=el('span','mast');[['known','m3'],['learning','m2'],['needs','m1']].forEach(([st,c])=>{const n=M.filter(m=>m.state===st).length;if(n)mb.append(el('span',c,String(n)))});mb.title=M.map(m=>`${m.k}: ${m.pct}% (${T(MSTATE[m.state][1])})`).join('\n');td(M.length?mb:'—')}
+    td(o.weak?`${o.weak.k} (${o.weak.pct}%)`:'—');td(fmtDate(o.last));body.append(r)});
+  tb.append(body);w.append(tb);box.append(w);box.append(el('p','inote','Trend: the last 3 results compared with the ones before, in points. Skills: how many are known (green), being learned (yellow) or need work (red), from each skill\'s last 10 answers. Click a student to see their profile.'))}
+function openStudent(name,rows){const mine=rows.filter(r=>r.student===name);if(!mine.length)return;const o=studentStats(mine)[0],DALL=difficultyMap(answersOf(rows));
   modal(box=>{box.classList.add('wide');const p=el('div','prof');
     const hd=el('div');hd.append(el('h2',null,name),el('p',null,[o.cls?T('Class')+' '+o.cls:'',`${T('last played')} ${fmtDate(o.last)}`].filter(Boolean).join(' · ')));p.append(hd);
     const sm=el('div','sum');[[o.sessions,'sessions'],[o.asked,'answers'],[o.pct+'%','right'],[o.trend==null?'—':(o.trend>0?'+':'')+o.trend,'trend (points)']].forEach(([b,l])=>{const d=el('div');d.append(el('b',null,String(b)),el('span',null,T(l)));sm.append(d)});p.append(sm);
     const ch=lineChart([{name,color:'#2b3990',pts:sessionPoints(mine)}],170);if(ch){const c=el('div');c.append(el('h3',null,T('Over time')),ch);p.append(c)}
     const A=answersOf(mine),G=groupStats(A,x=>x.tag||x.topic).filter(g=>g.n>=2).sort((a,b)=>a.pct-b.pct),two=el('div','two');
-    if(G.length){const c=el('div');c.append(el('h3',null,T('Topics')));const ul=el('ul','bars');G.slice(0,8).forEach(g=>ul.append(bar(g.k,g.pct,`${g.ok} ${T('of')} ${g.n} ${T('right')}`)));c.append(ul);two.append(c)}
+    const M=mastery(A);if(M.length){const c=el('div');c.append(el('h3',null,T('Skills')));const ul=el('ul','bars');M.slice(0,10).forEach(m=>{const li=bar(m.k,m.pct,`${T(MSTATE[m.state][1])} · ${T('last')} ${m.last} ${T('answers')}${m.lv?' · '+T(m.lv):''}`);
+      li.querySelector('small').prepend(el('span','mast-dot '+MSTATE[m.state][0]));ul.append(li)});c.append(ul);two.append(c)}
+    else if(G.length){const c=el('div');c.append(el('h3',null,T('Topics')));const ul=el('ul','bars');G.slice(0,8).forEach(g=>ul.append(bar(g.k,g.pct,`${g.ok} ${T('of')} ${g.n} ${T('right')}`)));c.append(ul);two.append(c)}
     const Q=questionStats(A).slice(0,8);if(Q.length){const c=el('div');c.append(el('h3',null,T('Questions they miss')));const ul=el('ul','mq');Q.forEach((q,i)=>{const li=el('li');li.append(el('span','rk',String(i+1)),el('span','qt',qLabel(q.x)));
-      const ct=el('span','ct',String(q.w));ct.append(el('small',null,T('times')));li.append(ct);const dt=el('span','dt');dt.append(T('Right')+': ',el('b',null,q.x.a));const pk=[...q.picks.entries()].sort((a,b)=>b[1]-a[1])[0];if(pk)dt.append(' · '+T('They pick')+': ',el('i',null,pk[0]));li.append(dt);ul.append(li)});c.append(ul);two.append(c)}
+      const ct=el('span','ct',String(q.w));ct.append(el('small',null,T('times')));li.append(ct);const dt=el('span','dt');dt.append(T('Right')+': ',el('b',null,q.x.a));const pk=[...q.picks.entries()].sort((a,b)=>b[1]-a[1])[0];if(pk)dt.append(' · '+T('They pick')+': ',el('i',null,pk[0]));
+      const d=diffOf(DALL,q.x);if(d)li.append(dt,el('span','who',d.p>=50?`${T('Most students miss this too')} (${d.p}%)`:d.p<25?`${T('Most students get this right')} (${100-d.p}%)`:`${d.p}% ${T('of all answers are wrong')}`));else li.append(dt);ul.append(li)});c.append(ul);two.append(c)}
     if(two.children.length)p.append(two);
     const row=el('div','mrow'),ex=el('button','plain','Export Excel'),ok=el('button','cta','Close');ex.type=ok.type='button';ok.onclick=closeModal;
     ex.onclick=()=>exportXlsx(mine,`edugames-${name.replace(/[^\p{L}\p{N}]+/gu,'-')}-${dayKey(Date.now())}.xlsx`,ex);row.append(ex,ok);p.append(row);box.append(p)});
