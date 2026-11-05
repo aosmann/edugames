@@ -1049,7 +1049,7 @@ const BANKS={};
 function loadBank(g){if(BANKS[g.id])return Promise.resolve(BANKS[g.id]);
   return new Promise((res,rej)=>{const prev=window.EduQ;delete window.EduQ;const s=document.createElement('script');s.src=g.base+'questions.js';
     s.onload=()=>{const E=window.EduQ;window.EduQ=prev;if(!E)return rej(new Error('no bank'));
-      const B=E.SUBJECTS.map(s=>({id:s.id,name:s.name,topics:s.topics.map(t=>({id:t.id,name:t.name,bl:t.bl,d:t.d,regions:!!t.regions,unit:t.unit||null,opts:t.opts||null}))}));B.icon=E.SICON||{};B.hue=E.SHUE||{};
+      const B=E.SUBJECTS.map(s=>({id:s.id,name:s.name,topics:s.topics.map(t=>({id:t.id,name:t.name,bl:t.bl,d:t.d,regions:!!t.regions,unit:t.unit||null,grade:t.grade||null,opts:t.opts||null}))}));B.icon=E.SICON||{};B.hue=E.SHUE||{};
       B.regions=E.REGIONS||null;B.getRegions=E.getRegions||null;B.setRegions=E.setRegions||null;B.regionLabel=E.regionLabel||null;BANKS[g.id]=B;res(B)};
     s.onerror=()=>{window.EduQ=prev;rej(new Error('bank failed'))};document.head.append(s)})}
 
@@ -1106,10 +1106,12 @@ function renderSetup(){const g=sel.game,B=sel.bank,s=curSub(),t=curTop();
     render:o=>{const im=el('img','gi');im.src=o.g.base+(o.g.icon||'icon-512.png');im.alt='';return[im,txt(o.g.name,o.g.pitch||'')]}});
   const hue=s&&B?(B.hue||{})[s.id]||'#8a93b8':'#8a93b8';$('ddTop').style.setProperty('--h',hue);
   $('cSubj').classList.toggle('done',!!s);$('cTop').classList.toggle('done',!!t);
-  $('nSubj').textContent=B&&B.length?`${B.length} subjects`:'';const hasU=!!(s&&s.topics.some(x=>x.unit)),tab=t?(t.unit?'units':'topics'):(hasU&&sel.ttab==='units'?'units':'topics');
-  const tList=s?s.topics.filter(x=>!hasU||!!x.unit===(tab==='units')):[];
-  {const tt=$('tTabs');tt.hidden=!hasU;tt.innerHTML='';if(hasU)[['topics','Topics'],['units','Units']].forEach(([id,name])=>{const b=el('button',null,name);b.type='button';b.setAttribute('role','tab');b.setAttribute('aria-selected',id===tab);
-    b.onclick=e=>{e.stopPropagation();if(id===tab)return;sel.ttab=id;sel.topic=null;renderSetup();setTimeout(()=>$('ddTop')._open&&$('ddTop')._open(),0)};tt.append(b)})}
+  $('nSubj').textContent=B&&B.length?`${B.length} subjects`:'';const grades=s?[...new Set(s.topics.flatMap(x=>x.grade||[]))].sort((a,b)=>a-b):[],hasU=grades.length>0,mine=s&&s.id==='mine';
+  if(hasU){const sg=gradeOf(session&&session.className);if(sel.grade==null||(sel.grade!=='all'&&!grades.includes(sel.grade)))sel.grade=grades.includes(sg)?sg:'all';
+    if(t&&t.grade&&t.grade.length&&!t.grade.includes(sel.grade)&&!(mine&&sel.grade==='all'))sel.grade=t.grade[0];if(t&&!t.grade&&sel.grade!=='all')sel.grade='all'}
+  const tab=hasU?sel.grade:'all',tList=s?s.topics.filter(x=>!hasU||(tab==='all'?(mine||!x.grade):(x.grade||[]).includes(tab))):[];
+  {const tt=$('tTabs');tt.hidden=!hasU;tt.innerHTML='';if(hasU)[['all',mine?T('All'):T('All classes')],...grades.map(g=>[g,T('Class')+' '+g])].forEach(([id,name])=>{const b=el('button',null,name);b.type='button';b.setAttribute('role','tab');b.setAttribute('aria-selected',id===tab);
+    b.onclick=e=>{e.stopPropagation();if(id===tab)return;sel.grade=id;sel.topic=null;renderSetup();setTimeout(()=>$('ddTop')._open&&$('ddTop')._open(),0)};tt.append(b)})}
   $('nTop').textContent=s?`${s.name} · ${tList.length}`:'';
   const sum=$('sSum');sum.innerHTML='';const row=el('div','sumrow'),rt=el('div');
   if(t&&B){rt.append(el('small',null,s.name),el('strong',null,t.name));row.append(subjIcon(B,s.id),rt);sum.append(row,el('p',null,t.regions&&B.regionLabel&&B.getRegions?B.regionLabel(B.getRegions(t.id)):t.bl))}
@@ -1118,9 +1120,9 @@ function renderSetup(){const g=sel.game,B=sel.bank,s=curSub(),t=curTop();
     dropdown($('ddSubj'),{label:'lSubj',placeholder:m,options:[],disabled:true,render:()=>[]});dropdown($('ddTop'),{label:'lTop',placeholder:'Choose a subject first',options:[],disabled:true,render:()=>[]});
     $('sSettings').innerHTML='';paintGo();return}
   dropdown($('ddSubj'),{label:'lSubj',placeholder:'Choose a subject',value:sel.subject,options:B.map(x=>({value:x.id,x})),
-    onChange:id=>{sel.subject=id;sel.topic=null;renderSetup();setTimeout(()=>$('ddTop')._open&&$('ddTop')._open(),0)},
+    onChange:id=>{sel.subject=id;sel.topic=null;sel.grade=null;renderSetup();setTimeout(()=>$('ddTop')._open&&$('ddTop')._open(),0)},
     render:o=>{const u=o.x.topics.filter(x=>x.unit).length;return[subjIcon(B,o.x.id),txt(o.x.name,(o.x.id==='mine'?`${o.x.topics.length} ${o.x.topics.length===1?'set':'sets'}`:`${o.x.topics.length-u} ${o.x.topics.length-u===1?'topic':'topics'}`)+(u?` · ${u} unit${u>1?'s':''}`:''))]}});
-  dropdown($('ddTop'),{label:'lTop',placeholder:s?(tab==='units'?'Choose a unit':'Choose a topic'):'Choose a subject first',disabled:!s,value:sel.topic,options:tList.map(x=>({value:x.id,x})),
+  dropdown($('ddTop'),{label:'lTop',placeholder:s?(tab!=='all'&&tList.some(x=>x.unit)?'Choose a unit':'Choose a topic'):'Choose a subject first',disabled:!s,value:sel.topic,options:tList.map(x=>({value:x.id,x})),
     onChange:id=>{sel.topic=id;renderSetup()},
     render:(o,inBtn)=>{const lv=(sel.picked[o.x.id]||{}).level||o.x.d;return inBtn?[subjIcon(B,s.id),txt(o.x.name,o.x.bl)]:[txt(o.x.name,o.x.bl),lvlDots(lv)]}});
   const box=$('sSettings');box.innerHTML='';delete sel.values.regions;
@@ -1172,8 +1174,8 @@ function topicOptsUI(t,box){const mem=store.get('edu-topt-'+t.id,{});
     const lab=el('div','sec-t optsec',o.label);lab.id='st-o-'+o.key;box.append(lab);
     const row=el('div','regchips'+(o.key==='ops'?' ops':''));row.setAttribute('role','group');row.setAttribute('aria-labelledby',lab.id);
     const chip=(v,name,on,f)=>{const b=el('button',null,name);b.type='button';b.setAttribute('aria-pressed',on);b.onclick=f;row.append(b)};
-    if(o.multi){const list=cur?cur.split(o.key==='ops'?'':','):[],all=o.options.map(x=>x[0]),sep=o.key==='ops'?'':',';
-      if(o.key!=='ops')chip('all','All',!list.length,()=>set(''));
+    if(o.multi){const sep=o.sep!=null?o.sep:(o.key==='ops'?'':','),list=cur?cur.split(sep):[],all=o.options.map(x=>x[0]);
+      if(o.key!=='ops')chip('all',T(o.all||'All'),!list.length,()=>set(''));
       o.options.forEach(([v,name])=>chip(v,name,list.includes(v),()=>{let nx=list.includes(v)?list.filter(x=>x!==v):list.concat(v);nx=all.filter(x=>nx.includes(x));
         if(!nx.length&&o.key==='ops')return;set(nx.join(sep))}))}
     else{const known=o.options.some(x=>x[0]===cur),custom=o.custom&&!known;
@@ -1183,10 +1185,10 @@ function topicOptsUI(t,box){const mem=store.get('edu-topt-'+t.id,{});
           i.onchange=()=>{const n=Math.round(+i.value);if(n>=o.custom.min&&n<=o.custom.max)set(String(n));else i.value=cur};row.append(i)}}}
     box.append(row)})}
 const optsLabel=(t,v)=>!t||!t.opts?'':t.opts.map(o=>{const x=v['o_'+o.key];if(x==null||x==='')return '';
-  if(o.multi){const l=String(x).split(o.key==='ops'?'':',');return l.map(y=>(o.options.find(p=>p[0]===y)||[y,y])[1]).join(o.key==='ops'?' ':', ')}
+  if(o.multi){const sp=o.sep!=null?o.sep:(o.key==='ops'?'':','),l=String(x).split(sp);return l.map(y=>(o.options.find(p=>p[0]===y)||[y,y])[1]).join(o.key==='ops'?' ':', ')}
   const p=o.options.find(p=>p[0]===x);return o.key==='max'?`${T('up to')} ${p?p[1]:x}`:(p?p[1]:x)}).filter(Boolean).join(' · ');
 function roundFromSel(){const g=sel.game,s=curSub(),t=curTop(),ol=t.regions||t.set?'':optsLabel(t,sel.values);
-  return{id:'r'+Date.now().toString(36),game:g.id,gameName:g.name,base:g.base,subject:s.id,topic:t.id,topicName:t.name,
+  return{id:'r'+Date.now().toString(36),game:g.id,gameName:g.name,base:g.base,subject:s.id,topic:t.id,topicName:t.unit?`${t.name} · ${t.unit}`:t.name,
     regionsLabel:t.regions&&sel.bank.regionLabel?sel.bank.regionLabel(sel.values.regions?sel.values.regions.split(','):null):ol,
     race:mode==='class'&&g.multiplayer&&g.multiplayer.race?{seed:1}:null,lang:I18N.lang,
     qset:t.set?encSet(t.set):null,setId:t.set?t.set.id:null,subjectName:t.set?(t.set.subject||T('My questions')):s.name,
@@ -1350,6 +1352,7 @@ async function pullSets(){if(!auth())return mySets();try{const {r,d}=await api('
 const SUBJ_SUGGEST=['English','Română','Math','Geography','History','Biology','Chemistry','Physics','Science','Informatics','Music','Religion','French','German','Other'];
 function openSets(){if(!auth())return openSignIn();document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed','false'));show('sets');$('setEd').hidden=true;$('setsList').hidden=false;renderSets();pullSets().then(renderSets)}
 const clsName=id=>{const c=classes().find(x=>x.id===id);return c?c.name:id};
+const gradeOf=n=>{const m=/^(\d+)/.exec(String(n||''));return m?+m[1]:null};
 function renderSets(){const S=mySets(),me=auth()||{},box=$('mineList');box.innerHTML='';
   const card=(x,own)=>{const c=el('div','setcard'),ic=el('span','si','★'),tx=el('div'),nm=el('b',null,x.name);tx.append(nm);if(x.shared&&own)tx.append(el('span','badge',T('shared')));
     const bits=[`${x.q.length} ${T(x.q.length===1?'question':'questions')}`];if(x.subject)bits.push(x.subject);if(x.classes&&x.classes.length)bits.push(T('class')+' '+x.classes.map(clsName).join(', '));
@@ -1453,8 +1456,8 @@ $('aiPrompt').onclick=()=>{const ro=$('edLang').value==='ro',topic=$('edName').v
 /* sets in the game setup: subject "My questions" */
 const encSet=x=>{const j=JSON.stringify({id:'set-'+x.id,n:x.name,q:x.q});return btoa(unescape(encodeURIComponent(j))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')};
 function withMine(B){const base=B.base||B,S=mySets(),list=auth()?[...S.mine,...S.shared]:[];if(!list.length)return base;
-  const cid=session&&session.classId,sorted=list.slice().sort((a,b)=>(b.classes.includes(cid)?1:0)-(a.classes.includes(cid)?1:0));
-  const out=base.filter(x=>x.id!=='mine').concat([{id:'mine',name:'My questions',topics:sorted.map(x=>({id:'set-'+x.id,name:x.name,d:2,set:x,
+  const cid=session&&session.classId,sorted0=list.slice().sort((a,b)=>(b.classes.includes(cid)?1:0)-(a.classes.includes(cid)?1:0)),sorted=sorted0;
+  const out=base.filter(x=>x.id!=='mine').concat([{id:'mine',name:'My questions',topics:sorted.map(x=>({id:'set-'+x.id,name:x.name,d:2,set:x,grade:(()=>{const g=[...new Set((x.classes||[]).map(c=>gradeOf(clsName(c))).filter(v=>v!=null))];return g.length?g:null})(),
     bl:`${x.q.length} ${T('questions')}${x.classes.length?' · '+T('class')+' '+x.classes.map(clsName).join(', '):''}${x.owner!==(auth()||{}).u?' · '+(x.ownerName||''):''}`}))}]);
   ['icon','hue','regions','getRegions','setRegions','regionLabel'].forEach(k=>out[k]=base[k]);out.base=base;out.icon=Object.assign({mine:'<path d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>'},base.icon||{});out.hue=Object.assign({mine:'#ffb347'},base.hue||{});return out}
 /* ---- Teachers page (admin) ---- */
