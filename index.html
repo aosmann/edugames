@@ -853,6 +853,8 @@ p{margin:0}
           <div><span class="gl">How many questions</span><div class="regchips" id="edN"></div></div>
           <div><span class="gl">How hard</span><div class="regchips" id="edLv"></div></div>
         </div>
+        <div class="edmeta one"><label class="wide">Name of the set<input id="edName" maxlength="80" placeholder="Biology · The cell"></label></div>
+        <div class="edrow"><label class="check"><input type="checkbox" id="edShared"> Share with the other teachers</label></div>
       </div></section>
       <section class="gstep" id="gs2"><div class="gnum">2</div><div class="gbody">
         <h3>Ask an AI to write them</h3>
@@ -868,11 +870,6 @@ p{margin:0}
         <div class="row"><span class="impnote" id="impNote"></span><span class="sp"></span><button class="link" type="button" id="impGo">Read again</button></div>
         <details class="more"><summary>Other ways: type them yourself, paste from Excel, open a file</summary>
           <p class="gp">Use <b>+ Add a question</b> below to type them. You can also paste a table from Excel or Google Sheets (Question · Right answer · Wrong · Wrong · Wrong) into the box above, or <label class="link" style="cursor:pointer">open a JSON or CSV file<input type="file" id="impFile" accept=".json,.csv,.txt,.tsv,text/plain,application/json,text/csv" hidden></label>.</p></details>
-      </div></section>
-      <section class="gstep" id="gs4"><div class="gnum">4</div><div class="gbody">
-        <h3>Check and save</h3>
-        <div class="edmeta one"><label class="wide">Name of the set<input id="edName" maxlength="80" placeholder="Biology · The cell"></label></div>
-        <div class="edrow"><label class="check"><input type="checkbox" id="edShared"> Share with the other teachers</label></div>
       </div></section>
       <div class="sethead"><h2><span id="edCount">0</span> <span id="edCountL">questions</span></h2><button class="link" type="button" id="clearQ">Remove all</button></div>
       <div class="qrows" id="qRows"></div>
@@ -1474,7 +1471,7 @@ $('edSave').onclick=async()=>{autoName();const name=$('edName').value.trim()||($
   $('edSave').disabled=true;
   try{const {r,d}=await api('/sets',{body:{action:'save',set:{id:ed.id,name,topic:$('edTopic').value.trim(),subject:$('edSubj').value.trim(),lang:$('edLang').value,shared:$('edShared').checked,classes:[...ed.classes],q}}});
     if(!r.ok)throw new Error(d.error==='Too big'?T('The set is too big. Split it into two sets.'):NET_ERR());
-    ed.id=d.id;ed.dirty=false;toast(T('Saved')+' · '+q.length+' '+T(q.length===1?'question':'questions'));await pullSets()}
+    ed.id=d.id;ed.dirty=false;toast(T('Saved')+' · '+q.length+' '+T(q.length===1?'question':'questions'));await pullSets();ed=null;$('setEd').hidden=true;$('setsList').hidden=false;renderSets();window.scrollTo(0,0)}
   catch(e){toast(e.message||NET_ERR())}$('edSave').disabled=false};
 /* import: blocks with * for the right answer, a pasted Excel/Sheets table, CSV, JSON, or "A) … Answer: B" */
 function parseQuestions(text){text=String(text||'').replace(/\r/g,'').replace(/ /g,' ').replace(/\\[ \t]*$/gm,'').replace(/\\([\\`*_{}\[\]()#+\-.!|~>])/g,'$1').replace(/\*\*([^*\n]+)\*\*/g,'$1').replace(/^```\w*$/gm,'').replace(/^#+\s.*$/gm,'').trim();if(!text)return[];
@@ -1521,7 +1518,7 @@ async function doImport(text){const list=parseQuestions(text);
   if(!list.length){$('impNote').className='impnote warn';$('impNote').textContent=T('No questions found. Check the format (open “Which formats work?”).');return}
   ed.rows=ed.rows.filter(r=>r.slice(0,5).some(Boolean)).concat(list.map(r=>r.map(x=>String(x||''))));ed.dirty=true;paintRows();
   const bad=ed.rows.filter((r,i)=>rowErr(r,i,ed.rows)).length;$('impText').value='';
-  autoName();setTimeout(()=>$('gs4').scrollIntoView({behavior:'smooth',block:'start'}),120);
+  autoName();setTimeout(()=>$('qRows').scrollIntoView({behavior:'smooth',block:'start'}),120);
   $('impNote').className='impnote '+(bad?'warn':'ok');$('impNote').textContent=`${list.length} ${T(list.length===1?'question added':'questions added')}${bad?' · '+bad+' '+T(bad===1?'needs fixing (in red)':'need fixing (in red)'):''}`}
 $('impGo').onclick=()=>doImport($('impText').value);
 $('impFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;if(f.size>2e6){toast(T('That file is too big.'));return}doImport(await f.text());e.target.value=''};
@@ -1529,8 +1526,8 @@ $('impFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;if(f.size
 const encSet=x=>{const j=JSON.stringify({id:'set-'+x.id,n:x.name,q:x.q});return btoa(unescape(encodeURIComponent(j))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')};
 function withMine(B){const base=B.base||B,S=mySets(),list=auth()?[...S.mine,...S.shared]:[];if(!list.length)return base;
   const cid=session&&session.classId,sorted0=list.slice().sort((a,b)=>(b.classes.includes(cid)?1:0)-(a.classes.includes(cid)?1:0)),sorted=sorted0;
-  const out=base.filter(x=>x.id!=='mine').concat([{id:'mine',name:'My questions',topics:sorted.map(x=>({id:'set-'+x.id,name:x.name,d:2,set:x,grade:(()=>{const g=[...new Set((x.classes||[]).map(c=>gradeOf(clsName(c))).filter(v=>v!=null))];return g.length?g:null})(),
-    bl:`${x.q.length} ${T('questions')}${x.classes.length?' · '+T('class')+' '+x.classes.map(clsName).join(', '):''}${x.owner!==(auth()||{}).u?' · '+(x.ownerName||''):''}`}))}]);
+  const out=[{id:'mine',name:'My questions',topics:sorted.map(x=>({id:'set-'+x.id,name:x.name,d:2,set:x,grade:(()=>{const g=[...new Set((x.classes||[]).map(c=>gradeOf(clsName(c))).filter(v=>v!=null))];return g.length?g:null})(),
+    bl:`${x.q.length} ${T('questions')}${x.classes.length?' · '+T('class')+' '+x.classes.map(clsName).join(', '):''}${x.owner!==(auth()||{}).u?' · '+(x.ownerName||''):''}`}))}].concat(base.filter(x=>x.id!=='mine'));
   ['icon','hue','regions','getRegions','setRegions','regionLabel'].forEach(k=>out[k]=base[k]);out.base=base;out.icon=Object.assign({mine:'<path d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>'},base.icon||{});out.hue=Object.assign({mine:'#ffb347'},base.hue||{});return out}
 /* ---- Teachers page (admin) ---- */
 function openTeachers(){if(!auth()||auth().role!=='admin')return;document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed','false'));show('teachers');renderTeachers()}
