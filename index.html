@@ -322,10 +322,23 @@ p{margin:0}
 .ptile.off{opacity:.42}
 .pwait{display:grid;justify-items:center;gap:10px;color:#dfe3ff;font-size:clamp(18px,2vw,22px);font-weight:700;padding:18px}
 .pwait .dots i{background:var(--marker)}
-.dock{display:grid;gap:10px;justify-items:center;text-align:center;border-top:1px solid rgba(255,255,255,.15);padding-top:22px}
+.readybox{display:grid;gap:10px;justify-items:center;text-align:center;background:rgba(255,255,255,.08);border-radius:var(--r-l);padding:28px 20px;margin:8px 0 14px}.readybox[hidden]{display:none}
+.readybox .rk{margin:0;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--marker);font-size:14px}.readybox h3{margin:0;font-size:clamp(26px,3.4vw,40px);color:#fff}
+.readybtns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:6px}.readybtns .cta{width:auto;padding:16px 34px;font-size:21px}.readybtns .ghost{padding:14px 22px;font-size:17px}
+.cdown{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:rgba(18,24,48,.72);pointer-events:none}.cdown[hidden]{display:none}
+.cdown b{font-size:min(40vw,320px);font-weight:800;color:var(--marker);line-height:1;animation:cdpop .9s ease-out both;font-variant-numeric:tabular-nums}@keyframes cdpop{from{transform:scale(1.6);opacity:0}30%{opacity:1}to{transform:scale(1);opacity:.9}}
+.howbig{position:fixed;inset:0;z-index:55;background:rgba(18,24,48,.86);display:grid;place-items:center;padding:20px}.howbig[hidden]{display:none}
+.howin{background:var(--card);border-radius:var(--r-l);padding:30px 28px;max-width:860px;width:100%;display:grid;gap:18px;max-height:calc(100vh - 40px);overflow:auto}.howin h2{margin:0;font-size:clamp(26px,3vw,38px)}
+.howin .cta{width:auto;justify-self:end;padding:14px 26px;font-size:18px;background:var(--board)}
+.hsteps{list-style:none;margin:0;padding:0;display:grid;gap:14px;counter-reset:h}.hsteps li{display:grid;grid-template-columns:52px 1fr;gap:14px;align-items:center;font-size:clamp(17px,2vw,24px);font-weight:700;line-height:1.35}
+.hsteps li::before{counter-increment:h;content:counter(h);width:46px;height:46px;border-radius:50%;background:var(--board);color:#fff;display:grid;place-items:center;font-weight:800;font-size:22px}
+.hkeys{font-size:15px;color:var(--ink2);font-weight:600}.hgoal{font-size:clamp(16px,1.8vw,20px);color:var(--ink2);margin:0}
+.whow{text-align:left;background:var(--paper);border-radius:var(--r-m);padding:14px 16px;margin-top:10px}.whow .hsteps li{font-size:16px;grid-template-columns:36px 1fr;gap:10px}.whow .hsteps li::before{width:32px;height:32px;font-size:16px}.whow .hkeys{display:none}
+.clock.big{font-size:clamp(44px,6vw,76px)}
+.dock{display:grid;gap:10px;justify-items:center;text-align:center;border-bottom:1px solid rgba(255,255,255,.15);padding-bottom:22px;margin-bottom:6px}
 .dock .sub{color:#c8cff5;max-width:60ch}
-.roomgames{display:flex;flex-wrap:wrap;justify-content:center;gap:18px 22px;margin-top:6px}
-.roomgames .game{width:clamp(96px,11vw,132px)}
+.roomgames{display:flex;flex-wrap:wrap;justify-content:center;gap:14px 16px;margin-top:6px}
+.roomgames .game{width:clamp(84px,calc((min(100vw,1180px) - 220px) / 7),124px)}
 .roomgames .game span{color:#fff}
 .roomgames .game .ic{box-shadow:0 10px 0 -4px var(--board2),0 14px 24px -10px rgba(0,0,0,.5)}
 @keyframes pop{from{transform:scale(.4);opacity:0}}
@@ -722,18 +735,20 @@ p{margin:0}
       <span class="clsnote" id="clsNote"></span>
     </div>
     <p class="roomnote" id="lobbyNote"></p>
-    <section class="players" aria-live="polite">
-      <h2><em id="joinedN">0</em> <span id="joinedL">students</span></h2>
-      <div class="ptiles" id="chips"></div>
-      <p class="missing" id="missing" hidden></p>
-    </section>
     <section class="dock">
       <h2>Pick a game</h2>
       <p class="sub" id="roomSub"></p>
       <div class="roomgames" id="roomGames"></div>
     </section>
+    <section class="players" aria-live="polite">
+      <h2><em id="joinedN">0</em> <span id="joinedL">students</span></h2>
+      <div class="ptiles" id="chips"></div>
+      <p class="missing" id="missing" hidden></p>
+    </section>
   </div>
 </main>
+<div class="cdown" id="cDown" hidden aria-live="assertive"><b id="cDownN">3</b></div>
+<div class="howbig" id="howBig" hidden role="dialog" aria-labelledby="howT"><div class="howin"><h2 id="howT"></h2><div id="howBody"></div><button class="cta" type="button" id="howClose">Got it</button></div></div>
 <div class="qrbig" id="qrBig" hidden role="dialog" aria-label="QR code to join the class">
   <div class="qrbox" id="qrBigBox"></div>
   <div class="code" id="qrBigCode"></div>
@@ -754,6 +769,12 @@ p{margin:0}
       <div class="clock" id="liveClock" aria-live="off"></div>
       <button class="endbtn" type="button" id="endRound">End round</button>
     </div>
+    <section class="readybox" id="readyBox" hidden aria-live="polite">
+      <p class="rk">Get ready</p>
+      <h3 id="readyT"></h3>
+      <p class="meta" id="readyN"></p>
+      <div class="readybtns"><button class="cta go" type="button" id="goRound">Start the game</button><button class="ghost" type="button" id="howBtn">How to play</button></div>
+    </section>
     <section class="race" id="raceBox" hidden aria-label="Race track">
       <iframe id="specFrame" title="Race track, live" allow="autoplay"></iframe>
       <div class="racebar">
@@ -942,6 +963,7 @@ p{margin:0}
     <p class="big" id="wHi">You're in</p>
     <p id="wMsg">Waiting for your teacher to start the game.</p>
     <p class="err" id="wErr" hidden></p>
+    <div class="whow" id="wHow" hidden></div>
   </div>
 </main>
 
@@ -1166,6 +1188,12 @@ function renderSetup(){const g=sel.game,B=sel.bank,s=curSub(),t=curTop();
     row.append(chip('all','All',all));B.regions.forEach(r=>row.append(chip(r.id,r.name,!all&&cur.includes(r.id))));box.append(row)}
   Object.keys(sel.values).forEach(k=>{if(k.slice(0,2)==='o_'&&!(t&&t.opts&&t.opts.some(o=>'o_'+o.key===k)))delete sel.values[k]});
   if(t&&t.opts)topicOptsUI(t,box);
+  if(t&&mode==='class'&&!(g.multiplayer&&g.multiplayer.race)){sel.lim=sel.lim||store.get('edu-portal-lim',{q:'',t:''});
+    const row=(key,label,opts)=>{const lab=el('div','sec-t optsec',T(label));box.append(lab);const r=el('div','regchips');opts.forEach(([v,l])=>{const b=el('button',null,T(l));b.type='button';b.setAttribute('aria-pressed',String(sel.lim[key]||'')===v);
+      b.onclick=()=>{sel.lim[key]=v;store.set('edu-portal-lim',sel.lim);renderSetup()};r.append(b)});box.append(r)};
+    row('q','Questions per student',[['','No limit'],['10','10'],['15','15'],['20','20'],['30','30']]);
+    row('t','Round time',[['','The game decides'],['180','3 min'],['300','5 min'],['600','10 min'],['900','15 min']]);
+    if(HOWTO[g.id]){const hb=el('button','link','How to play '+g.name);hb.type='button';hb.style.marginTop='10px';hb.onclick=()=>showHow(g.id,g.name);box.append(hb)}}
   if(t)(g.settings||[]).filter(st=>!(t.set&&st.key==='level')).forEach(st=>{let v=sel.values[st.key];const cu=st.custom;sel.cust=sel.cust||{};
     Object.keys(sel.values).forEach(k=>{if(k.startsWith(st.key+'_'))delete sel.values[k]});
     const isC=!!(cu&&sel.cust[st.key]&&sel.cust[st.key].on);let cv=null;
@@ -1223,8 +1251,9 @@ function roundFromSel(){const g=sel.game,s=curSub(),t=curTop(),ol=t.regions||t.s
   return{id:'r'+Date.now().toString(36),game:g.id,gameName:g.name,base:g.base,subject:s.id,topic:t.id,topicName:t.unit?`${t.name} · ${t.unit}`:t.name,
     regionsLabel:t.regions&&sel.bank.regionLabel?sel.bank.regionLabel(sel.values.regions?sel.values.regions.split(','):null):ol,
     race:mode==='class'&&g.multiplayer&&g.multiplayer.race?{seed:1}:null,lang:I18N.lang,
+    lim:mode==='class'&&!(g.multiplayer&&g.multiplayer.race)&&sel.lim&&(sel.lim.q||sel.lim.t)?{q:+sel.lim.q||0,t:+sel.lim.t||0}:null,
     qset:t.set?encSet(t.set):null,setId:t.set?t.set.id:null,subjectName:t.set?(t.set.subject||T('My questions')):s.name,
-    values:Object.assign({},sel.values),label:`${g.name} · ${t.name}${ol?' · '+ol:''}${t.set?'':' · '+(LEVELS[sel.values.level]||'')}${sel.values.time?' · '+(sel.values.time>=120?sel.values.time/60+' min':sel.values.time+' sec'):''}`}}
+    values:Object.assign({},sel.values),label:`${g.name} · ${t.name}${ol?' · '+ol:''}${mode==='class'&&sel.lim&&(sel.lim.q||sel.lim.t)&&!(g.multiplayer&&g.multiplayer.race)?' · '+limLabel({q:+sel.lim.q||0,t:+sel.lim.t||0}):''}${t.set?'':' · '+(LEVELS[sel.values.level]||'')}${sel.values.time?' · '+(sel.values.time>=120?sel.values.time/60+' min':sel.values.time+' sec'):''}`}}
 function gameURL(r,lock){const u=new URL(r.base);u.searchParams.set('topic',r.topic);u.searchParams.set('lang',r.lang||I18N.lang);Object.entries(r.values).forEach(([k,v])=>u.searchParams.set(k,v));if(lock)u.searchParams.set('lock','1');if(r.qset)u.searchParams.set('qset',r.qset);
   if(lock&&r.race){u.searchParams.set('race','1');u.searchParams.set('seed',r.race.seed)}return u.href}
 /* race games (game.json multiplayer.race): one seed per round, a spectate view for the teacher */
@@ -1666,6 +1695,19 @@ function renderRoomGames(){const box=$('roomGames');box.innerHTML='';
   GAMES.forEach(g=>{const b=el('button','game');b.type='button';b.style.setProperty('--c',g.color||'#2b3990');
     const ic=el('span','ic');const im=el('img');im.src=g.base+(g.icon||'icon-512.png');im.alt='';ic.append(im);
     b.append(ic,el('span',null,g.name));b.onclick=()=>openSetup(g);box.append(b)})}
+/* ---------------- how to play: a short card per game, for the board and the students' Get ready screen ---------------- */
+const HOWTO={
+ lanefall:{goal:'A runner: every question is a gate on the road.',steps:['Read the question at the top.','Swipe left or right into the lane with the right answer.','Swipe up to jump over barriers. A wrong lane or a crash costs a heart.'],keys:'Keyboard: ← → to change lane, ↑ or Space to jump.'},
+ stackfall:{goal:'Build the tallest tower before the clock runs out.',steps:['Read the question.','Tap the right answer: a new floor drops onto the tower and the clock gets a few seconds.','A wrong answer knocks a floor off and takes time away.'],keys:'Keyboard: ← ↓ → for the three answers.'},
+ slicefall:{goal:'The answers fly up as fruit.',steps:['Read the question.','Swipe through the fruit with the right answer.','Don\'t slice the bombs or the wrong fruit: they cost a life and time.'],keys:'With a mouse: drag across the fruit.'},
+ hoopfall:{goal:'Three hoops, three answers.',steps:['Read the question on the board.','Flick the ball up into the hoop with the right answer.','A swish gives a bonus; a streak multiplies the points.'],keys:'Keyboard: 1, 2 or 3.'},
+ blockfall:{goal:'Falling blocks, driven by your answers.',steps:['Read the question while the block falls.','Answer right and the block slides into the best spot.','Clear full rows before the stack reaches the top. Wrong or slow answers drop the block anywhere.'],keys:''},
+ kartfall:{goal:'A kart race: the answers are painted on the road.',steps:['Read the question.','Steer left or right and drive over the right answer for a turbo boost.','Dodge cones, hay bales and oil. The race starts when your teacher says go.'],keys:'Keyboard: ← → to steer, ↑ for turbo.'},
+ goalfall:{goal:'A penalty shootout.',steps:['Read the question: three answers hang in the goal.','Swipe from the ball to the right answer to beat the keeper.','Score in a row for double and triple points.'],keys:'Keyboard or mouse: click the answer, or press 1 · 2 · 3.'}};
+function howEl(id){const h=HOWTO[id];if(!h)return null;const box=el('div');box.append(el('p','hgoal',T(h.goal)));const ol=el('ol','hsteps');h.steps.forEach(x=>ol.append(el('li',null,T(x))));box.append(ol);if(h.keys)box.append(el('p','hkeys',T(h.keys)));return box}
+function showHow(id,name){const b=howEl(id);if(!b){toast(T('No how-to for this game yet.'));return}$('howT').textContent=T('How to play')+' '+name;const body=$('howBody');body.innerHTML='';body.append(b);$('howBig').hidden=false;$('howClose').focus()}
+$('howClose').onclick=()=>{$('howBig').hidden=true};$('howBig').addEventListener('click',e=>{if(e.target===$('howBig'))$('howBig').hidden=true});
+$('howBtn').onclick=()=>{if(round)showHow(round.game,round.gameName)};
 /* ---------------- class lists: kept on the class server (not in this public page), for signed-in teachers ---------------- */
 const classes=()=>store.get('edu-portal-classes-cache',[]);
 const curRoster=()=>session&&session.classId?classes().find(c=>c.id===session.classId)||null:null;
@@ -1734,8 +1776,8 @@ function onStudent(conn){let name=null;
       const prev=conns.get(name)||{status:'waiting',score:0,right:0,asked:0,streak:0};prev.conn=conn;prev.avatar=AVMAP[m.avatar]?m.avatar:(prev.avatar||randomAvatar());conns.set(name,prev);
       if(!session.players.includes(name))session.players.push(name);
       conn.send({t:'welcome',name,code:session.code,lang:I18N.lang});
-      if(round&&!round.closed&&!(round.results||[]).some(x=>x.player===name)){Object.assign(prev,{status:'playing',score:0,right:0,asked:0,streak:0});conn.send({t:'start',round:pub(round)})}
-      paintLobby();paintLive();pushMode();return}
+      if(round&&!round.closed&&!(round.results||[]).some(x=>x.player===name)){if(round.ready){prev.status='waiting';conn.send({t:'ready',round:pub(round)})}else{Object.assign(prev,{status:'playing',score:0,right:0,asked:0,streak:0});conn.send({t:'start',round:pub(round)})}}
+      paintLobby();paintLive();paintReady();pushMode();return}
     if(!name)return;const s=conns.get(name);if(!s)return;
     if(m.t==='avatar'){if(AVMAP[m.avatar]&&s.avatar!==m.avatar){s.avatar=m.avatar;paintLobby();paintLive()}return}
     if(m.t==='progress'&&round&&m.round===round.id){
@@ -1747,26 +1789,36 @@ function onStudent(conn){let name=null;
       paintLive()}
     if(m.t==='kstate'&&round&&round.race&&m.round===round.id&&m.s&&typeof m.s==='object'){const k=m.s;s.k={d:+k.d||0,x:+k.x||0,lap:+k.lap||1,fin:!!k.fin,at:Date.now()};return}
     if(m.t==='result'&&round&&m.round===round.id&&m.result){
-      const res=Object.assign({},m.result,{player:name,receivedAt:new Date().toISOString()});if(round.regionsLabel&&!res.regionsLabel)res.regionsLabel=round.regionsLabel;
+      const res=Object.assign({game:round.game,subject:round.subject,topic:round.topic,topicName:round.topicName,level:+((round.values||{}).level)||null},m.result,{player:name,receivedAt:new Date().toISOString()});if(round.regionsLabel&&!res.regionsLabel)res.regionsLabel=round.regionsLabel;
       round.results=(round.results||[]).filter(x=>x.player!==name);round.results.push(res);saveSession();
       Object.assign(s,{status:'done',score:res.score||0,right:res.right||0,asked:res.asked||0});paintLive();
       const playing=[...conns.values()].filter(c=>online(c)&&c.status==='playing').length;
       if(!playing&&!round.closed)setTimeout(()=>{if(round&&!round.closed&&![...conns.values()].some(c=>online(c)&&c.status==='playing'))endRound()},1800)}});
   conn.on('close',()=>{pending.delete(conn);if(name&&conns.get(name)&&conns.get(name).conn===conn){paintLobby();paintLive();pushMode()}})}
-const pub=r=>({id:r.id,url:gameURL(r,true),gameName:r.gameName,topicName:r.topicName,race:!!r.race,raceStarted:!!r.raceStarted});
+const pub=r=>({id:r.id,url:gameURL(r,true),game:r.game,gameName:r.gameName,topicName:r.topicName,race:!!r.race,raceStarted:!!r.raceStarted,ready:!!r.ready,lim:r.lim||null});
 
 /* start a round on every connected device */
 function startRound(r){
   round=Object.assign({},r,{id:'r'+Date.now().toString(36),startedAt:new Date().toISOString(),results:[],closed:false});
-  if(round.race)round.race={seed:Math.random()*1e9|0};round.raceStarted=false;
+  if(round.race)round.race={seed:Math.random()*1e9|0};round.raceStarted=false;round.ready=!round.race;
   session.rounds.push(round);session.last=r;saveSession();
-  conns.forEach(c=>{Object.assign(c,{status:'waiting',score:0,right:0,asked:0,streak:0,flash:null,delta:0});if(online(c)){c.status='playing';c.conn.send({t:'start',round:pub(round)})}});
+  conns.forEach(c=>{Object.assign(c,{status:'waiting',score:0,right:0,asked:0,streak:0,flash:null,delta:0});if(online(c)){if(round.ready)c.conn.send({t:'ready',round:pub(round)});else{c.status='playing';c.conn.send({t:'start',round:pub(round)})}}});
   conns.forEach(c=>{c.k=null});setupRace();
   $('podium').hidden=true;$('lb').innerHTML='';LB.clear();show('liveScr');paintLive();
-  clearInterval(clockT);clockT=setInterval(paintClock,500);paintClock()}
+  paintReady();clearInterval(clockT);clockT=setInterval(paintClock,500);paintClock()}
+function paintReady(){const rb=$('readyBox');rb.hidden=!(round&&round.ready&&!round.closed);if(rb.hidden)return;
+  $('readyT').textContent=`${round.gameName} · ${round.topicName}`;const n=[...conns.values()].filter(online).length;
+  $('readyN').textContent=`${n} ${T(n===1?'student is ready':'students are ready')}${round.lim?' · '+limLabel(round.lim):''}`;$('howBtn').hidden=!HOWTO[round.game]}
+const limLabel=l=>[l.q?`${l.q} ${T('questions')}`:'',l.t?`${Math.round(l.t/60)} min`:''].filter(Boolean).join(' · ');
+/* the teacher starts everyone at once: 3-2-1 on every screen, then the games open */
+$('goRound').onclick=()=>{if(!round||!round.ready)return;round.ready=false;round.startedAt=new Date(Date.now()+3200).toISOString();saveSession();
+  conns.forEach(c=>{if(online(c)&&!(round.results||[]).some(x=>x.conn===c)){c.status='playing';c.conn.send({t:'start',round:pub(round),count:3})}});
+  paintReady();countdown(3);paintLive()};
+function countdown(n){const box=$('cDown'),b=$('cDownN');box.hidden=false;let k=n;const step=()=>{if(k<=0){box.hidden=true;return}b.textContent=String(k);b.style.animation='none';void b.offsetWidth;b.style.animation='';k--;setTimeout(step,1000)};step()}
 function paintClock(){if(!round)return;const el_=$('liveClock');
-  const t=(Date.now()-Date.parse(round.startedAt))/1000;
-  if(round.closed){el_.textContent='';return}
+  if(round.closed||round.ready){el_.textContent='';el_.classList.remove('big');return}
+  const t=Math.max(0,(Date.now()-Date.parse(round.startedAt))/1000),lim=round.lim&&round.lim.t;el_.classList.toggle('big',!!lim);
+  if(lim){const left=lim-t;el_.textContent=fmtClock(Math.max(0,left));el_.classList.toggle('low',left<=30);if(left<=0)endRound();return}
   if(round.values.time){const left=round.values.time+4-t;el_.textContent=fmtClock(Math.max(0,left));el_.classList.toggle('low',left<=10)}
   else{el_.textContent=fmtClock(t);el_.classList.remove('low')}}
 
@@ -1897,10 +1949,16 @@ function startJoin(code,order){order=order||[joinRelay,...RELAYS.map((x,j)=>j).f
   if(student&&student.conn)student.conn.close();jMode=null;jGuest=false;$('jWho').hidden=true;$('jBtn').disabled=true;$('jBtn').textContent='Connecting…';
   const st={code,name:null,want:null,conn:null,cur:null,
     fromGame(m){const conn=st.conn,cur=st.cur;if(!conn||!cur||!st.name)return;
-      if(m.type==='edu-progress')conn.send({t:'progress',round:cur.id,score:m.score,right:m.right,asked:m.asked,last:m.last||null});
+      if(m.type==='edu-progress'){if(st.done)return;conn.send({t:'progress',round:cur.id,score:m.score,right:m.right,asked:m.asked,last:m.last||null});
+        const L=m.last;if(L&&!L.ok)(st.missed=st.missed||[]).push({q:L.q,answer:L.answer,picked:L.picked,img:L.img||null});
+        /* question limit: after N answers the portal ends this student's run and sends the result itself */
+        if(cur.lim&&cur.lim.q&&(m.asked||0)>=cur.lim.q&&!cur.sent){st.done=true;cur.sent=true;
+          const g=GAMES.find(x=>x.base&&cur.url.startsWith(x.base))||{};
+          conn.send({t:'result',round:cur.id,result:{game:cur.game||g.id,score:m.score||0,right:m.right||0,asked:m.asked||0,missed:st.missed||[],limit:cur.lim.q,at:new Date().toISOString()}});
+          closeStage();$('wHi').textContent=T('Done!');$('wMsg').textContent=`${m.right||0} ${T('of')} ${m.asked||0} ${T('right')}. ${T('Wait for the others to finish.')}`;$('wHow').hidden=true;show('waitScr')}}
       if(m.type==='edu-state'&&cur.race&&m.state)conn.send({t:'kstate',round:cur.id,s:m.state});
       if(m.type==='edu-ready'&&cur.race&&cur.raceStarted)toGame({type:'edu-go'});
-      if(m.type==='edu-result'){conn.send({t:'result',round:cur.id,result:m.result});cur.sent=true}}};
+      if(m.type==='edu-result'){if(cur.sent&&st.done)return;conn.send({t:'result',round:cur.id,result:m.result});cur.sent=true}}};
   student=st;
   const ord=n=>n+(n%10===1&&n%100!==11?'st':n%10===2&&n%100!==12?'nd':n%10===3&&n%100!==13?'rd':'th');
   st.conn=guestRoom(code,{
@@ -1913,9 +1971,12 @@ function startJoin(code,order){order=order||[joinRelay,...RELAYS.map((x,j)=>j).f
       if(m.lang&&m.lang!==I18N.lang){I18N.set(m.lang);paintLang()}
       if(m.t==='mode'){if(st.name&&!m.msg)return;jMode=m;if(!$('join').hidden||m.msg){show('join');paintWho()}return}
       if(m.t==='welcome'){st.name=m.name;store.set('edu-player',st.want&&st.want.guest?m.name:(m.name));$('wHi').textContent=`You're in, ${m.name}`;$('wMsg').textContent='Waiting for your teacher to start the game.';$('wErr').hidden=true;if(!st.cur)show('waitScr');return}
-      if(m.t==='start'){st.cur=m.round;let url=m.round.url;
+      if(m.t==='ready'){st.cur=null;$('wHi').textContent=T('Get ready!');$('wMsg').textContent=`${m.round.gameName} · ${m.round.topicName}`+(m.round.lim?` · ${limLabel(m.round.lim)}`:'')+'. '+T('Your teacher starts the game in a moment.');
+        const w=$('wHow');w.innerHTML='';const h=howEl(m.round.game);w.hidden=!h;if(h){w.append(el('b',null,T('How to play')),h)}closeStage();show('waitScr');return}
+      if(m.t==='start'){st.cur=m.round;st.missed=[];st.done=false;let url=m.round.url;$('wHow').hidden=true;
         if(st.cur.race){const u=new URL(url);u.searchParams.set('me',st.name);const a=avURL(myAvatar);if(a)u.searchParams.set('avatar',a);url=u.href}
-        openStage(url,`${m.round.gameName} · ${m.round.topicName}`,st.name);return}
+        const go=()=>{if(student!==st||st.cur!==m.round)return;openStage(url,`${m.round.gameName} · ${m.round.topicName}`,st.name)};
+        if(m.count){show('waitScr');countdown(m.count);setTimeout(go,m.count*1000)}else go();return}
       if(m.t==='kpeers'&&st.cur&&st.cur.race){toGame({type:'edu-peers',peers:m.peers||[]});return}
       if(m.t==='kgo'&&st.cur&&st.cur.race){st.cur.raceStarted=true;toGame({type:'edu-go'});return}
       if(m.t==='stop'){st.cur=null;closeStage();$('wHi').textContent=m.rank?`You came ${ord(m.rank)} of ${m.of}`:'Round over';$('wMsg').textContent='Your teacher is picking the next game. Keep this page open.';show('waitScr');return}
