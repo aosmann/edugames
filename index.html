@@ -470,6 +470,8 @@ p{margin:0}
 .bars .tr i.mid{background:#e9a23b}.bars .tr i.low{background:var(--bad)}
 .bars small{grid-column:1/-1;font-size:13px;color:var(--ink2)}
 .inote{font-size:13px;color:var(--ink2)}
+.rtabrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 2px}.rtabrow .rtabs{margin:0}
+.gspill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:11px 16px;font-weight:800;font-size:15px;text-decoration:none;background:var(--card);color:#0f7a49;box-shadow:0 1px 0 var(--line),0 4px 14px -6px rgba(24,32,61,.25)}.gspill[hidden]{display:none}.gspill svg{width:20px;height:20px}.gspill.off{color:var(--ink2)}
 .rtabs{display:flex;gap:4px;padding:4px;border-radius:999px;background:#e3e7f3;width:max-content;max-width:100%;overflow-x:auto;margin:4px 0 2px}
 .rtabs button{border:0;background:none;padding:9px 16px;border-radius:999px;font-weight:700;color:var(--ink2);white-space:nowrap}
 .rtabs button[aria-selected=true]{background:var(--card);color:var(--ink);box-shadow:0 1px 0 var(--line),0 2px 8px rgba(24,32,61,.08)}
@@ -791,7 +793,7 @@ p{margin:0}
     <p class="syncnote" id="syncNote"></p>
     <button class="link" type="button" id="rSignIn" hidden>Sign in</button>
     <div class="sum" id="sum"></div>
-    <div class="rtabs" role="tablist" id="rTabs"><button type="button" role="tab" data-rtab="overview">Overview</button><button type="button" role="tab" data-rtab="students">Students</button><button type="button" role="tab" data-rtab="questions">Questions</button><button type="button" role="tab" data-rtab="table">All results</button></div>
+    <div class="rtabrow"><div class="rtabs" role="tablist" id="rTabs"><button type="button" role="tab" data-rtab="overview">Overview</button><button type="button" role="tab" data-rtab="students">Students</button><button type="button" role="tab" data-rtab="questions">Questions</button><button type="button" role="tab" data-rtab="table">All results</button></div><a class="gspill" id="gsPill" href="#" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M4 9h16M4 14.5h16M10 9v11.5"/></svg><span id="gsPillT">Google Sheets</span></a></div>
     <div class="ins" id="rOv" data-rpane="overview"></div>
     <div id="rStu" data-rpane="students"></div>
     <div class="ins" id="ins" data-rpane="questions" hidden></div>
@@ -1329,7 +1331,7 @@ async function openSheets(){modal(box=>box.append(el('h2',null,'Google Sheets'),
       const st=el('p');st.style.fontWeight='700';st.style.color='var(--ink)';st.textContent=(g.email?g.email+' · ':'')+(g.at?T('last sent')+' '+fmtDate(g.at):T('waiting for the first results'));box.append(st);
       if(g.err==='failed')box.append(el('p','merr',T('Couldn\'t reach Google last time. It tries again by itself in a few minutes.')));
       const row=el('div','mrow'),dis=el('button','plain','Disconnect'),open=el('a','cta','Open my sheet');dis.type='button';open.href=g.url;open.target='_blank';open.rel='noopener';open.style.textDecoration='none';
-      dis.onclick=()=>confirmBox(T('Disconnect Google Sheets?'),T('New results stop going to the sheet. The sheet and everything in it stays in your Google Drive.'),T('Disconnect'),async()=>{const {r}=await api('/google',{body:{action:'disconnect'}});if(!r.ok)throw 0;closeModal();toast(T('Disconnected'))},true);
+      dis.onclick=()=>confirmBox(T('Disconnect Google Sheets?'),T('New results stop going to the sheet. The sheet and everything in it stays in your Google Drive.'),T('Disconnect'),async()=>{const {r}=await api('/google',{body:{action:'disconnect'}});if(!r.ok)throw 0;closeModal();toast(T('Disconnected'));gsAt=0;paintGsPill()},true);
       const fresh=el('button','plain','Make a fresh sheet');fresh.type='button';
       fresh.onclick=()=>confirmBox(T('Make a fresh sheet?'),T('EduGames makes a new, clean sheet in your Google Drive with all your reports so far, and keeps filling that one. The current sheet stays in your Drive.'),T('Make a fresh sheet'),async()=>{
         const {r}=await api('/google',{body:{action:'rebuild',lang:I18N.lang}});if(!r.ok)throw 0;toast(T('The new sheet is being filled. Open it in a minute.'),4000);openSheets()});
@@ -1344,7 +1346,7 @@ async function openSheets(){modal(box=>box.append(el('h2',null,'Google Sheets'),
       try{const {r,d}=await api('/google',{body:{action:'start',lang:I18N.lang}});if(!r.ok||!d.url)throw 0;if(w){w.location.href=d.url;const t=setInterval(()=>{if(w.closed){clearInterval(t);if(!$('modal').hidden)openSheets()}},1000)}else location.href=d.url}
       catch(x){if(w)w.close();err.textContent=x&&x.message?x.message:NET_ERR()}go.disabled=false}})}
 const okRow=box=>{const row=el('div','mrow'),ok=el('button','cta','OK');ok.type='button';ok.onclick=closeModal;row.append(ok);box.append(row)};
-window.addEventListener('message',e=>{if(e.data&&e.data.type==='edu-google'){if(e.data.ok)toast(T('Google Sheets connected'));if(!$('modal').hidden)openSheets()}});
+window.addEventListener('message',e=>{if(e.data&&e.data.type==='edu-google'){gsAt=0;paintGsPill();if(e.data.ok)toast(T('Google Sheets connected'));if(!$('modal').hidden)openSheets()}});
 /* ---------------- My questions: a teacher's own question sets ----------------
    kept on the class server (/sets); a set travels to the game inside its address (?qset=), so students need nothing */
 const mySets=()=>store.get('edu-sets-cache',{mine:[],shared:[]});
@@ -1835,7 +1837,13 @@ function row(x,ctx){const g=GAMES.find(g=>g.id===x.game);return{at:x.at||x.recei
   seconds:x.timeUsed??x.duration??'',missed:x.missed||[],log:ctx.round&&ctx.round.log?ctx.round.log.filter(e=>e.p===ctx.player):null}}
 function filtered(){const g=$('fGame').value,s=$('fSession').value,c=$('fClass').value,f=$('fFrom').value,t=$('fTo').value,n=$('fStudent').value.trim().toLowerCase();
   return allRows().filter(r=>(!g||r.game===g)&&(!s||r.sessionId===s)&&(!c||r.cls===c)&&(!f||dayKey(r.at)>=f)&&(!t||dayKey(r.at)<=t)&&(!n||r.student.toLowerCase().includes(n)))}
-function renderReports(fromPull){if(!fromPull)pullReports();paintSync();
+let gsInfo=null,gsAt=0;
+async function paintGsPill(){const p=$('gsPill');if(!auth()){p.hidden=true;return}
+  if(Date.now()-gsAt>60000){gsAt=Date.now();try{const {r,d}=await api('/google');gsInfo=r.ok?d:null}catch(e){gsInfo=null}}
+  if(!gsInfo||!gsInfo.available){p.hidden=true;return}p.hidden=false;
+  if(gsInfo.connected&&gsInfo.url){p.href=gsInfo.url;p.target='_blank';p.rel='noopener';p.className='gspill';$('gsPillT').textContent=T('Open in Google Sheets');p.onclick=null}
+  else{p.href='#';p.removeAttribute('target');p.className='gspill off';$('gsPillT').textContent=T('Connect Google Sheets');p.onclick=e=>{e.preventDefault();openSheets()}}}
+function renderReports(fromPull){if(!fromPull)pullReports();paintSync();paintGsPill();
   const gs=$('fGame'),gv=gs.value;gs.innerHTML='';gs.append(new Option('All games',''));
   const ids=new Set([...GAMES.map(g=>g.id),...sessions().flatMap(s=>(s.rounds||[]).map(r=>r.game))]);
   ids.forEach(id=>{const g=GAMES.find(x=>x.id===id);gs.append(new Option(g?g.name:id,id))});gs.value=gv;
