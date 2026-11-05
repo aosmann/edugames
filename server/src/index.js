@@ -340,6 +340,7 @@ export class Store {
   gRedirect() { return (this.env.PUBLIC_URL || 'https://edugames-class.edugames.workers.dev') + '/google/callback'; }
   async google(req, me) {
     const key = 'gs:' + me.u, g = await this.state.storage.get(key);
+    if (req.method !== 'POST' && g && g.refresh && g.v === 3 && g.rv !== 2) { g.rv = 2; g.reset = true; await this.state.storage.put(key, g); await this.gQueue(['__reset'], 1000); }
     if (req.method !== 'POST' && g && g.refresh && (g.v !== 3 || !g.pct)) { const meta = await this.state.storage.list({prefix: 'm:'}); await this.gQueue([...meta].filter(([, m]) => me.role === 'admin' || m.owner === me.u).map(([k]) => k.slice(2)).slice(0, 1), 1000); }
     if (req.method !== 'POST') return this.json({available: this.gOn(), connected: !!(g && g.refresh), url: g && g.url, email: g && g.email, at: g && g.at, err: g && g.err, all: me.role === 'admin', old: g && g.old || null, v: g && g.v || 1, tables: !!(g && g.tableOk), tableErr: g && !g.tableOk && g.tableErr || null});
     const b = await this.body(req);
@@ -449,7 +450,8 @@ export class Store {
   async gTable(tok, g, base, key, sheetId, title, cols, addSheet) {
     const L = SHEET_TX[g.lang] || SHEET_TX.en;
     const hdr = cols.map(k => L.lang ? COLS[k][1] : COLS[k][0]), tableId = 't' + sheetId;
-    const pre = addSheet ? [{addSheet: {properties: {sheetId, title, gridProperties: {frozenRowCount: 1}}}}] : [];
+    const tc = key === 'all' ? {red: .1, green: .61, blue: .37} : key === 'mis' ? {red: .84, green: .26, blue: .23} : null;
+    const pre = addSheet ? [{addSheet: {properties: {sheetId, title, gridProperties: {frozenRowCount: 1}, ...(tc ? {tabColorStyle: {rgbColor: tc}} : {})}}}] : [];
     const pi = cols.indexOf('pct');
     const look = [{updateSheetProperties: {properties: {sheetId, gridProperties: {hideGridlines: true}}, fields: 'gridProperties.hideGridlines'}},
       {updateDimensionProperties: {range: {sheetId, dimension: 'COLUMNS', startIndex: 0, endIndex: cols.length}, properties: {pixelSize: 120}, fields: 'pixelSize'}},
@@ -483,7 +485,7 @@ export class Store {
     g.tabs[key] = {sheetId, tableId: null, title};
   }
   /* Overview: students, classes and the most missed questions, as live formulas over the tables */
-  async gOverview(tok, g, base, L, LY) {
+  async gOverview(tok, g, base, L, LY, formulasOnly) {
     const OV = g.ov ?? 0;
     const A = LY.all, M = LY.mis, ca = k => colLetter(A.indexOf(k)), cm = k => colLetter(M.indexOf(k)), O = L.ov, all = `'${L.tabs.all}'!A:${colLetter(A.length - 1)}`, mis = `'${L.tabs.mis}'!A:${colLetter(M.length - 1)}`;
     const h = k => (L.lang ? COLS[k][1] : COLS[k][0]);
@@ -505,6 +507,8 @@ export class Store {
     const grad2 = c => ({addConditionalFormatRule: {index: 0, rule: {ranges: [{sheetId: OV, startRowIndex: sec + 2, endRowIndex: 2000, startColumnIndex: c, endColumnIndex: c + 1}],
       gradientRule: {minpoint: {colorStyle: {rgbColor: {red: .96, green: .55, blue: .52}}, type: 'NUMBER', value: '0.3'}, midpoint: {colorStyle: {rgbColor: {red: 1, green: .87, blue: .55}}, type: 'NUMBER', value: '0.65'}, maxpoint: {colorStyle: {rgbColor: {red: .55, green: .83, blue: .63}}, type: 'NUMBER', value: '0.95'}}}}});
     const band = (c, n) => ({addBanding: {bandedRange: {range: {sheetId: OV, startRowIndex: sec + 2, endRowIndex: 400, startColumnIndex: c, endColumnIndex: c + n}, rowProperties: {firstBandColorStyle: {rgbColor: {red: 1, green: 1, blue: 1}}, secondBandColorStyle: {rgbColor: {red: .96, green: .97, blue: .99}}}}}});
+    if (formulasOnly) return this.gBatch(tok, base, [put(3, 0, [[`=COUNTA(${allc('student')})`]]), put(3, 2, [[`=COUNTUNIQUE(${allc('student')})`]]), put(3, 4, [[`=IFERROR(SUM(${allc('right')})/SUM(${allc('asked')}),0)`]]),
+      put(sec + 1, 0, [[q1]]), put(sec + 1, 7, [[q2]]), put(sec + 1, 11, [[q3]])]);
     await this.gBatch(tok, base, [put(0, 0, [[O.title], [O.note]]), bold(0, 0, 20),
       {repeatCell: {range: {sheetId: OV, startRowIndex: 1, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: 1}, cell: {userEnteredFormat: {textFormat: {foregroundColorStyle: {rgbColor: {red: .35, green: .38, blue: .54}}}}}, fields: 'userEnteredFormat.textFormat'}},
       ...kp(0, O.results, `=COUNTA(${allc('student')})`), ...kp(2, h('student'), `=COUNTUNIQUE(${allc('student')})`), ...kp(4, h('pct'), `=IFERROR(SUM(${allc('right')})/SUM(${allc('asked')}),0)`, true),
@@ -531,8 +535,14 @@ export class Store {
   /* empty a sheet's data tabs (keeps the tabs, tables and Overview) and send every session again */
   async gReset(u, g, tok) {
     const base = (this.env.GOOGLE_TEST_URL || 'https://sheets.googleapis.com') + '/v4/spreadsheets/' + g.sheet;
-    const reqs = Object.values(g.tabs || {}).map(t => ({updateCells: {range: {sheetId: t.sheetId, startRowIndex: 1, startColumnIndex: 0}, fields: 'userEnteredValue'}}));
-    if (reqs.length) { const r = await this.gBatch(tok, base, reqs); if (!r.ok && r.status !== 400) throw new Error('reset'); }
+    /* remove the data tabs and make them again (same file, same link); then point the Overview formulas at the new tabs */
+    const L = SHEET_TX[g.lang] || SHEET_TX.en, LY = LAYOUT(!!g.admin), old = Object.values(g.tabs || {}).map(t => t.sheetId).filter(id => id !== (g.ov ?? 0));
+    let r = await this.gBatch(tok, base, old.map(sheetId => ({deleteSheet: {sheetId}})));
+    if (!r.ok) for (const sheetId of old) await this.gBatch(tok, base, [{deleteSheet: {sheetId}}]);
+    g.tabs = {}; g.next = (g.next || 10) + 2;
+    await this.gTable(tok, g, base, 'all', g.next - 1, L.tabs.all, LY.all, true);
+    await this.gTable(tok, g, base, 'mis', g.next, L.tabs.mis, LY.mis, true);
+    await this.gOverview(tok, g, base, L, LY, true).catch(() => {});
     { const old = await this.state.storage.list({prefix: 'gx:' + u + ':'}); if (old.size) await this.state.storage.delete([...old.keys()]); }
     const meta = await this.state.storage.list({prefix: 'm:'});
     const q = (await this.state.storage.get('gq')) || [];
