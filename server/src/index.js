@@ -339,7 +339,7 @@ export class Store {
   gRedirect() { return (this.env.PUBLIC_URL || 'https://edugames-class.edugames.workers.dev') + '/google/callback'; }
   async google(req, me) {
     const key = 'gs:' + me.u, g = await this.state.storage.get(key);
-    if (req.method !== 'POST' && g && g.refresh && g.v !== 3) { const meta = await this.state.storage.list({prefix: 'm:'}); await this.gQueue([...meta].filter(([, m]) => me.role === 'admin' || m.owner === me.u).map(([k]) => k.slice(2)).slice(0, 1), 1000); }
+    if (req.method !== 'POST' && g && g.refresh && (g.v !== 3 || !g.pct)) { const meta = await this.state.storage.list({prefix: 'm:'}); await this.gQueue([...meta].filter(([, m]) => me.role === 'admin' || m.owner === me.u).map(([k]) => k.slice(2)).slice(0, 1), 1000); }
     if (req.method !== 'POST') return this.json({available: this.gOn(), connected: !!(g && g.refresh), url: g && g.url, email: g && g.email, at: g && g.at, err: g && g.err, all: me.role === 'admin', old: g && g.old || null, v: g && g.v || 1, tables: !!(g && g.tableOk), tableErr: g && !g.tableOk && g.tableErr || null});
     const b = await this.body(req);
     if (b.action === 'start') {
@@ -431,7 +431,7 @@ export class Store {
     const base = (this.env.GOOGLE_TEST_URL || 'https://sheets.googleapis.com') + '/v4/spreadsheets/' + g.sheet;
     await this.gTable(tok, g, base, 'all', ids[L.tabs.all] ?? 1, L.tabs.all, LY.all, false);
     await this.gTable(tok, g, base, 'mis', ids[L.tabs.mis] ?? 2, L.tabs.mis, LY.mis, false);
-    g.ov = ids[L.tabs.ov] ?? 0;
+    g.ov = ids[L.tabs.ov] ?? 0; g.pct = true;
     await this.gOverview(tok, g, base, L, LY).catch(() => {});
     { const old = await this.state.storage.list({prefix: 'gx:' + u + ':'}); if (old.size) await this.state.storage.delete([...old.keys()]); }
     await this.state.storage.put('gs:' + u, g);
@@ -510,9 +510,11 @@ export class Store {
       put(sec, 0, [[O.students]]), put(sec + 1, 0, [[q1.replace('=IFERROR', '=IFERROR')]]), put(sec, 7, [[O.classes]]), put(sec + 1, 7, [[q2]]), put(sec, 11, [[O.missed]]), put(sec + 1, 11, [[q3]]),
       bold(sec, 0, 13), bold(sec, 7, 13), bold(sec, 11, 13), hrow2(0, 6), hrow2(7, 3), hrow2(11, 3), band(0, 6), band(7, 3), band(11, 3),
       w(0, 70), w(1, 150), w(2, 80), w(3, 80), w(4, 90), w(5, 90), w(6, 28), w(7, 70), w(8, 80), w(9, 90), w(10, 28), w(11, 360), w(12, 170), w(13, 70), grad2(5), grad2(9),
-      {updateDimensionProperties: {range: {sheetId: OV, dimension: 'ROWS', startIndex: 3, endIndex: 4}, properties: {pixelSize: 44}, fields: 'pixelSize'}},
+      {updateDimensionProperties: {range: {sheetId: OV, dimension: 'ROWS', startIndex: 3, endIndex: 4}, properties: {pixelSize: 44}, fields: 'pixelSize'}}, ...this.pctFix(g),
       {updateSheetProperties: {properties: {sheetId: OV, gridProperties: {frozenRowCount: 0, hideGridlines: true}}, fields: 'gridProperties.frozenRowCount,gridProperties.hideGridlines'}}]);
   }
+  /* the Overview's % columns (F and J) as percentages: QUERY's own format is not always kept */
+  pctFix(g) { const OV = g.ov ?? 0; return [5, 9].map(c => ({repeatCell: {range: {sheetId: OV, startRowIndex: 9, endRowIndex: 2000, startColumnIndex: c, endColumnIndex: c + 1}, cell: {userEnteredFormat: {numberFormat: {type: 'PERCENT', pattern: '0%'}}}, fields: 'userEnteredFormat.numberFormat'}})); }
   async alarm() {
     let q = (await this.state.storage.get('gq')) || []; if (!q.length) return;
     const accs = [...(await this.state.storage.list({prefix: 'acct:'})).values()], admins = accs.filter(a => a.role === 'admin').map(a => a.u);
@@ -523,6 +525,7 @@ export class Store {
       try { const acc = accs.find(a => a.u === u); if (acc) await this.gNewSheet(u, acc, g.lang || 'ro', await this.gToken(u, g), {refresh: g.refresh, email: g.email, old: g.url}); } catch (e) {}
       return this.state.storage.setAlarm(Date.now() + 2000);
     }
+    for (const [u, g] of conns) if (!g.pct) { try { const base = (this.env.GOOGLE_TEST_URL || 'https://sheets.googleapis.com') + '/v4/spreadsheets/' + g.sheet; const r = await this.gBatch(await this.gToken(u, g), base, this.pctFix(g)); if (r.ok) { g.pct = true; await this.state.storage.put('gs:' + u, g); } } catch (e) {} }
     const batch = q.slice(0, 40), rows = new Map(), marks = [];   // target -> tab key -> {name, list}
     for (const sid of batch) {
       const raw = await this.state.storage.get('s:' + sid); if (!raw) continue;
@@ -541,7 +544,8 @@ export class Store {
     const failed = new Set();
     for (const [t, tabs] of rows) {
       const g = conns.get(t);
-      try { const tok = await this.gToken(t, g); for (const [key, x] of tabs) await this.gAppend(tok, g, key, x); g.at = Date.now(); g.err = null; }
+      try { const tok = await this.gToken(t, g); if (!g.pct) { const base = (this.env.GOOGLE_TEST_URL || 'https://sheets.googleapis.com') + '/v4/spreadsheets/' + g.sheet; await this.gBatch(tok, base, this.pctFix(g)); g.pct = true; }
+        for (const [key, x] of tabs) await this.gAppend(tok, g, key, x); g.at = Date.now(); g.err = null; }
       catch (e) { failed.add(t); g.err = e.fatal ? 'revoked' : e.gone ? 'deleted' : 'failed'; if (e.fatal || e.gone) g.refresh = null; }
       await this.state.storage.put('gs:' + t, g);
     }
