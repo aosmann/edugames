@@ -305,6 +305,7 @@ const UI={
  "Trend: the last 3 results compared with the ones before, in points. Skills: how many are known (green), being learned (yellow) or need work (red), from each skill's last 10 answers. Click a student to see their profile.":"Tendință: ultimele 3 rezultate față de cele dinainte, în puncte. Abilități: câte sunt știute (verde), în lucru (galben) sau de lucrat (roșu), după ultimele 10 răspunsuri la fiecare. Apasă pe un elev ca să-i vezi profilul.",
  'Open in Google Sheets':'Deschide în Google Sheets',
  'All subjects':'Toate materiile',
+ 'Google didn\'t allow the table view, so the sheet uses plain tabs. Google said:':'Google nu a permis vizualizarea ca tabel, așa că foaia folosește file simple. Google a spus:',
  'Sign in to use class lists':'Conectează-te pentru listele claselor','Sign in':'Conectare','Sign out':'Deconectare','Username':'Utilizator','Password':'Parolă','Wrong username or password':'Utilizator sau parolă greșită',
  'Too many wrong tries. Try again in {n} minutes.':'Prea multe încercări greșite. Încearcă din nou peste {n} minute.','Couldn\'t reach the class server. Check the connection.':'Nu ne putem conecta la serverul clasei. Verifică conexiunea.',
  'Results are only on this device. Sign in to see your reports from any device and save them online.':'Rezultatele sunt doar pe acest dispozitiv. Conectează-te ca să-ți vezi rapoartele de pe orice dispozitiv și să le salvezi online.',

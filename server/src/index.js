@@ -339,7 +339,7 @@ export class Store {
   gRedirect() { return (this.env.PUBLIC_URL || 'https://edugames-class.edugames.workers.dev') + '/google/callback'; }
   async google(req, me) {
     const key = 'gs:' + me.u, g = await this.state.storage.get(key);
-    if (req.method !== 'POST') return this.json({available: this.gOn(), connected: !!(g && g.refresh), url: g && g.url, email: g && g.email, at: g && g.at, err: g && g.err, all: me.role === 'admin', old: g && g.old || null, v: g && g.v || 1});
+    if (req.method !== 'POST') return this.json({available: this.gOn(), connected: !!(g && g.refresh), url: g && g.url, email: g && g.email, at: g && g.at, err: g && g.err, all: me.role === 'admin', old: g && g.old || null, v: g && g.v || 1, tables: !!(g && g.tableOk), tableErr: g && !g.tableOk && g.tableErr || null});
     const b = await this.body(req);
     if (b.action === 'start') {
       if (!this.gOn()) return this.json({error: 'not set up'}, 503);
@@ -447,7 +447,9 @@ export class Store {
     const hdr = cols.map(k => L.lang ? COLS[k][1] : COLS[k][0]), tableId = 't' + sheetId;
     const pre = addSheet ? [{addSheet: {properties: {sheetId, title, gridProperties: {frozenRowCount: 1}}}}] : [];
     const pi = cols.indexOf('pct');
-    const look = [{updateDimensionProperties: {range: {sheetId, dimension: 'COLUMNS', startIndex: 0, endIndex: cols.length}, properties: {pixelSize: 120}, fields: 'pixelSize'}},
+    const look = [{updateSheetProperties: {properties: {sheetId, gridProperties: {hideGridlines: true}}, fields: 'gridProperties.hideGridlines'}},
+      {updateDimensionProperties: {range: {sheetId, dimension: 'COLUMNS', startIndex: 0, endIndex: cols.length}, properties: {pixelSize: 120}, fields: 'pixelSize'}},
+      ...cols.map((k, i) => ['time', 'level', 'score', 'right', 'asked', 'early', 'guest'].includes(k) ? {updateDimensionProperties: {range: {sheetId, dimension: 'COLUMNS', startIndex: i, endIndex: i + 1}, properties: {pixelSize: k === 'early' ? 130 : 80}, fields: 'pixelSize'}} : null).filter(Boolean),
       ...cols.map((k, i) => ['q', 'picked', 'answer', 'topic'].includes(k) ? {updateDimensionProperties: {range: {sheetId, dimension: 'COLUMNS', startIndex: i, endIndex: i + 1}, properties: {pixelSize: k === 'q' ? 320 : 190}, fields: 'pixelSize'}} : null).filter(Boolean),
       ...(pi >= 0 ? [{addConditionalFormatRule: {index: 0, rule: {ranges: [{sheetId, startRowIndex: 1, endRowIndex: 20000, startColumnIndex: pi, endColumnIndex: pi + 1}],
         gradientRule: {minpoint: {colorStyle: {rgbColor: {red: .96, green: .55, blue: .52}}, type: 'NUMBER', value: '0.3'}, midpoint: {colorStyle: {rgbColor: {red: 1, green: .87, blue: .55}}, type: 'NUMBER', value: '0.65'},
@@ -455,14 +457,20 @@ export class Store {
     const table = {addTable: {table: {name: tblName(title), tableId, range: {sheetId, startRowIndex: 0, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: cols.length},
       columnProperties: cols.map((k, i) => ({columnIndex: i, columnName: hdr[i], columnType: COLS[k][2]})),
       rowsProperties: {headerColorStyle: {rgbColor: {red: .17, green: .22, blue: .56}}, firstBandColorStyle: {rgbColor: {red: 1, green: 1, blue: 1}}, secondBandColorStyle: {rgbColor: {red: .96, green: .97, blue: .99}}}}}};
-    let r = await this.gBatch(tok, base, [...pre, table, ...look]);
-    if (!r.ok) { const t2 = JSON.parse(JSON.stringify(table)); delete t2.addTable.table.rowsProperties; r = await this.gBatch(tok, base, [...pre, t2, ...look]); }
-    if (r.ok) { g.tabs[key] = {sheetId, tableId, title}; return; }
+    /* try the full table, then simpler versions, so a table is made whenever Google allows one; keep Google's first refusal */
+    const variants = [t => t, t => { delete t.rowsProperties; return t; },
+      t => { t.columnProperties.forEach(c => { if (c.columnType === 'BOOLEAN') c.columnType = 'TEXT'; }); return t; },
+      t => { t.columnProperties.forEach(c => { delete c.columnType; }); return t; }];
+    let r, firstErr = null; const tb = JSON.parse(JSON.stringify(table.addTable.table));
+    for (const v of variants) { v(tb); r = await this.gBatch(tok, base, [...pre, {addTable: {table: tb}}, ...look]); if (r.ok) break; if (!firstErr) firstErr = String((r.d && r.d.error && r.d.error.message) || r.status).slice(0, 300); }
+    if (firstErr) g.tableErr = firstErr;
+    if (r.ok) { g.tabs[key] = {sheetId, tableId, title}; if (!g.tableErr || r.ok) g.tableOk = true; return; }
     /* fallback: a plain tab */
     if (pre.length) { const p = await this.gBatch(tok, base, pre); if (!p.ok && !/already exists/i.test(JSON.stringify(p.d))) throw new Error('addSheet'); }
     await fetch(`${base}/values/${encodeURIComponent(`'${title}'!A1`)}?valueInputOption=RAW`, {method: 'PUT', headers: {Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json'}, body: JSON.stringify({values: [hdr]})});
     await this.gBatch(tok, base, [{repeatCell: {range: {sheetId, startRowIndex: 0, endRowIndex: 1}, cell: {userEnteredFormat: {textFormat: {bold: true, foregroundColor: {red: 1, green: 1, blue: 1}}, backgroundColor: {red: .17, green: .22, blue: .56}}}, fields: 'userEnteredFormat(textFormat,backgroundColor)'}},
-      {updateSheetProperties: {properties: {sheetId, gridProperties: {frozenRowCount: 1}}, fields: 'gridProperties.frozenRowCount'}},
+      {updateSheetProperties: {properties: {sheetId, gridProperties: {frozenRowCount: 1, hideGridlines: true}}, fields: 'gridProperties.frozenRowCount,gridProperties.hideGridlines'}},
+      {addBanding: {bandedRange: {range: {sheetId, startRowIndex: 0, startColumnIndex: 0, endColumnIndex: cols.length}, rowProperties: {headerColorStyle: {rgbColor: {red: .17, green: .22, blue: .56}}, firstBandColorStyle: {rgbColor: {red: 1, green: 1, blue: 1}}, secondBandColorStyle: {rgbColor: {red: .96, green: .97, blue: .99}}}}}},
       ...cols.map((k, i) => COLS[k][2] === 'DATE' || COLS[k][2] === 'PERCENT' ? {repeatCell: {range: {sheetId, startRowIndex: 1, startColumnIndex: i, endColumnIndex: i + 1}, cell: {userEnteredFormat: {numberFormat: COLS[k][2] === 'DATE' ? {type: 'DATE', pattern: 'dd.mm.yyyy'} : {type: 'PERCENT', pattern: '0%'}}}, fields: 'userEnteredFormat.numberFormat'}} : null).filter(Boolean), ...look]).catch(() => {});
     g.tabs[key] = {sheetId, tableId: null, title};
   }
@@ -480,11 +488,22 @@ export class Store {
     const w = (c, px) => ({updateDimensionProperties: {range: {sheetId: 0, dimension: 'COLUMNS', startIndex: c, endIndex: c + 1}, properties: {pixelSize: px}, fields: 'pixelSize'}});
     const grad = (c) => ({addConditionalFormatRule: {index: 0, rule: {ranges: [{sheetId: 0, startRowIndex: 5, endRowIndex: 2000, startColumnIndex: c, endColumnIndex: c + 1}],
       gradientRule: {minpoint: {colorStyle: {rgbColor: {red: .96, green: .55, blue: .52}}, type: 'NUMBER', value: '0.3'}, midpoint: {colorStyle: {rgbColor: {red: 1, green: .87, blue: .55}}, type: 'NUMBER', value: '0.65'}, maxpoint: {colorStyle: {rgbColor: {red: .55, green: .83, blue: .63}}, type: 'NUMBER', value: '0.95'}}}}});
-    await this.gBatch(tok, base, [put(0, 0, [[O.title], [O.note]]), put(3, 0, [[O.students]]), put(4, 0, [[q1]]), put(3, 7, [[O.classes]]), put(4, 7, [[q2]]), put(3, 11, [[O.missed]]), put(4, 11, [[q3]]),
-      bold(0, 0, 18), bold(3, 0, 13), bold(3, 7, 13), bold(3, 11, 13), hrow(0, 6), hrow(7, 3), hrow(11, 3),
+    const kp = (c, label, f, pct) => [put(3, c, [[f]]), put(4, c, [[label]]),
+      {repeatCell: {range: {sheetId: 0, startRowIndex: 3, endRowIndex: 4, startColumnIndex: c, endColumnIndex: c + 1}, cell: {userEnteredFormat: {textFormat: {bold: true, fontSize: 24, foregroundColorStyle: {rgbColor: {red: .17, green: .22, blue: .56}}}, horizontalAlignment: 'LEFT', ...(pct ? {numberFormat: {type: 'PERCENT', pattern: '0%'}} : {})}}, fields: 'userEnteredFormat(textFormat,horizontalAlignment,numberFormat)'}},
+      {repeatCell: {range: {sheetId: 0, startRowIndex: 4, endRowIndex: 5, startColumnIndex: c, endColumnIndex: c + 1}, cell: {userEnteredFormat: {textFormat: {fontSize: 10, foregroundColorStyle: {rgbColor: {red: .35, green: .38, blue: .54}}}}}, fields: 'userEnteredFormat.textFormat'}}];
+    const allc = k => `'${L.tabs.all}'!${ca(k)}2:${ca(k)}`;
+    const sec = 7, hrow2 = (c, n) => ({repeatCell: {range: {sheetId: 0, startRowIndex: sec + 1, endRowIndex: sec + 2, startColumnIndex: c, endColumnIndex: c + n}, cell: {userEnteredFormat: {textFormat: {bold: true, foregroundColorStyle: {rgbColor: {red: 1, green: 1, blue: 1}}}, backgroundColorStyle: {rgbColor: {red: .17, green: .22, blue: .56}}}}, fields: 'userEnteredFormat(textFormat,backgroundColorStyle)'}});
+    const grad2 = c => ({addConditionalFormatRule: {index: 0, rule: {ranges: [{sheetId: 0, startRowIndex: sec + 2, endRowIndex: 2000, startColumnIndex: c, endColumnIndex: c + 1}],
+      gradientRule: {minpoint: {colorStyle: {rgbColor: {red: .96, green: .55, blue: .52}}, type: 'NUMBER', value: '0.3'}, midpoint: {colorStyle: {rgbColor: {red: 1, green: .87, blue: .55}}, type: 'NUMBER', value: '0.65'}, maxpoint: {colorStyle: {rgbColor: {red: .55, green: .83, blue: .63}}, type: 'NUMBER', value: '0.95'}}}}});
+    const band = (c, n) => ({addBanding: {bandedRange: {range: {sheetId: 0, startRowIndex: sec + 2, endRowIndex: 400, startColumnIndex: c, endColumnIndex: c + n}, rowProperties: {firstBandColorStyle: {rgbColor: {red: 1, green: 1, blue: 1}}, secondBandColorStyle: {rgbColor: {red: .96, green: .97, blue: .99}}}}}});
+    await this.gBatch(tok, base, [put(0, 0, [[O.title], [O.note]]), bold(0, 0, 20),
       {repeatCell: {range: {sheetId: 0, startRowIndex: 1, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: 1}, cell: {userEnteredFormat: {textFormat: {foregroundColorStyle: {rgbColor: {red: .35, green: .38, blue: .54}}}}}, fields: 'userEnteredFormat.textFormat'}},
-      w(0, 70), w(1, 150), w(2, 80), w(3, 80), w(4, 90), w(5, 90), w(6, 30), w(7, 70), w(8, 80), w(9, 90), w(10, 30), w(11, 360), w(12, 170), w(13, 70), grad(5), grad(9),
-      {updateSheetProperties: {properties: {sheetId: 0, gridProperties: {frozenRowCount: 2}}, fields: 'gridProperties.frozenRowCount'}}]);
+      ...kp(0, O.results, `=COUNTA(${allc('student')})`), ...kp(2, h('student'), `=COUNTUNIQUE(${allc('student')})`), ...kp(4, h('pct'), `=IFERROR(SUM(${allc('right')})/SUM(${allc('asked')}),0)`, true),
+      put(sec, 0, [[O.students]]), put(sec + 1, 0, [[q1.replace('=IFERROR', '=IFERROR')]]), put(sec, 7, [[O.classes]]), put(sec + 1, 7, [[q2]]), put(sec, 11, [[O.missed]]), put(sec + 1, 11, [[q3]]),
+      bold(sec, 0, 13), bold(sec, 7, 13), bold(sec, 11, 13), hrow2(0, 6), hrow2(7, 3), hrow2(11, 3), band(0, 6), band(7, 3), band(11, 3),
+      w(0, 70), w(1, 150), w(2, 80), w(3, 80), w(4, 90), w(5, 90), w(6, 28), w(7, 70), w(8, 80), w(9, 90), w(10, 28), w(11, 360), w(12, 170), w(13, 70), grad2(5), grad2(9),
+      {updateDimensionProperties: {range: {sheetId: 0, dimension: 'ROWS', startIndex: 3, endIndex: 4}, properties: {pixelSize: 44}, fields: 'pixelSize'}},
+      {updateSheetProperties: {properties: {sheetId: 0, gridProperties: {frozenRowCount: 0, hideGridlines: true}}, fields: 'gridProperties.frozenRowCount,gridProperties.hideGridlines'}}]);
   }
   async alarm() {
     let q = (await this.state.storage.get('gq')) || []; if (!q.length) return;
