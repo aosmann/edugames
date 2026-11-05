@@ -29,5 +29,5 @@ new_sqlite_classes = ["Store"]
 
 # Google Sheets (school accounts only). The client secret is a secret: npx wrangler secret put GOOGLE_CLIENT_SECRET
 [vars]
-GOOGLE_CLIENT_ID = ""
+GOOGLE_CLIENT_ID = "156411591780-5dtmge49o0r1bq0nn9oq5ei5st66dnmi.apps.googleusercontent.com"
 GOOGLE_DOMAIN = "spectrum.ro"
