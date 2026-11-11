@@ -337,7 +337,7 @@ const UI={
  'Remove all':'Șterge tot','Remove all questions?':'Ștergi toate întrebările?','The list is emptied. Nothing is saved until you click Save.':'Lista se golește. Nimic nu se salvează până nu apeși Salvează.',
  'Change avatar':'Schimbă avatarul','Change your avatar':'Schimbă-ți avatarul',
  "Clear reports":"Șterge rapoarte",
- 'Period':'Perioada','This month':'Luna asta','Last 3 months':'Ultimele 3 luni','This school year':'Anul școlar','All time':'Tot timpul','Pick dates':'Alege datele',
+ 'Community':'Comunitate','Topics, my questions or community':'Teme, întrebările mele sau comunitate', 'Period':'Perioada','This month':'Luna asta','Last 3 months':'Ultimele 3 luni','This school year':'Anul școlar','All time':'Tot timpul','Pick dates':'Alege datele',
  'Teacher':'Profesor','All teachers':'Toți profesorii','you':'tu','Loading sessions…':'Se încarcă orele…','No class results in this period.':'Nu există rezultate în această perioadă.',
  'Pick a period, then filter by subject, class, session or student, and export.':'Alege o perioadă, apoi filtrează după materie, clasă, oră sau elev și exportă.',
  'This period has a lot of sessions, so skills and question difficulty are left out. Pick a shorter period or one teacher to see them.':'Perioada are foarte multe ore, așa că abilitățile și dificultatea întrebărilor nu sunt incluse. Alege o perioadă mai scurtă sau un singur profesor ca să le vezi.',

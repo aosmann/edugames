@@ -183,6 +183,8 @@ p{margin:0}
 .stepper output{min-width:4.6em;text-align:center;font-weight:800;font-size:17px;font-variant-numeric:tabular-nums}
 .ttabs{display:flex;gap:4px;padding:4px;background:#e9ecf6;border-radius:999px;width:max-content;max-width:100%;margin-bottom:12px}
 .ttabs button{border:0;background:none;border-radius:999px;padding:10px 20px;font-weight:800;font-size:15px;color:var(--ink2)}
+.ttabs{overflow-x:auto;scrollbar-width:none}.ttabs button{white-space:nowrap;flex:none}
+@media (max-width:520px){.ttabs button{padding:9px 13px;font-size:14px}}
 .ttabs button[aria-selected=true]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(24,32,61,.14)}
 .ttabs[hidden]{display:none}
 .tbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}.tbar[hidden]{display:none}.tbar .ttabs{margin-bottom:0}
@@ -718,7 +720,7 @@ p{margin:0}
     <div class="cols">
       <div class="pick">
         <section class="pcard" id="cSubj"><h2 class="stept" id="lSubj"><b>1</b>Subject<span id="nSubj"></span></h2><div class="dd big" id="ddSubj"></div></section>
-        <section class="pcard" id="cTop"><h2 class="stept" id="lTop"><b>2</b>Topic<span id="nTop"></span></h2><div class="tbar" id="tBar" hidden><div class="ttabs" id="tTabs" role="tablist" aria-label="Topics or my questions"></div><label class="tcls" id="tClsL"><span>Class</span><select id="tCls"></select></label></div><div class="dd big" id="ddTop"></div></section>
+        <section class="pcard" id="cTop"><h2 class="stept" id="lTop"><b>2</b>Topic<span id="nTop"></span></h2><div class="tbar" id="tBar" hidden><div class="ttabs" id="tTabs" role="tablist" aria-label="Topics, my questions or community"></div><label class="tcls" id="tClsL"><span>Class</span><select id="tCls"></select></label></div><div class="dd big" id="ddTop"></div></section>
       </div>
       <aside class="panel summary" aria-label="Round">
         <div class="sumtop" id="sSum"></div>
@@ -1181,14 +1183,16 @@ function renderSetup(){const g=sel.game,B=sel.bank,s=curSub(),t=curTop();
     render:o=>{const im=el('img','gi');im.src=o.g.base+(o.g.icon||'icon-512.png');im.alt='';return[im,txt(o.g.name,o.g.pitch||'')]}});
   const hue=s&&B?(B.hue||{})[s.id]||'#8a93b8':'#8a93b8';$('ddTop').style.setProperty('--h',hue);
   $('cSubj').classList.toggle('done',!!s);$('cTop').classList.toggle('done',!!t);
-  $('nSubj').textContent=B&&B.length?`${B.length} subjects`:'';const mineT=s?s.topics.filter(x=>x.set):[],bankT=s?s.topics.filter(x=>!x.set):[];
-  if(t)sel.src=t.set?'mine':'bank';if(sel.src==null||!(sel.src==='mine'?mineT:bankT).length)sel.src=bankT.length?'bank':'mine';
-  const mine=sel.src==='mine',pool=mine?mineT:bankT,grades=[...new Set(pool.flatMap(x=>x.grade||[]))].sort((a,b)=>a-b),hasU=grades.length>0;
+  $('nSubj').textContent=B&&B.length?`${B.length} subjects`:'';const mineT=s?s.topics.filter(x=>x.set&&!x.comm):[],commT=s?s.topics.filter(x=>x.set&&x.comm):[],bankT=s?s.topics.filter(x=>!x.set):[];
+  /* topic sources: built-in Topics, My questions (mine), Community (shared by other teachers); a tab shows only when it has something */
+  const SRC={bank:bankT,mine:mineT,comm:commT},srcs=['bank','mine','comm'].filter(k=>SRC[k].length);
+  if(t)sel.src=t.set?(t.comm?'comm':'mine'):'bank';if(sel.src==null||!srcs.includes(sel.src))sel.src=srcs[0]||'bank';
+  const mine=sel.src!=='bank',pool=SRC[sel.src],grades=[...new Set(pool.flatMap(x=>x.grade||[]))].sort((a,b)=>a-b),hasU=grades.length>0;
   if(hasU){const sg=gradeOf(session&&session.className);if(sel.grade==null||(sel.grade!=='all'&&!grades.includes(sel.grade)))sel.grade=grades.includes(sg)?sg:'all';
     if(t&&t.grade&&t.grade.length&&!t.grade.includes(sel.grade)&&!(mine&&sel.grade==='all'))sel.grade=t.grade[0];if(t&&!t.grade&&!mine&&sel.grade!=='all')sel.grade='all'}
   const tab=hasU?sel.grade:'all',tList=pool.filter(x=>!hasU||(tab==='all'?(mine||!x.grade):(x.grade||[]).includes(tab)||(mine&&!x.grade)));
-  {const bar=$('tBar'),tt=$('tTabs'),both=mineT.length&&bankT.length;bar.hidden=!(both||hasU);tt.hidden=!both;tt.innerHTML='';
-    if(both)[['bank',T('Topics')],['mine',T('My questions')+' · '+mineT.length]].forEach(([id,name])=>{const b=el('button',null,name);b.type='button';b.setAttribute('role','tab');b.setAttribute('aria-selected',id===sel.src);
+  {const bar=$('tBar'),tt=$('tTabs'),both=srcs.length>1;bar.hidden=!(both||hasU);tt.hidden=!both;tt.innerHTML='';
+    if(both)srcs.map(k=>[k,k==='bank'?T('Topics'):(k==='mine'?T('My questions'):T('Community'))+' · '+SRC[k].length]).forEach(([id,name])=>{const b=el('button',null,name);b.type='button';b.setAttribute('role','tab');b.setAttribute('aria-selected',id===sel.src);
       b.onclick=e=>{e.stopPropagation();if(id===sel.src)return;sel.src=id;sel.grade=null;sel.topic=null;renderSetup();setTimeout(()=>$('ddTop')._open&&$('ddTop')._open(),0)};tt.append(b)});
     const cs=$('tCls');$('tClsL').hidden=!hasU;cs.innerHTML='';if(hasU){cs.append(new Option(mine?T('All classes'):T('All classes'),'all'));grades.forEach(g=>cs.append(new Option(T('Class')+' '+g,String(g))));cs.value=String(tab);
       cs.onchange=()=>{sel.grade=cs.value==='all'?'all':+cs.value;sel.topic=null;renderSetup();setTimeout(()=>$('ddTop')._open&&$('ddTop')._open(),0)}}}
@@ -1595,9 +1599,9 @@ const encSet=x=>{const j=JSON.stringify({id:'set-'+x.id,n:x.name,q:x.q});return 
 /* teachers' sets join their subject's card (a set's subject "English" goes with English); a subject only sets have gets its own card */
 const SET_SUBJ={english:['english','engleză','engleza'],math:['math','maths','matematică','matematica','mathematics'],geo:['geography','geografie'],science:['science','științe','stiinte','natural sciences'],info:['informatics','informatică','informatica','ict','tic','computer science']};
 const subjIdOf=n=>{const k=String(n||'').trim().toLowerCase();for(const [id,l] of Object.entries(SET_SUBJ))if(l.includes(k))return id;return null};
-function withMine(B){const base=B.base||B,S=mySets(),list=auth()?[...S.mine,...S.shared]:[];if(!list.length)return base;
+function withMine(B){const base=B.base||B,S=mySets(),u=(auth()||{}).u,list=auth()?[...S.mine,...S.shared].filter(x=>x.owner===u||x.shared):[];if(!list.length)return base;
   const cid=session&&session.classId,sorted=list.slice().sort((a,b)=>(b.classes.includes(cid)?1:0)-(a.classes.includes(cid)?1:0));
-  const topic=x=>({id:'set-'+x.id,name:x.name,d:2,set:x,grade:(()=>{const g=[...new Set((x.classes||[]).map(c=>gradeOf(clsName(c))).filter(v=>v!=null))];return g.length?g:null})(),
+  const me=(auth()||{}).u,topic=x=>({id:'set-'+x.id,name:x.name,d:2,set:x,comm:x.owner!==me,grade:(()=>{const g=[...new Set((x.classes||[]).map(c=>gradeOf(clsName(c))).filter(v=>v!=null))];return g.length?g:null})(),
     bl:`${x.q.length} ${T('questions')}${x.classes.length?' · '+T('class')+' '+x.classes.map(clsName).join(', '):''}${x.owner!==(auth()||{}).u?' · '+(x.ownerName||''):''}`});
   const out=base.filter(x=>x.id!=='mine').map(s=>Object.assign({},s,{topics:s.topics.slice()})),extra=new Map();
   sorted.forEach(x=>{const id=subjIdOf(x.subject),home=id&&out.find(s=>s.id===id);if(home){home.topics.push(topic(x));return}
