@@ -158,7 +158,8 @@ export class Room {
 
 /* Saved class sessions (rounds, results, answers), one record per session.
    POST /reports  {session}         -> saved (kept if the stored copy is newer)
-   GET  /reports?after=<ms>         -> sessions changed after that time, newest first (up to 300) */
+   GET  /reports?after=<ms>         -> sessions changed after that time, newest first (up to 300; older portals)
+   GET  /reports?v=2&from=&to=...   -> a date range in pages, see reportRange */
 const U_OK = /^[a-z0-9._-]{2,30}$/;
 /* rows for Google Sheets: one result -> its class tab (or Guests), All results, and one Mistakes row per missed question */
 /* Sheet layout v2: every tab is a Google Sheets table with typed columns, plus an "Overview" tab of formulas.
@@ -269,12 +270,27 @@ export class Store {
       await this.gQueue([s.id]);
       return this.json({ok: true, at});
     }
+    if (url.searchParams.get('v') === '2') return this.reportRange(url, me, admin);
     const after = +url.searchParams.get('after') || 0;
     const meta = await this.state.storage.list({prefix: 'm:'});
     const ids = [...meta].filter(([, m]) => m.at > after && (admin || m.owner === me.u)).sort((a, b) => b[1].at - a[1].at).slice(0, 300).map(([k]) => k.slice(2));
     const vals = new Map();
     for (let i = 0; i < ids.length; i += 100) (await this.state.storage.get(ids.slice(i, i + 100).map(id => 's:' + id))).forEach((v, k) => vals.set(k, v));
     return this.json(ids.map(id => { try { return JSON.parse(vals.get('s:' + id)); } catch (e) { return null; } }).filter(Boolean));
+  }
+  /* GET /reports?v=2&from=&to=&owner=&changed=&off=&lite=1&count=1
+     sessions that started in [from, to), newest first, in pages; lite leaves out the per-answer log (for long periods) */
+  async reportRange(url, me, admin) {
+    const q = k => url.searchParams.get(k), from = +q('from') || 0, to = +q('to') || Infinity, changed = +q('changed') || 0, off = Math.max(0, +q('off') || 0);
+    const lite = q('lite') === '1', owner = admin ? (q('owner') || '') : me.u;
+    const meta = await this.state.storage.list({prefix: 'm:'});
+    const hit = [...meta].map(([k, m]) => [k.slice(2), m, m.started || m.at]).filter(([, m, st]) => st >= from && st < to && m.at > changed && (!owner || m.owner === owner || (admin && owner === me.u && !m.owner)));
+    if (q('count') === '1') return this.json({total: hit.length});
+    hit.sort((a, b) => b[2] - a[2]);
+    const page = hit.slice(off, off + (lite ? 300 : 60)).map(([id]) => id), vals = new Map();
+    for (let i = 0; i < page.length; i += 100) (await this.state.storage.get(page.slice(i, i + 100).map(id => 's:' + id))).forEach((v, k) => vals.set(k, v));
+    const sessions = page.map(id => { try { const s = JSON.parse(vals.get('s:' + id)); if (lite) { s.lite = 1; (s.rounds || []).forEach(r => { delete r.log; }); } return s; } catch (e) { return null; } }).filter(Boolean);
+    return this.json({total: hit.length, next: off + page.length < hit.length ? off + page.length : null, sessions});
   }
   async login(req) {
     const b = await this.body(req);
