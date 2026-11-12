@@ -527,7 +527,7 @@ p{margin:0}
 .stu .tr-up{color:var(--good);font-weight:800}.stu .tr-dn{color:var(--bad);font-weight:800}.stu .tr-0{color:var(--ink2);font-weight:700}
 .spark{width:70px;height:22px;vertical-align:middle}.spark path{fill:none;stroke:var(--board);stroke-width:2;stroke-linejoin:round}
 .pctb{display:inline-block;min-width:48px;text-align:right;font-weight:800}.pctb.lo{color:var(--bad)}.pctb.mi{color:#9a6700}.pctb.hi{color:var(--good)}
-.msheet.wide{max-width:820px}.prof{display:grid;gap:16px}.prof .sum{gap:18px}.prof .sum b{font-size:24px}
+.msheet.wide{max-width:820px}.msheet.mid{max-width:640px}.prof{display:grid;gap:16px}.prof .sum{gap:18px}.prof .sum b{font-size:24px}
 .prof .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:720px){.prof .two{grid-template-columns:1fr}}
 .prof h3{font-size:16px;margin:0 0 8px}.prof .mq li{padding:8px 0}
 .syncnote{font-size:14px;font-weight:700;padding:10px 14px;border-radius:var(--r-m);background:var(--card);box-shadow:0 1px 0 var(--line)}
@@ -537,7 +537,7 @@ p{margin:0}
 .exp{display:flex;gap:10px;flex-wrap:wrap}
 .exp .cta,.exp .ghost{width:auto;flex:0 1 auto;padding:12px 18px;font-size:16px}
 .clrpill{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:11px 16px;font-weight:800;font-size:15px;background:var(--card);color:var(--bad);box-shadow:0 1px 0 var(--line),0 4px 14px -6px rgba(24,32,61,.25)}.clrpill svg{width:18px;height:18px}
-.clropts{display:grid;gap:8px}.msheet .clropts label{display:flex;grid-template-columns:none;font-size:15px;align-items:center;gap:12px;border:1.5px solid var(--line);border-radius:var(--r-m);padding:12px 14px;font-weight:700;color:var(--ink);cursor:pointer}.clropts label:has(input:checked){border-color:var(--bad);background:#fff5f4}.clropts small{margin-left:auto;color:var(--ink2);font-weight:700}.msheet .clropts input{accent-color:var(--bad);width:18px;height:18px;padding:0;flex:none;margin:0}
+.clropts{display:grid;gap:8px}.clrlist{max-height:44vh;overflow:auto;padding-right:2px}.clrtx{display:grid;gap:2px;min-width:0}.msheet .clrtx small{margin:0;font-weight:500;color:var(--ink2);font-size:13px}.clrbar{display:flex;gap:14px;align-items:center;margin:4px 0 8px;font-size:14px}.clrbar span{margin-left:auto;color:var(--ink2)}.clrchips{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 12px}.clrchips span{background:#e9ecf6;border-radius:999px;padding:4px 10px;font-size:13px;font-weight:700}.msheet .clropts label{display:flex;grid-template-columns:none;font-size:15px;align-items:center;gap:12px;border:1.5px solid var(--line);border-radius:var(--r-m);padding:12px 14px;font-weight:700;color:var(--ink);cursor:pointer}.clropts label:has(input:checked){border-color:var(--bad);background:#fff5f4}.clropts small{margin-left:auto;color:var(--ink2);font-weight:700}.msheet .clropts input{accent-color:var(--bad);width:18px;height:18px;padding:0;flex:none;margin:0}
 @media(max-width:480px){.exp .cta,.exp .ghost{flex:1 1 0}}
 
 /* ---------- student join ---------- */
@@ -2292,24 +2292,36 @@ async function exportXlsx(rows,fname,btn){const lbl=btn.textContent;btn.disabled
   btn.disabled=false;btn.textContent=lbl}
 $('expXlsx').onclick=()=>exportXlsx(filtered(),fileName('xlsx'),$('expXlsx'));
 /* clear reports: this teacher's own sessions, online and on this device; Google Sheets refill with what is left */
-$('clrRep').onclick=()=>{const me=auth(),now=Date.now(),d0=new Date();d0.setHours(0,0,0,0);const wk=new Date(d0);wk.setDate(wk.getDate()-((wk.getDay()+6)%7));
-  const mine=sessions().filter(x=>!x.owner||!me||x.owner===me.u||(me.role==='admin'&&!x.owner)),at=x=>Date.parse(x.startedAt)||+x.updatedAt||0;
-  const opts=[['hour',T('Last hour'),now-36e5],['today',T('Today'),d0.getTime()],['week',T('This week'),wk.getTime()],['all',T('Everything'),0]];
-  modal(box=>{let pick='today';const ul=el('div','clropts'),go=el('button','cta'),err=el('p','merr'),srv={};
-    /* this device only knows the period it loaded, so the online counts come from the server */
-    const n=since=>Math.max(srv[since]||0,mine.filter(x=>at(x)>=since&&!(session&&x.id===session.id)).length);
-    const paint=()=>{const o=opts.find(o=>o[0]===pick),c=n(o[2]);go.textContent=c?`${T('Delete')} ${c} ${T(c===1?'session':'sessions')}`:T('Nothing to delete');go.disabled=!c};
-    const cnt=since=>`${n(since)} ${T(n(since)===1?'session':'sessions')}`,smalls={};
-    opts.forEach(([id,l,since])=>{const lab=el('label'),r=el('input');r.type='radio';r.name='clr';r.checked=id===pick;r.onchange=()=>{pick=id;paint()};smalls[id]=el('small',null,cnt(since));lab.append(r,el('span',null,l),smalls[id]);ul.append(lab)});
-    if(me)opts.forEach(async([id,,since])=>{try{const d=await repGet({v:2,count:1,from:since,owner:me.u});if(d&&!Array.isArray(d)){srv[since]=Math.max(0,d.total-(session&&at(session)>=since?1:0));smalls[id].textContent=cnt(since);paint()}}catch(e){}});
+$('clrRep').onclick=()=>{const me=auth(),admin=!!(me&&me.role==='admin');
+  /* the sessions behind what Reports shows now (period, teacher, subject, class, session, student); only your own can be deleted */
+  const own=x=>!me||!x.owner||x.owner===me.u;
+  const hit=new Map();filtered().forEach(r=>{if(r.sessionId&&r.sessionId!=='solo')hit.set(r.sessionId,(hit.get(r.sessionId)||0)+1)});
+  const all=repSessions().filter(x=>hit.has(x.id)&&!(session&&x.id===session.id)),list=all.filter(own).sort((a,b)=>sAt(b)-sAt(a)),others=all.length-list.length;
+  const fv=id=>{const e=$(id);return e.tagName==='SELECT'?(e.value?e.options[e.selectedIndex].text:''):e.value.trim()};
+  const chips=[fv('fRange'),admin&&fv('fTeacher'),fv('fSubj'),fv('fClass'),fv('fSession'),fv('fStudent')].filter(Boolean);
+  const whole=!!($('fSubj').value||$('fStudent').value.trim());
+  modal(box=>{box.classList.add('mid');const picked=new Set(list.map(x=>x.id)),go=el('button','cta'),err=el('p','merr'),ul=el('div','clropts clrlist'),boxes=[];
+    const paint=()=>{const c=picked.size;go.textContent=c?`${T('Delete')} ${c} ${T(c===1?'session':'sessions')}`:T('Nothing selected');go.disabled=!c;
+      boxes.forEach(([r,id])=>r.checked=picked.has(id));selN.textContent=`${c} ${T('of')} ${list.length} ${T('selected')}`};
+    list.forEach(x=>{const lab=el('label'),r=el('input'),tx=el('div','clrtx');r.type='checkbox';r.onchange=()=>{r.checked?picked.add(x.id):picked.delete(x.id);paint()};boxes.push([r,x.id]);
+      const subj=[...new Set((x.rounds||[]).map(rd=>rd.subjectName).filter(Boolean))].join(', '),pl=(x.players||[]).length;
+      tx.append(el('b',null,`${fmtDate(x.startedAt)}${x.className?' · '+x.className:''}`),el('small',null,[subj,`${pl} ${T(pl===1?'student':'students')}`,x.code].filter(Boolean).join(' · ')));
+      const n=hit.get(x.id);lab.append(r,tx,el('small',null,`${n} ${T(n===1?'result':'results')}`));ul.append(lab)});
+    const bar=el('div','clrbar'),sa=el('button','link',T('Select all')),sn=el('button','link',T('None')),selN=el('span');sa.type=sn.type='button';
+    sa.onclick=()=>{list.forEach(x=>picked.add(x.id));paint()};sn.onclick=()=>{picked.clear();paint()};bar.append(sa,sn,selN);
+    const head=el('div','clrchips');chips.forEach(c=>head.append(el('span',null,c)));
     const row=el('div','mrow'),c=el('button','plain','Cancel');c.type=go.type='button';c.onclick=closeModal;go.style.background='var(--bad)';row.append(c,go);
-    box.append(el('h2',null,'Clear reports'),el('p',null,me?(me.role==='admin'?T('Deletes your own class sessions, online and on this device. Other teachers\' reports are not touched. Your Google Sheet is refilled with what is left.'):T('Deletes your class sessions, online and on this device. Your Google Sheet is refilled with what is left.')):T('Deletes the class sessions saved on this device.')),ul,err,row);paint();
-    go.onclick=async()=>{const o=opts.find(o=>o[0]===pick),since=o[2];go.disabled=true;
-      try{let ids=[];if(me){const {r,d}=await api('/reports',{body:{action:'delete',since}});if(!r.ok)throw 0;ids=d.ids||[]}
-        const drop=x=>at(x)>=since&&!(session&&x.id===session.id);
-        const loc=localSessions(),gone=new Set([...ids,...loc.filter(drop).map(x=>x.id)]);store.set('edu-portal-sessions',loc.filter(x=>!gone.has(x.id)));
+    box.append(el('h2',null,'Clear reports'),el('p',null,T('These are the class sessions in your current filters. Change the filters on the Reports page to pick others.')),head);
+    if(list.length){box.append(bar,ul);if(whole)box.append(el('p','inote',T('A session is deleted whole, with every student and game in it.')))}
+    else box.append(el('p','inote',T('No sessions of yours in these filters.')));
+    if(others)box.append(el('p','inote',`${others} ${T(others===1?'session from another teacher matches too. Only they can delete it.':'sessions from other teachers match too. Only they can delete them.')}`));
+    box.append(el('p','inote',me?T('Deleted online and on this device. Your Google Sheet is refilled with what is left.'):T('Deleted from this device.')),err,row);paint();
+    go.onclick=async()=>{const ids=[...picked];go.disabled=true;
+      try{let srv=[];if(me){const {r,d}=await api('/reports',{body:{action:'delete',ids}});if(!r.ok)throw 0;srv=d.ids||[]}
+        const gone=new Set([...srv,...ids]),loc=localSessions();store.set('edu-portal-sessions',loc.filter(x=>!gone.has(x.id)));
         store.set('edu-sync-pending',pendingSync().filter(id=>!gone.has(id)));remoteSessions=remoteSessions.filter(x=>!gone.has(x.id));
-        closeModal();toast(`${gone.size} ${T(gone.size===1?'session deleted':'sessions deleted')}`);gsAt=0;renderReports(true)}
+        if($('fSession').value&&gone.has($('fSession').value))$('fSession').value='';
+        closeModal();toast(`${ids.length} ${T(ids.length===1?'session deleted':'sessions deleted')}`);gsAt=0;renderReports(true)}
       catch(e){err.textContent=e&&e.message?e.message:NET_ERR();go.disabled=false}}})};
 
 /* ---------------- start ---------------- */
