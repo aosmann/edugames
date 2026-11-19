@@ -92,6 +92,7 @@ Nothing to build in the game: the shared `questions.js` reads these from the add
 - `o_<key>=<value>`: settings of a topic (`topic.opts`). Basic math: `o_ops=+-xd` (any of + - x d) and `o_max=1000`; Times tables: `o_tables=7,8` and `o_ops=x|d|xd`.
 - `qset=<base64url JSON>`: a teacher's own question set. It appears as the subject `mine` ("My questions") with one topic whose id is the `topic` parameter, so the game's normal `?topic=` lookup finds it. It never goes into Mix.
 - `qseed=<integer>`: same question order for the whole class (the teacher's "Question order: Same for everyone" setting). Nothing to do in the game: `questions.js` v5.4+ reads it, and every `EduQ.stream()` then gives the same questions in the same order, with the answers in the same places. Don't reshuffle `ans` in the game if you want the buttons to match too.
+- `qorder=1` (with `qset` and `qseed`): the teacher's set in its own order ("In my order"): question 1, 2, 3… for everyone, starting again from 1 after the last one. Also handled by `questions.js` (v5.5+).
 
 Just keep `questions.js` byte-identical to the other games and use `EduQ.SUBJECTS` / `EduQ.stream` as usual.
 
