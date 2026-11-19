@@ -345,6 +345,8 @@ const UI={
  'sessions from other teachers match too. Only they can delete them.':'ore ale altor profesori se potrivesc și ele. Doar ei le pot șterge.',
  'Deleted online and on this device. Your Google Sheet is refilled with what is left.':'Se șterg online și de pe acest dispozitiv. Foaia Google se completează din nou cu ce rămâne.',
  'Deleted from this device.':'Se șterg de pe acest dispozitiv.',
+ 'My sets':'Seturile mele','Other teachers':'Alți profesori','Search sets':'Caută seturi','All subjects':'Toate materiile','All classes':'Toate clasele','No sets match.':'Niciun set nu se potrivește.','Question sets':'Seturi de întrebări','This set belongs to':'Setul aparține lui',
+ 'No shared sets yet. When a teacher ticks “Share with the other teachers”, the set shows up here.':'Încă nu sunt seturi partajate. Când un profesor bifează opțiunea de partajare, setul apare aici.',
  'Community':'Comunitate','Topics, my questions or community':'Teme, întrebările mele sau comunitate', 'Period':'Perioada','This month':'Luna asta','Last 3 months':'Ultimele 3 luni','This school year':'Anul școlar','All time':'Tot timpul','Pick dates':'Alege datele',
  'Teacher':'Profesor','All teachers':'Toți profesorii','you':'tu','Loading sessions…':'Se încarcă orele…','No class results in this period.':'Nu există rezultate în această perioadă.',
  'Pick a period, then filter by subject, class, session or student, and export.':'Alege o perioadă, apoi filtrează după materie, clasă, oră sau elev și exportă.',

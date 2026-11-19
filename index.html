@@ -634,7 +634,10 @@ p{margin:0}
 @media(max-width:620px){.trow{grid-template-columns:auto 1fr auto}.trow .ta{grid-column:1/-1;justify-content:flex-end}}
 .setlist{display:grid;gap:10px}
 .setcard{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;background:var(--card);border-radius:var(--r-m);padding:14px 16px;box-shadow:0 1px 0 var(--line)}
-.setcard .si{width:44px;height:44px;border-radius:12px;background:#fff1dc;color:#b86e00;display:grid;place-items:center;font-size:20px;font-weight:800}
+.setcard .si{width:44px;height:44px;border-radius:12px;color:#fff;display:grid;place-items:center;font-size:16px;font-weight:800;text-transform:uppercase}
+.settools{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 6px}.settools input{flex:1;min-width:180px}.settools input,.settools select{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;font-size:15px;background:var(--card);color:var(--ink)}.settools [hidden]{display:none}
+.setgrp{display:flex;align-items:center;gap:8px;font-size:15px;margin:22px 0 10px;color:var(--ink)}.setgrp i{width:10px;height:10px;border-radius:50%}.setgrp small{color:var(--ink2);font-weight:700}
+.sethead .ttabs{margin:0}.sethead .sp{flex:1}
 .setcard b{font-size:17px}.setcard small{display:block;color:var(--ink2);font-size:13px;margin-top:2px}
 .setcard .ta{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.setcard .ta button{border:0;border-radius:10px;background:var(--paper);padding:9px 12px;font-weight:800;font-size:14px;color:var(--ink)}.setcard .ta button.danger{color:var(--bad)}
 .setcard .badge{font-size:12px;font-weight:800;color:var(--good);background:#e3f6ec;border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:2px}
@@ -890,10 +893,9 @@ p{margin:0}
     </header>
     <div id="setsList">
       <section class="intro" style="padding-bottom:6px"><h1>My questions</h1><p>Make your own question sets. They work in every game, on your own or with the class, and the results show up in Reports.</p></section>
-      <div class="sethead"><h2 id="mineH">Your sets</h2><button class="cta" type="button" id="newSet">New set</button></div>
-      <div class="setlist" id="mineList"></div>
-      <div class="sethead" id="sharedHead" hidden><h2>Shared by other teachers</h2></div>
-      <div class="setlist" id="sharedList"></div>
+      <div class="sethead"><div class="ttabs" id="setTabs" role="tablist" aria-label="Question sets"></div><span class="sp"></span><button class="cta" type="button" id="newSet">New set</button></div>
+      <div class="settools"><input type="search" id="setQ" placeholder="Search sets" aria-label="Search sets"><select id="setSubj" aria-label="Subject"></select><select id="setCls" aria-label="Class"></select></div>
+      <div id="mineList"></div>
     </div>
     <div id="setEd" hidden>
       <div class="sethead"><button class="link" type="button" id="edBack">‹ All sets</button></div>
@@ -1445,17 +1447,41 @@ const SUBJ_SUGGEST=['English','Română','Math','Geography','History','Biology',
 function openSets(){if(!auth())return openSignIn();document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed','false'));show('sets');$('setEd').hidden=true;$('setsList').hidden=false;renderSets();pullSets().then(renderSets)}
 const clsName=id=>{const c=classes().find(x=>x.id===id);return c?c.name:id};
 const gradeOf=n=>{const m=/^(\d+)/.exec(String(n||''));return m?+m[1]:null};
-function renderSets(){const S=mySets(),me=auth()||{},box=$('mineList');box.innerHTML='';
-  const card=(x,own)=>{const c=el('div','setcard'),ic=el('span','si','★'),tx=el('div'),nm=el('b',null,x.name);tx.append(nm);if(x.shared&&own)tx.append(el('span','badge',T('shared')));
-    const bits=[`${x.q.length} ${T(x.q.length===1?'question':'questions')}`];if(x.subject)bits.push(x.subject);if(x.classes&&x.classes.length)bits.push(T('class')+' '+x.classes.map(clsName).join(', '));
-    if(!own||x.owner!==me.u)bits.push(T('by')+' '+(x.ownerName||x.owner));tx.append(el('small',null,bits.join(' · ')));
+/* the My questions page: tabs (My sets / Community / Other teachers for the admin), search, subject and class filters, grouped by subject */
+let setTab=store.get('edu-sets-tab','mine');
+const SUBJ_COL=['#3b5bdb','#e8590c','#2b8a3e','#ae3ec9','#c2255c','#1098ad','#f08c00','#5f3dc4'];
+const SUBJ_FIX={Math:['#3b5bdb','Matematică'],English:['#e8590c','Engleză'],Română:['#c2255c','Română'],Geography:['#2b8a3e','Geografie'],History:['#9c6b30','Istorie'],Biology:['#5c940d','Biologie'],Chemistry:['#ae3ec9','Chimie'],Physics:['#1098ad','Fizică'],Science:['#0ca678','Științe'],Informatics:['#5f3dc4','Informatică'],Music:['#d6336c','Muzică'],Religion:['#845ef7','Religie'],French:['#1c7ed6','Franceză'],German:['#495057','Germană']};
+/* a set's name often starts with its subject ("Matematică · Adunări"); inside the subject's group that part is left out */
+const setTitle=x=>{const m=/^(.{1,24}?) · (.+)$/.exec(x.name||''),sj=x.subject||'',f=SUBJ_FIX[sj];if(!m)return x.name;const p=m[1].trim().toLowerCase();return [sj,T(sj),f&&f[1]].some(v=>v&&v.toLowerCase()===p)?m[2]:x.name};
+const subjCol=n=>{if(SUBJ_FIX[n])return SUBJ_FIX[n][0];let h=0;for(const ch of String(n||''))h=(h*31+ch.charCodeAt(0))>>>0;return SUBJ_COL[h%SUBJ_COL.length]};
+function renderSets(){const S=mySets(),me=auth()||{},admin=me.role==='admin',box=$('mineList');box.innerHTML='';
+  const seen=new Set(),all=[...S.mine,...S.shared].filter(x=>!seen.has(x.id)&&seen.add(x.id));
+  const G={mine:all.filter(x=>x.owner===me.u),comm:all.filter(x=>x.owner!==me.u&&x.shared),others:admin?all.filter(x=>x.owner!==me.u&&!x.shared):[]};
+  const tabs=[['mine',T('My sets')],['comm',T('Community')]];if(G.others.length)tabs.push(['others',T('Other teachers')]);
+  if(!tabs.some(t=>t[0]===setTab))setTab='mine';
+  const tt=$('setTabs');tt.innerHTML='';tabs.forEach(([id,name])=>{const b=el('button',null,`${name} · ${G[id].length}`);b.type='button';b.setAttribute('role','tab');b.setAttribute('aria-selected',id===setTab);
+    b.onclick=()=>{setTab=id;store.set('edu-sets-tab',id);renderSets()};tt.append(b)});
+  const list=G[setTab];
+  /* filters: only the subjects and classes this tab has */
+  const fill=(sel,first,vals)=>{const v=sel.value;sel.innerHTML='';sel.append(new Option(first,''));vals.forEach(([val,txt])=>sel.append(new Option(txt,val)));sel.value=vals.some(x=>x[0]===v)?v:'';sel.hidden=vals.length<2&&!sel.value};
+  const subs=[...new Set(list.map(x=>x.subject||T('Other')))].sort((a,b)=>T(a).localeCompare(T(b)));fill($('setSubj'),T('All subjects'),subs.map(x=>[x,T(x)]));
+  const cl=[...new Set(list.flatMap(x=>x.classes||[]))].sort((a,b)=>clsName(a).localeCompare(clsName(b),undefined,{numeric:true}));fill($('setCls'),T('All classes'),cl.map(x=>[x,clsName(x)]));
+  const q=$('setQ').value.trim().toLowerCase(),fs=$('setSubj').value,fc=$('setCls').value;$('setQ').hidden=list.length<6&&!q;
+  const shown=list.filter(x=>(!fs||(x.subject||T('Other'))===fs)&&(!fc||(x.classes||[]).includes(fc))&&(!q||(x.name+' '+(x.ownerName||'')+' '+(x.subject||'')).toLowerCase().includes(q)));
+  const card=x=>{const own=x.owner===me.u,canEdit=own||admin,c=el('div','setcard'),sj=x.subject||T('Other'),ic=el('span','si',T(sj).replace(/[^\p{L}]/gu,'').slice(0,2)||'★'),tx=el('div'),nm=el('b',null,setTitle(x));nm.title=x.name;
+    ic.style.background=subjCol(sj);tx.append(nm);if(x.shared&&setTab==='mine')tx.append(el('span','badge',T('shared')));
+    const bits=[`${x.q.length} ${T(x.q.length===1?'question':'questions')}`];if(x.classes&&x.classes.length)bits.push(T('class')+' '+x.classes.map(clsName).join(', '));
+    if(!own)bits.push(T('by')+' '+(x.ownerName||x.owner));tx.append(el('small',null,bits.join(' · ')));
     const ta=el('div','ta'),btn=(t,f,cls)=>{const b=el('button',cls||null,t);b.type='button';b.onclick=f;ta.append(b)};
-    if(own){btn('Edit',()=>editSet(x));btn('Delete',()=>confirmBox(T('Delete')+' “'+x.name+'”?',T('The set is removed for good. Reports that used it stay.'),T('Delete'),async()=>{const {r}=await api('/sets',{body:{action:'delete',id:x.id}});if(!r.ok)throw 0;closeModal();await pullSets();renderSets()},true),'danger')}
-    else btn('Copy to my sets',async()=>{try{const {r,d}=await api('/sets',{body:{action:'copy',id:x.id}});if(!r.ok)throw 0;toast(T('Copied to your sets'));await pullSets();renderSets()}catch(e){toast(NET_ERR())}});
+    if(!own)btn('Copy to my sets',async()=>{try{const {r}=await api('/sets',{body:{action:'copy',id:x.id}});if(!r.ok)throw 0;toast(T('Copied to your sets'));await pullSets();renderSets()}catch(e){toast(NET_ERR())}});
+    if(canEdit){btn('Edit',()=>editSet(x));btn('Delete',()=>confirmBox(T('Delete')+' “'+x.name+'”?',own?T('The set is removed for good. Reports that used it stay.'):T('This set belongs to')+' '+(x.ownerName||x.owner)+'. '+T('The set is removed for good. Reports that used it stay.'),T('Delete'),async()=>{const {r}=await api('/sets',{body:{action:'delete',id:x.id}});if(!r.ok)throw 0;closeModal();await pullSets();renderSets()},true),'danger')}
     c.append(ic,tx,ta);return c};
-  if(!S.mine.length)box.append(el('p','sub','No sets yet. Click “New set” to make your first one.'));S.mine.forEach(x=>box.append(card(x,true)));
-  $('mineH').textContent=me.role==='admin'?T('All sets'):T('Your sets');
-  const sh=$('sharedList');sh.innerHTML='';$('sharedHead').hidden=!S.shared.length;S.shared.forEach(x=>sh.append(card(x,false)))}
+  if(!list.length){box.append(el('p','sub',setTab==='mine'?'No sets yet. Click “New set” to make your first one.':setTab==='comm'?'No shared sets yet. When a teacher ticks “Share with the other teachers”, the set shows up here.':''));return}
+  if(!shown.length){box.append(el('p','sub','No sets match.'));return}
+  const by=new Map();shown.forEach(x=>{const k=x.subject||T('Other');if(!by.has(k))by.set(k,[]);by.get(k).push(x)});
+  [...by.keys()].sort((a,b)=>T(a).localeCompare(T(b))).forEach(k=>{const h=el('h3','setgrp');h.append(el('i',null),el('span',null,T(k)),el('small',null,String(by.get(k).length)));h.firstChild.style.background=subjCol(k);
+    const l=el('div','setlist');by.get(k).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true})).forEach(x=>l.append(card(x)));box.append(h,l)})}
+['setQ','setSubj','setCls'].forEach(id=>$(id).addEventListener('input',renderSets));
 $('newSet').onclick=()=>editSet(null);
 $('edBack').onclick=()=>{if(ed&&ed.dirty&&!confirm(T('Leave without saving?')))return;ed=null;$('setEd').hidden=true;$('setsList').hidden=false;renderSets()};
 /* the editor */
