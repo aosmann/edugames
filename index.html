@@ -402,6 +402,8 @@ input[type=checkbox]{accent-color:var(--board);width:18px;height:18px;margin:0;f
 .lbwrap{padding-block:8px 40px;display:grid;gap:18px}
 .race{display:grid;gap:12px}
 .race[hidden]{display:none}
+#hostFrame{width:100%;height:calc(100dvh - 210px);min-height:420px;border:0;border-radius:22px;background:#0b1030;box-shadow:0 20px 50px -24px rgba(0,0,0,.6)}
+.board.islive #classView,.board.islive #lb,.board.islive #lbMode,.board.islive #liveClock,.board.islive #liveCounts{display:none!important}
 #specFrame{width:100%;aspect-ratio:16/9;max-height:68vh;border:0;border-radius:22px;background:#0b1030;box-shadow:0 20px 50px -24px rgba(0,0,0,.6)}
 .racebar{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap}
 .racebar .cta{width:auto;padding:14px 28px;font-size:19px}
@@ -842,6 +844,14 @@ input[type=checkbox]{accent-color:var(--board);width:18px;height:18px;margin:0;f
         <button class="ghost" type="button" id="projRace">Open track on projector</button>
       </div>
     </section>
+    <section class="race" id="liveBox" hidden aria-label="Live quiz">
+      <iframe id="hostFrame" title="Live quiz board" allow="autoplay; fullscreen"></iframe>
+      <div class="racebar">
+        <p class="meta" id="liveNote">Students answer on their phones. Run the quiz from the board above.</p>
+        <span class="sp"></span>
+        <button class="ghost" type="button" id="liveFull">Full screen</button>
+      </div>
+    </section>
     <section class="classview" id="classView" hidden aria-live="polite">
       <div class="cvbig"><b id="cvRight">0</b><span>right answers, all together</span></div>
       <div class="cvbar"><i id="cvFill"></i></div>
@@ -1257,6 +1267,9 @@ function renderSetup(){const g=sel.game,B=sel.bank,s=curSub(),t=curTop();
     if(sel.lim.o==='mine'&&!t.set){sel.lim.o='same'}
     row('o','Question order',[['','Mixed for each student'],['same','Same for everyone'],...(t.set?[['mine','In my order']]:[])]);
     if(HOWTO[g.id]){const hb=el('button','link','How to play '+g.name);hb.type='button';hb.style.marginTop='10px';hb.onclick=()=>showHow(g.id,g.name);box.append(hb)}}
+  if(t&&mode==='class'&&g.multiplayer&&g.multiplayer.live&&t.set){sel.lim=sel.lim||store.get('edu-portal-lim',{q:'',t:''});
+    const lab=el('div','sec-t optsec',T('Question order'));box.append(lab);const r=el('div','regchips'),cur=sel.lim.o==='mine'?'mine':'';
+    [['','Shuffled'],['mine','In my order']].forEach(([v,l])=>{const b=el('button',null,T(l));b.type='button';b.setAttribute('aria-pressed',cur===v);b.onclick=()=>{sel.lim.o=v||(sel.lim.o==='same'?'same':'');if(!v&&sel.lim.o==='mine')sel.lim.o='';store.set('edu-portal-lim',sel.lim);renderSetup()};r.append(b)});box.append(r)}
   if(t)(g.settings||[]).filter(st=>!(t.set&&st.key==='level')).forEach(st=>{let v=sel.values[st.key];const cu=st.custom;sel.cust=sel.cust||{};
     Object.keys(sel.values).forEach(k=>{if(k.startsWith(st.key+'_'))delete sel.values[k]});
     const isC=!!(cu&&sel.cust[st.key]&&sel.cust[st.key].on);let cv=null;
@@ -1311,17 +1324,20 @@ const optsLabel=(t,v)=>!t||!t.opts?'':t.opts.map(o=>{const x=v['o_'+o.key];if(x=
   if(o.multi){const sp=o.sep!=null?o.sep:(o.key==='ops'?'':','),l=String(x).split(sp);return l.map(y=>(o.options.find(p=>p[0]===y)||[y,y])[1]).join(o.key==='ops'?' ':', ')}
   const p=o.options.find(p=>p[0]===x);return o.key==='max'?`${T('up to')} ${p?p[1]:x}`:(p?p[1]:x)}).filter(Boolean).join(' · ');
 /* question order for a class round: '' mixed, 'same' one shuffled order for all, 'mine' a teacher's set in its own order */
-const qOrder=(g,t)=>{if(mode!=='class'||!sel.lim||(g.multiplayer&&(g.multiplayer.race||g.multiplayer.live)))return '';const o=sel.lim.o||'';return o==='mine'&&!t.set?'same':o};
+const qOrder=(g,t)=>{if(mode!=='class'||!sel.lim||(g.multiplayer&&g.multiplayer.race))return '';if(g.multiplayer&&g.multiplayer.live)return t.set&&sel.lim.o==='mine'?'mine':'';const o=sel.lim.o||'';return o==='mine'&&!t.set?'same':o};
 function roundFromSel(){const g=sel.game,s=curSub(),t=curTop(),ol=t.regions||t.set?'':optsLabel(t,sel.values);
   return{id:'r'+Date.now().toString(36),game:g.id,gameName:g.name,base:g.base,subject:s.id,topic:t.id,topicName:t.unit?`${t.name} · ${t.unit}`:t.name,
     regionsLabel:t.regions&&sel.bank.regionLabel?sel.bank.regionLabel(sel.values.regions?sel.values.regions.split(','):null):ol,
-    race:mode==='class'&&g.multiplayer&&g.multiplayer.race?{seed:1}:null,lang:I18N.lang,
+    race:mode==='class'&&g.multiplayer&&g.multiplayer.race?{seed:1}:null,live:mode==='class'&&g.multiplayer&&g.multiplayer.live?{seed:1}:null,lang:I18N.lang,
     qseed:qOrder(g,t)?1+(Math.random()*2e9|0):null,qorder:qOrder(g,t)==='mine',
-    lim:mode==='class'&&!(g.multiplayer&&g.multiplayer.race)&&sel.lim&&(sel.lim.q||sel.lim.t)?{q:+sel.lim.q||0,t:+sel.lim.t||0}:null,
+    lim:mode==='class'&&!(g.multiplayer&&(g.multiplayer.race||g.multiplayer.live))&&sel.lim&&(sel.lim.q||sel.lim.t)?{q:+sel.lim.q||0,t:+sel.lim.t||0}:null,
     qset:t.set?encSet(t.set):null,setId:t.set?t.set.id:null,subjectName:t.set?(t.set.subject||T('My questions')):s.name,
-    values:Object.assign({},sel.values),label:`${g.name} · ${t.name}${ol?' · '+ol:''}${mode==='class'&&sel.lim&&(sel.lim.q||sel.lim.t)&&!(g.multiplayer&&g.multiplayer.race)?' · '+limLabel({q:+sel.lim.q||0,t:+sel.lim.t||0}):''}${qOrder(g,t)==='same'?' · '+T('same order'):qOrder(g,t)==='mine'?' · '+T('in my order'):''}${t.set?'':' · '+(LEVELS[sel.values.level]||'')}${sel.values.time?' · '+(sel.values.time>=120?sel.values.time/60+' min':sel.values.time+' sec'):''}`}}
-function gameURL(r,lock){const u=new URL(r.base);u.searchParams.set('topic',r.topic);u.searchParams.set('lang',r.lang||I18N.lang);Object.entries(r.values).forEach(([k,v])=>u.searchParams.set(k,v));if(lock)u.searchParams.set('lock','1');if(lock&&r.qseed)u.searchParams.set('qseed',r.qseed);if(lock&&r.qorder)u.searchParams.set('qorder','1');if(r.qset)u.searchParams.set('qset',r.qset);
+    values:Object.assign({},sel.values),label:`${g.name} · ${t.name}${ol?' · '+ol:''}${mode==='class'&&sel.lim&&(sel.lim.q||sel.lim.t)&&!(g.multiplayer&&(g.multiplayer.race||g.multiplayer.live))?' · '+limLabel({q:+sel.lim.q||0,t:+sel.lim.t||0}):''}${qOrder(g,t)==='same'?' · '+T('same order'):qOrder(g,t)==='mine'?' · '+T('in my order'):''}${t.set?'':' · '+(LEVELS[sel.values.level]||'')}${sel.values.time?' · '+(sel.values.time>=120?sel.values.time/60+' min':sel.values.time+' sec'):''}`}}
+function gameURL(r,lock){if(lock&&r.live){const p=new URL(r.base);p.searchParams.set('player','1');p.searchParams.set('lock','1');p.searchParams.set('lang',r.lang||I18N.lang);return p.href}
+  const u=new URL(r.base);u.searchParams.set('topic',r.topic);u.searchParams.set('lang',r.lang||I18N.lang);Object.entries(r.values).forEach(([k,v])=>u.searchParams.set(k,v));if(lock)u.searchParams.set('lock','1');if(lock&&r.qseed)u.searchParams.set('qseed',r.qseed);if(lock&&r.qorder)u.searchParams.set('qorder','1');if(r.qset)u.searchParams.set('qset',r.qset);
   if(lock&&r.race){u.searchParams.set('race','1');u.searchParams.set('seed',r.race.seed)}return u.href}
+/* live games (game.json multiplayer.live, Quizfall): the teacher's board runs the quiz, phones only answer */
+function hostURL(r){const u=new URL(gameURL(Object.assign({},r,{live:null}),false));u.searchParams.set('host','1');u.searchParams.set('seed',r.live.seed);if(r.qorder)u.searchParams.set('qorder','1');return u.href}
 /* race games (game.json multiplayer.race): one seed per round, a spectate view for the teacher */
 function specURL(r){const u=new URL(r.base);u.searchParams.set('spectate','1');u.searchParams.set('seed',r.race.seed);['laps','track'].forEach(k=>{if(r.values[k]!=null)u.searchParams.set(k,r.values[k])});return u.href}
 const avURL=id=>AVMAP[id]?new URL(AVMAP[id].img,location.href).href:null;
@@ -1835,6 +1851,7 @@ const HOWTO={
  slicefall:{goal:'The answers fly up as fruit.',steps:['Read the question.','Swipe through the fruit with the right answer.','Don\'t slice the bombs or the wrong fruit: they cost a life and time.'],keys:'With a mouse: drag across the fruit.'},
  hoopfall:{goal:'Three hoops, three answers.',steps:['Read the question on the board.','Flick the ball up into the hoop with the right answer.','A swish gives a bonus; a streak multiplies the points.'],keys:'Keyboard: 1, 2 or 3.'},
  blockfall:{goal:'Falling blocks, driven by your answers.',steps:['Read the question while the block falls.','Answer right and the block slides into the best spot.','Clear full rows before the stack reaches the top. Wrong or slow answers drop the block anywhere.'],keys:''},
+ quizfall:{goal:'A live quiz, like Kahoot: the question is on the board, everyone answers on their phone.',steps:['Read the question on the board.','Tap the colour and shape with the right answer on your phone, before the time runs out.','Faster right answers score more; answer streaks add a bonus. The top 5 show after every question.'],keys:''},
  kartfall:{goal:'A kart race: the answers are painted on the road.',steps:['Read the question.','Steer left or right and drive over the right answer for a turbo boost.','Dodge cones, hay bales and oil. The race starts when your teacher says go.'],keys:'Keyboard: ← → to steer, ↑ for turbo.'},
  goalfall:{goal:'A penalty shootout.',steps:['Read the question: three answers hang in the goal.','Swipe from the ball to the right answer to beat the keeper.','Score in a row for double and triple points.'],keys:'Keyboard or mouse: click the answer, or press 1 · 2 · 3.'}};
 /* how-to animations: a tiny looping scene per game (SVG + CSS), the same question each time: 7 × 8 = ? → 56 */
@@ -1855,6 +1872,7 @@ function demoSVG(id){const Q=`<rect x="95" y="8" width="130" height="26" rx="13"
   blockfall:`<rect width="320" height="200" fill="#1a1630"/>${Q}<rect x="60" y="44" width="120" height="150" fill="#25204a"/>
     <g fill="#b48cff"><rect x="60" y="174" width="20" height="20"/><rect x="80" y="174" width="20" height="20"/><rect x="100" y="174" width="20" height="20"/><rect x="160" y="174" width="20" height="20"/><rect x="60" y="154" width="20" height="20"/><rect x="160" y="154" width="20" height="20"/></g>
     <g class="d-blk" fill="#ffd23f"><rect x="100" y="54" width="20" height="20"/><rect x="120" y="54" width="20" height="20"/></g>${chip(240,80,'54')}${chip(240,116,'56','ok d-ok')}${chip(240,152,'58')}${hand('d-tap2')}`,
+  quizfall:`<rect width="320" height="200" fill="#2647d9"/>${Q}<g class=""><rect x="40" y="48" width="115" height="50" rx="10" fill="#e2453c"/><polygon points="60,64 69,80 51,80" fill="#fff"/><text x="110" y="80" text-anchor="middle" font-size="18" font-weight="800" fill="#fff">54</text></g><g class=""><rect x="165" y="48" width="115" height="50" rx="10" fill="#1f6fe0"/><polygon points="185,63 194,73 185,83 176,73" fill="#fff"/><text x="235" y="80" text-anchor="middle" font-size="18" font-weight="800" fill="#fff">48</text></g><g class=""><rect x="40" y="106" width="115" height="50" rx="10" fill="#e8a400"/><circle cx="60" cy="131" r="8" fill="#fff"/><text x="110" y="138" text-anchor="middle" font-size="18" font-weight="800" fill="#fff">64</text></g><g class="ok d-ok"><rect x="165" y="106" width="115" height="50" rx="10" fill="#1f9e55"/><rect x="177" y="123" width="16" height="16" fill="#fff"/><text x="235" y="138" text-anchor="middle" font-size="18" font-weight="800" fill="#fff">56</text></g>${hand('d-tap2')}`,
   kartfall:`<rect width="320" height="200" fill="#3c6e2f"/><rect x="70" y="0" width="180" height="200" fill="#55586b"/><path d="M130 0v200M190 0v200" stroke="#ddd" stroke-width="2" stroke-dasharray="10 10"/>${Q}
     <g class="d-road">${chip(100,70,'54','',50)}${chip(160,70,'58','',50)}${chip(220,70,'56','ok d-ok',50)}</g><g class="d-kart"><rect x="148" y="150" width="24" height="34" rx="6" fill="#d6423a"/><rect x="144" y="156" width="6" height="10" fill="#222"/><rect x="170" y="156" width="6" height="10" fill="#222"/><rect x="144" y="172" width="6" height="10" fill="#222"/><rect x="170" y="172" width="6" height="10" fill="#222"/></g>${hand('d-swr')}`,
   goalfall:`<rect width="320" height="200" fill="#2f8f4a"/>${Q}<rect x="40" y="44" width="240" height="90" fill="none" stroke="#fff" stroke-width="5"/><path d="M40 44h240v90H40z" fill="rgba(255,255,255,.12)"/>
@@ -1944,23 +1962,24 @@ function onStudent(conn){let name=null;
       if(m.last&&typeof m.last==='object'){const L=m.last,cut=v=>v==null?null:String(v).slice(0,160);round.log=round.log||[];
         if(round.log.length<6000)round.log.push({p:name,q:cut(L.q),a:cut(L.answer),pk:cut(L.picked),ok:L.ok?1:0,img:cut(L.img),tag:cut(L.tag)});saveSoon()}
       paintLive()}
+    if(m.t==='qu'&&round&&round.live&&m.round===round.id){toHost({type:'edu-up',from:{id:name,name,avatar:avURL(s.avatar)},data:m.data});return}
     if(m.t==='kstate'&&round&&round.race&&m.round===round.id&&m.s&&typeof m.s==='object'){const k=m.s;s.k={d:+k.d||0,x:+k.x||0,lap:+k.lap||1,fin:!!k.fin,at:Date.now()};return}
     if(m.t==='result'&&round&&m.round===round.id&&m.result){
       const res=Object.assign({game:round.game,subject:round.subject,topic:round.topic,topicName:round.topicName,level:+((round.values||{}).level)||null},m.result,{player:name,receivedAt:new Date().toISOString()});if(round.regionsLabel&&!res.regionsLabel)res.regionsLabel=round.regionsLabel;
       round.results=(round.results||[]).filter(x=>x.player!==name);round.results.push(res);saveSession();
       Object.assign(s,{status:'done',score:res.score||0,right:res.right||0,asked:res.asked||0});paintLive();
       const playing=[...conns.values()].filter(c=>online(c)&&c.status==='playing').length;
-      if(!playing&&!round.closed)setTimeout(()=>{if(round&&!round.closed&&![...conns.values()].some(c=>online(c)&&c.status==='playing'))endRound()},1800)}});
+      if(!playing&&!round.closed&&!round.live)setTimeout(()=>{if(round&&!round.closed&&![...conns.values()].some(c=>online(c)&&c.status==='playing'))endRound()},1800)}});
   conn.on('close',()=>{pending.delete(conn);if(name&&conns.get(name)&&conns.get(name).conn===conn){paintLobby();paintLive();pushMode()}})}
-const pub=r=>({id:r.id,url:gameURL(r,true),game:r.game,gameName:r.gameName,topicName:r.topicName,race:!!r.race,raceStarted:!!r.raceStarted,ready:!!r.ready,lim:r.lim||null});
+const pub=r=>({id:r.id,url:gameURL(r,true),game:r.game,gameName:r.gameName,topicName:r.topicName,race:!!r.race,live:!!r.live,raceStarted:!!r.raceStarted,ready:!!r.ready,lim:r.lim||null});
 
 /* start a round on every connected device */
 function startRound(r){
   round=Object.assign({},r,{id:'r'+Date.now().toString(36),startedAt:new Date().toISOString(),results:[],closed:false});
-  if(round.race)round.race={seed:Math.random()*1e9|0};round.raceStarted=false;round.ready=!round.race;
+  if(round.race)round.race={seed:Math.random()*1e9|0};if(round.live)round.live={seed:1+(Math.random()*1e9|0)};round.raceStarted=false;round.ready=!(round.race||round.live);
   session.rounds.push(round);session.last=r;saveSession();
   conns.forEach(c=>{Object.assign(c,{status:'waiting',score:0,right:0,asked:0,streak:0,flash:null,delta:0});if(online(c)){if(round.ready)c.conn.send({t:'ready',round:pub(round)});else{c.status='playing';c.conn.send({t:'start',round:pub(round)})}}});
-  conns.forEach(c=>{c.k=null});setupRace();
+  conns.forEach(c=>{c.k=null});setupRace();setupLive();
   $('podium').hidden=true;$('lb').innerHTML='';LB.clear();show('liveScr');paintLive();
   paintReady();clearInterval(clockT);clockT=setInterval(paintClock,500);paintClock()}
 function paintReady(){const rb=$('readyBox');rb.hidden=!(round&&round.ready&&!round.closed);if(rb.hidden)return;
@@ -1994,6 +2013,20 @@ function setupRace(){clearInterval(raceT);raceT=null;const on=!!(round&&round.ra
     conns.forEach((c,n)=>{if(c.k&&now-c.k.at<5000)peers.push({id:n,name:n,avatar:avURL(c.avatar),d:c.k.d,x:c.k.x,lap:c.k.lap,fin:!!c.k.fin})});
     if(peer&&peer.open)peer.broadcast({t:'kpeers',peers});toSpec({type:'edu-peers',peers})},166)}
 function stopRace(){clearInterval(raceT);raceT=null}
+/* ---- live quiz (Quizfall): the board iframe is the host; the portal only relays edu-bcast down, edu-up up and the roster ---- */
+let liveT=null,liveSent='';
+const toHost=m=>{try{$('hostFrame').contentWindow.postMessage(m,'*')}catch(e){}};
+function livePlayers(){const out=[];conns.forEach((c,n)=>{if(online(c))out.push({id:n,name:n,avatar:avURL(c.avatar)})});return out}
+function sendPlayers(force){const p=livePlayers(),k=JSON.stringify(p);if(!force&&k===liveSent)return;liveSent=k;toHost({type:'edu-players',players:p})}
+function setupLive(){clearInterval(liveT);liveT=null;const on=!!(round&&round.live);$('liveBox').hidden=!on;$('liveScr').classList.toggle('islive',on);
+  if(!on){if($('hostFrame').src!=='about:blank')$('hostFrame').src='about:blank';return}
+  liveSent='';$('hostFrame').src=hostURL(round);liveT=setInterval(()=>{if(!round||!round.live){clearInterval(liveT);return}sendPlayers()},1500)}
+function stopLive(clear){clearInterval(liveT);liveT=null;if(clear){$('liveBox').hidden=true;$('liveScr').classList.remove('islive');$('hostFrame').src='about:blank'}}
+window.addEventListener('message',e=>{if(e.source!==$('hostFrame').contentWindow)return;const m=e.data||{};if(!round||!round.live)return;
+  if(m.type==='edu-ready'){sendPlayers(true);return}
+  if(m.type==='edu-bcast'){if(peer&&peer.open)peer.broadcast({t:'qb',round:round.id,data:m.data});return}
+  if(m.type==='edu-live-end'){round.liveEnd={ranking:(m.ranking||[]).slice(0,200),count:m.count,time:m.time,at:m.at};saveSession();return}});
+$('liveFull').onclick=()=>{const f=$('hostFrame');(f.requestFullscreen||f.webkitRequestFullscreen||(()=>{})).call(f)};
 $('startRace').onclick=()=>{if(!round||!round.race||round.raceStarted)return;round.raceStarted=true;
   if(peer)peer.broadcast({t:'kgo'});toSpec({type:'edu-go'});$('startRace').hidden=true;$('raceNote').textContent='Race on! Late joiners start from the grid.'};
 $('projRace').onclick=()=>{if(!round||!round.race)return;projWin=window.open(specURL(round),'kartfall-track');
@@ -2031,7 +2064,7 @@ function paintLive(){if(!round||$('liveScr').hidden)return;
     if(!dx&&!dy)return;r.li.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'none'}],{duration:450,easing:'cubic-bezier(.2,.8,.2,1)'})})}
 
 /* ---- end of a round: podium, then the class goes on ---- */
-function endRound(){if(!round||round.closed)return;round.closed=true;round.endedAt=new Date().toISOString();stopRace();
+function endRound(){if(!round||round.closed)return;round.closed=true;round.endedAt=new Date().toISOString();stopRace();stopLive();
   /* students still playing when the round ends keep what they did so far (marked partial) */
   conns.forEach((c,n)=>{if(!(c.asked>0)||(round.results||[]).some(x=>x.player===n))return;
     const mine=(round.log||[]).filter(e=>e.p===n&&!e.ok).map(e=>({q:e.q,answer:e.a,picked:e.pk,img:e.img}));
@@ -2048,7 +2081,7 @@ function endRound(){if(!round||round.closed)return;round.closed=true;round.ended
   $('podium').hidden=false;paintLive()}
 $('endRound').onclick=endRound;
 $('againRound').onclick=()=>{if(session&&session.last)startRound(session.last)};
-$('nextRound').onclick=()=>{$('podium').hidden=true;stopRace();$('raceBox').hidden=true;$('specFrame').src='about:blank';show('lobby');paintLobby()};
+$('nextRound').onclick=()=>{$('podium').hidden=true;stopRace();stopLive(true);$('raceBox').hidden=true;$('specFrame').src='about:blank';show('lobby');paintLobby()};
 $('finishSession').onclick=()=>{$('podium').hidden=true;closeClass(true)};
 $('closeClass').onclick=()=>{if([...conns.values()].some(online)&&!confirm(T('End the class? Every student will be disconnected.')))return;closeClass(!!(session&&session.rounds.length))};
 function closeClass(toReport){if(!session)return setMode('play');setTimeout(syncNow,400);
@@ -2113,6 +2146,7 @@ function startJoin(code,order){order=order||[joinRelay,...RELAYS.map((x,j)=>j).f
           const g=GAMES.find(x=>x.base&&cur.url.startsWith(x.base))||{};
           conn.send({t:'result',round:cur.id,result:{game:cur.game||g.id,score:m.score||0,right:m.right||0,asked:m.asked||0,missed:st.missed||[],limit:cur.lim.q,at:new Date().toISOString()}});
           closeStage();$('wHi').textContent=T('Done!');$('wMsg').textContent=`${m.right||0} ${T('of')} ${m.asked||0} ${T('right')}. ${T('Wait for the others to finish.')}`;$('wHow').hidden=true;show('waitScr')}}
+      if(m.type==='edu-up'&&cur.live){conn.send({t:'qu',round:cur.id,data:m.data});return}
       if(m.type==='edu-state'&&cur.race&&m.state)conn.send({t:'kstate',round:cur.id,s:m.state});
       if(m.type==='edu-ready'&&cur.race&&cur.raceStarted)toGame({type:'edu-go'});
       if(m.type==='edu-result'){if(cur.sent&&st.done)return;conn.send({t:'result',round:cur.id,result:m.result});cur.sent=true}}};
@@ -2131,9 +2165,10 @@ function startJoin(code,order){order=order||[joinRelay,...RELAYS.map((x,j)=>j).f
       if(m.t==='ready'){st.cur=null;$('wHi').textContent=T('Get ready!');$('wMsg').textContent=`${m.round.gameName} · ${m.round.topicName}`+(m.round.lim?` · ${limLabel(m.round.lim)}`:'')+'. '+T('Your teacher starts the game in a moment.');
         const w=$('wHow');w.innerHTML='';const h=howEl(m.round.game);w.hidden=!h;if(h){w.append(el('b',null,T('How to play')),h)}closeStage();show('waitScr');return}
       if(m.t==='start'){st.cur=m.round;st.missed=[];st.done=false;let url=m.round.url;$('wHow').hidden=true;
-        if(st.cur.race){const u=new URL(url);u.searchParams.set('me',st.name);const a=avURL(myAvatar);if(a)u.searchParams.set('avatar',a);url=u.href}
+        if(st.cur.race||st.cur.live){const u=new URL(url);u.searchParams.set('me',st.name);if(st.cur.live)u.searchParams.set('name',st.name);const a=avURL(myAvatar);if(a)u.searchParams.set('avatar',a);url=u.href}
         const go=()=>{if(student!==st||st.cur!==m.round)return;openStage(url,`${m.round.gameName} · ${m.round.topicName}`,st.name)};
         if(m.count){show('waitScr');countdown(m.count);setTimeout(go,m.count*1000)}else go();return}
+      if(m.t==='qb'&&st.cur&&st.cur.live&&m.round===st.cur.id){toGame({type:'edu-bcast',data:m.data});return}
       if(m.t==='kpeers'&&st.cur&&st.cur.race){toGame({type:'edu-peers',peers:m.peers||[]});return}
       if(m.t==='kgo'&&st.cur&&st.cur.race){st.cur.raceStarted=true;toGame({type:'edu-go'});return}
       if(m.t==='stop'){st.cur=null;closeStage();$('wHi').textContent=m.rank?`You came ${ord(m.rank)} of ${m.of}`:'Round over';$('wMsg').textContent='Your teacher is picking the next game. Keep this page open.';show('waitScr');return}
