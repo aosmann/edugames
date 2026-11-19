@@ -2382,7 +2382,12 @@ $('clrRep').onclick=()=>{const me=auth(),admin=!!(me&&me.role==='admin');
 /* ---------------- custom dropdowns ----------------
    each <select> is wrapped once; a tap or key opens .xmenu, and picking sets the select's value and fires input + change */
 const XSEL={menu:null,sel:null,act:-1,items:[]};
-function xselWrap(sel){if(sel.closest('.xsel'))return;const w=document.createElement('span');w.className='xsel';sel.parentNode.insertBefore(w,sel);w.append(sel);
+/* on phones and tablets, focusing a <select> opens the system picker, so the field is never focused there */
+const XCOARSE=matchMedia('(pointer:coarse)').matches||'ontouchstart' in window;
+/* tapping a label's text would focus its select (and open the system picker on iPhone): open our menu instead */
+document.addEventListener('click',e=>{if(e.target.closest('.xsel,.xmenu'))return;const lab=e.target.closest('label');const sel=lab&&lab.querySelector('.xsel>select');
+  if(sel){e.preventDefault();if(!sel.disabled)xselOpen(sel)}},true);
+function xselWrap(sel){if(sel.closest('.xsel'))return;const w=document.createElement('span');w.className='xsel';if(XCOARSE)sel.tabIndex=-1;sel.parentNode.insertBefore(w,sel);w.append(sel);
   w.addEventListener('click',e=>{e.preventDefault();if(sel.disabled)return;XSEL.sel===sel?xselClose():xselOpen(sel)});
   sel.addEventListener('keydown',e=>{if(XSEL.sel===sel)return;if([' ','Enter','ArrowDown','ArrowUp'].includes(e.key)){e.preventDefault();xselOpen(sel)}});
   sel.addEventListener('mousedown',e=>e.preventDefault())}
@@ -2390,7 +2395,7 @@ function xselOpen(sel){xselClose();const w=sel.parentNode,m=document.createEleme
   [...sel.children].forEach(ch=>{const add=(o)=>{if(o.hidden)return;const li=document.createElement('li');li.setAttribute('role','option');li.textContent=o.text;li.setAttribute('aria-selected',o.selected);
       if(o.disabled)li.setAttribute('aria-disabled','true');else{li.onclick=()=>xselPick(o.index);li.onmousemove=()=>xselAct(XSEL.items.indexOf(li))}m.append(li);if(!o.disabled)XSEL.items.push(li);li._i=o.index};
     if(ch.tagName==='OPTGROUP'){const g=document.createElement('li');g.className='grp';g.textContent=ch.label;m.append(g);[...ch.children].forEach(add)}else add(ch)});
-  document.body.append(m);XSEL.menu=m;XSEL.sel=sel;w.classList.add('open');sel.focus({preventScroll:true});
+  document.body.append(m);XSEL.menu=m;XSEL.sel=sel;w.classList.add('open');if(!XCOARSE)sel.focus({preventScroll:true});
   const r=w.getBoundingClientRect(),vw=innerWidth,vh=innerHeight,below=vh-r.bottom-12,above=r.top-12,up=below<220&&above>below;
   m.style.minWidth=Math.max(r.width,160)+'px';m.style.maxWidth=Math.min(vw-24,460)+'px';m.style.maxHeight=Math.max(120,Math.min(360,up?above:below))+'px';
   const mw=m.offsetWidth;m.style.left=Math.max(12,Math.min(r.left,vw-mw-12))+'px';
@@ -2405,7 +2410,7 @@ function xselPick(i){const sel=XSEL.sel;xselClose();if(!sel||sel.selectedIndex==
 function xselClose(){if(XSEL.menu)XSEL.menu.remove();if(XSEL.sel)XSEL.sel.parentNode.classList.remove('open');XSEL.menu=XSEL.sel=null;XSEL.items=[];XSEL.act=-1}
 document.addEventListener('pointerdown',e=>{if(XSEL.menu&&!XSEL.menu.contains(e.target)&&!(XSEL.sel&&XSEL.sel.parentNode.contains(e.target)))xselClose()},true);
 document.addEventListener('keydown',e=>{if(!XSEL.menu)return;const k=e.key;
-  if(k==='Escape'){e.preventDefault();e.stopPropagation();const s=XSEL.sel;xselClose();s&&s.focus()}
+  if(k==='Escape'){e.preventDefault();e.stopPropagation();const s=XSEL.sel;xselClose();if(s&&!XCOARSE)s.focus()}
   else if(k==='ArrowDown'||k==='ArrowUp'){e.preventDefault();xselAct(Math.max(0,Math.min(XSEL.items.length-1,XSEL.act+(k==='ArrowDown'?1:-1))))}
   else if(k==='Home'||k==='End'){e.preventDefault();xselAct(k==='Home'?0:XSEL.items.length-1)}
   else if(k==='Enter'||k===' '){e.preventDefault();const li=XSEL.items[XSEL.act];if(li)xselPick(li._i)}
