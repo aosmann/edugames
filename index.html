@@ -57,7 +57,7 @@ p{margin:0}
 .modes button[data-mode=class][aria-pressed=true]{background:var(--board);color:#fff;box-shadow:inset 0 -3px 0 var(--board2)}
 @media(max-width:620px){.top{gap:14px 6px}.top .langbtn{padding:8px 10px}.top .modes{order:3;width:100%;grid-template-columns:repeat(3,1fr)}.top .sp{display:none}.top .langbtn{margin-left:auto}
   .top .joinpill{font-size:0;gap:0;padding:11px}.top .joinpill svg{width:22px;height:22px}}
-@media(max-width:430px){.top .acctbtn.out{font-size:0;gap:0;padding:11px}.top .acctbtn.out .an{display:none!important}.top .acctbtn.out svg{width:22px;height:22px}}
+@media(max-width:430px){.top .acctbtn.out,.bar .acctbtn.out{font-size:0;gap:0;padding:11px}.top .acctbtn.out .an,.bar .acctbtn.out .an{display:none!important}.top .acctbtn.out svg,.bar .acctbtn.out svg{width:22px;height:22px}}
 
 /* ---------- home ---------- */
 .intro{display:grid;gap:8px;padding:30px 0 22px}
@@ -278,7 +278,7 @@ input[type=checkbox]{accent-color:var(--board);width:18px;height:18px;margin:0;f
 .qr{width:clamp(110px,15vw,168px);aspect-ratio:1;border:0;border-radius:14px;background:#fff;padding:0;display:grid;place-items:center;cursor:zoom-in}
 .qr svg{width:100%;height:100%;display:block}
 .qr .wait{color:var(--ink2);font-weight:700;font-size:14px}
-@media(max-width:680px){.joinbar{grid-template-columns:1fr auto;padding:14px}.jtext{grid-column:1/-1}.jcode{padding-left:0;border-left:0}}
+@media(max-width:680px){.joinbar{grid-template-columns:minmax(0,1fr) auto;padding:14px}.jtext{grid-column:1/-1}.jcode{padding-left:0;border-left:0}}
 .qrbig{position:fixed;inset:0;z-index:40;background:var(--board);color:#fff;display:grid;place-content:center;justify-items:center;gap:16px;padding:24px;cursor:zoom-out;text-align:center}
 .qrbox{background:#fff;border-radius:var(--r-l);padding:clamp(14px,2vw,24px);width:min(80vmin,620px);aspect-ratio:1}
 .qrbox svg{width:100%;height:100%;display:block}
@@ -391,6 +391,13 @@ input[type=checkbox]{accent-color:var(--board);width:18px;height:18px;margin:0;f
 .clock.big{font-size:clamp(44px,6vw,76px)}
 .dock{display:grid;gap:10px;justify-items:center;text-align:center;border-bottom:1px solid rgba(255,255,255,.15);padding-bottom:22px;margin-bottom:6px}
 .dock .sub{color:#c8cff5;max-width:60ch}
+/* the game dock is a small strip by default, so the students stay in view; the title opens the big grid */
+.docktog{display:inline-flex;align-items:center;gap:10px;border:0;background:none;color:inherit;font:inherit;cursor:pointer;padding:4px 8px;border-radius:14px}
+.docktog:hover{background:rgba(255,255,255,.08)}.docktog svg{width:.75em;height:.75em;transition:transform .2s}.docktog[aria-expanded=true] svg{transform:rotate(180deg)}
+.dock.compact{gap:8px;padding-bottom:16px}.dock.compact .sub{display:none}
+.dock{min-width:0;max-width:100%;grid-template-columns:minmax(0,1fr)}.dock>*{min-width:0}.dock.compact .roomgames{width:100%;flex-wrap:nowrap;justify-content:safe center;overflow-x:auto;max-width:100%;gap:10px;padding:2px 4px 8px;scrollbar-width:thin}
+.dock.compact .roomgames .game{width:76px;flex:none;gap:6px}.dock.compact .roomgames .game span:not(.ic){font-size:13px}
+.dock.compact .roomgames .game .ic{box-shadow:0 6px 0 -3px var(--board2),0 10px 18px -10px rgba(0,0,0,.5)}
 .roomgames{display:flex;flex-wrap:wrap;justify-content:center;gap:14px 16px;margin-top:6px}
 .roomgames .game{width:clamp(84px,calc((min(100vw,1180px) - 220px) / 7),124px)}
 .roomgames .game span{color:#fff}
@@ -795,8 +802,8 @@ input[type=checkbox]{accent-color:var(--board);width:18px;height:18px;margin:0;f
       <span class="clsnote" id="clsNote"></span>
     </div>
     <p class="roomnote" id="lobbyNote"></p>
-    <section class="dock">
-      <h2>Pick a game</h2>
+    <section class="dock" id="dock">
+      <h2><button type="button" class="docktog" id="dockTog" aria-expanded="false" aria-controls="roomGames">Pick a game<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></h2>
       <p class="sub" id="roomSub"></p>
       <div class="roomgames" id="roomGames"></div>
     </section>
@@ -1839,6 +1846,8 @@ function drawQR(){const q=qrcode(0,'M');q.addData(joinLink());q.make();const svg
 $('qr').onclick=()=>{if($('qr').querySelector('svg'))$('qrBig').hidden=false};
 $('qrBig').onclick=()=>$('qrBig').hidden=true;
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('qrBig').hidden=true});
+{let big=store.get('edu-dock-big',false);const paint=()=>{$('dock').classList.toggle('compact',!big);$('dockTog').setAttribute('aria-expanded',big)};paint();
+  $('dockTog').onclick=()=>{big=!big;store.set('edu-dock-big',big);paint()}}
 function renderRoomGames(){const box=$('roomGames');box.innerHTML='';
   if(!GAMES.length){box.append(el('p','sub','Loading games…'));return}
   GAMES.forEach(g=>{const b=el('button','game');b.type='button';b.style.setProperty('--c',g.color||'#2b3990');
