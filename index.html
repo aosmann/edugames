@@ -1249,11 +1249,12 @@ function renderSetup(){const g=sel.game,B=sel.bank,s=curSub(),t=curTop();
     row.append(chip('all','All',all));B.regions.forEach(r=>row.append(chip(r.id,r.name,!all&&cur.includes(r.id))));box.append(row)}
   Object.keys(sel.values).forEach(k=>{if(k.slice(0,2)==='o_'&&!(t&&t.opts&&t.opts.some(o=>'o_'+o.key===k)))delete sel.values[k]});
   if(t&&t.opts)topicOptsUI(t,box);
-  if(t&&mode==='class'&&!(g.multiplayer&&g.multiplayer.race)){sel.lim=sel.lim||store.get('edu-portal-lim',{q:'',t:''});
+  if(t&&mode==='class'&&!(g.multiplayer&&(g.multiplayer.race||g.multiplayer.live))){sel.lim=sel.lim||store.get('edu-portal-lim',{q:'',t:''});
     const row=(key,label,opts)=>{const lab=el('div','sec-t optsec',T(label));box.append(lab);const r=el('div','regchips');opts.forEach(([v,l])=>{const b=el('button',null,T(l));b.type='button';b.setAttribute('aria-pressed',String(sel.lim[key]||'')===v);
       b.onclick=()=>{sel.lim[key]=v;store.set('edu-portal-lim',sel.lim);renderSetup()};r.append(b)});box.append(r)};
     row('q','Questions per student',[['','No limit'],['10','10'],['15','15'],['20','20'],['30','30']]);
     row('t','Round time',[['','The game decides'],['180','3 min'],['300','5 min'],['600','10 min'],['900','15 min']]);
+    row('o','Question order',[['','Mixed for each student'],['same','Same for everyone']]);
     if(HOWTO[g.id]){const hb=el('button','link','How to play '+g.name);hb.type='button';hb.style.marginTop='10px';hb.onclick=()=>showHow(g.id,g.name);box.append(hb)}}
   if(t)(g.settings||[]).filter(st=>!(t.set&&st.key==='level')).forEach(st=>{let v=sel.values[st.key];const cu=st.custom;sel.cust=sel.cust||{};
     Object.keys(sel.values).forEach(k=>{if(k.startsWith(st.key+'_'))delete sel.values[k]});
@@ -1312,10 +1313,11 @@ function roundFromSel(){const g=sel.game,s=curSub(),t=curTop(),ol=t.regions||t.s
   return{id:'r'+Date.now().toString(36),game:g.id,gameName:g.name,base:g.base,subject:s.id,topic:t.id,topicName:t.unit?`${t.name} · ${t.unit}`:t.name,
     regionsLabel:t.regions&&sel.bank.regionLabel?sel.bank.regionLabel(sel.values.regions?sel.values.regions.split(','):null):ol,
     race:mode==='class'&&g.multiplayer&&g.multiplayer.race?{seed:1}:null,lang:I18N.lang,
+    qseed:mode==='class'&&!(g.multiplayer&&(g.multiplayer.race||g.multiplayer.live))&&sel.lim&&sel.lim.o==='same'?1+(Math.random()*2e9|0):null,
     lim:mode==='class'&&!(g.multiplayer&&g.multiplayer.race)&&sel.lim&&(sel.lim.q||sel.lim.t)?{q:+sel.lim.q||0,t:+sel.lim.t||0}:null,
     qset:t.set?encSet(t.set):null,setId:t.set?t.set.id:null,subjectName:t.set?(t.set.subject||T('My questions')):s.name,
-    values:Object.assign({},sel.values),label:`${g.name} · ${t.name}${ol?' · '+ol:''}${mode==='class'&&sel.lim&&(sel.lim.q||sel.lim.t)&&!(g.multiplayer&&g.multiplayer.race)?' · '+limLabel({q:+sel.lim.q||0,t:+sel.lim.t||0}):''}${t.set?'':' · '+(LEVELS[sel.values.level]||'')}${sel.values.time?' · '+(sel.values.time>=120?sel.values.time/60+' min':sel.values.time+' sec'):''}`}}
-function gameURL(r,lock){const u=new URL(r.base);u.searchParams.set('topic',r.topic);u.searchParams.set('lang',r.lang||I18N.lang);Object.entries(r.values).forEach(([k,v])=>u.searchParams.set(k,v));if(lock)u.searchParams.set('lock','1');if(r.qset)u.searchParams.set('qset',r.qset);
+    values:Object.assign({},sel.values),label:`${g.name} · ${t.name}${ol?' · '+ol:''}${mode==='class'&&sel.lim&&(sel.lim.q||sel.lim.t)&&!(g.multiplayer&&g.multiplayer.race)?' · '+limLabel({q:+sel.lim.q||0,t:+sel.lim.t||0}):''}${mode==='class'&&sel.lim&&sel.lim.o==='same'&&!(g.multiplayer&&(g.multiplayer.race||g.multiplayer.live))?' · '+T('same order'):''}${t.set?'':' · '+(LEVELS[sel.values.level]||'')}${sel.values.time?' · '+(sel.values.time>=120?sel.values.time/60+' min':sel.values.time+' sec'):''}`}}
+function gameURL(r,lock){const u=new URL(r.base);u.searchParams.set('topic',r.topic);u.searchParams.set('lang',r.lang||I18N.lang);Object.entries(r.values).forEach(([k,v])=>u.searchParams.set(k,v));if(lock)u.searchParams.set('lock','1');if(lock&&r.qseed)u.searchParams.set('qseed',r.qseed);if(r.qset)u.searchParams.set('qset',r.qset);
   if(lock&&r.race){u.searchParams.set('race','1');u.searchParams.set('seed',r.race.seed)}return u.href}
 /* race games (game.json multiplayer.race): one seed per round, a spectate view for the teacher */
 function specURL(r){const u=new URL(r.base);u.searchParams.set('spectate','1');u.searchParams.set('seed',r.race.seed);['laps','track'].forEach(k=>{if(r.values[k]!=null)u.searchParams.set(k,r.values[k])});return u.href}

@@ -91,6 +91,7 @@ The flag images live in `flags/<iso>.webp` next to `questions.js` (195 files, ~5
 Nothing to build in the game: the shared `questions.js` reads these from the address by itself.
 - `o_<key>=<value>`: settings of a topic (`topic.opts`). Basic math: `o_ops=+-xd` (any of + - x d) and `o_max=1000`; Times tables: `o_tables=7,8` and `o_ops=x|d|xd`.
 - `qset=<base64url JSON>`: a teacher's own question set. It appears as the subject `mine` ("My questions") with one topic whose id is the `topic` parameter, so the game's normal `?topic=` lookup finds it. It never goes into Mix.
+- `qseed=<integer>`: same question order for the whole class (the teacher's "Question order: Same for everyone" setting). Nothing to do in the game: `questions.js` v5.4+ reads it, and every `EduQ.stream()` then gives the same questions in the same order, with the answers in the same places. Don't reshuffle `ans` in the game if you want the buttons to match too.
 
 Just keep `questions.js` byte-identical to the other games and use `EduQ.SUBJECTS` / `EduQ.stream` as usual.
 
