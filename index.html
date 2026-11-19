@@ -175,6 +175,13 @@ input[type=checkbox]{accent-color:var(--board);width:18px;height:18px;margin:0;f
 .xmenu li[aria-selected=true]::after{content:"";margin-left:auto;width:5px;height:10px;border:solid var(--board);border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-2px,-2px);flex:none}
 .xmenu li[aria-disabled=true]{opacity:.45;cursor:default}
 .xmenu li.grp{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2);cursor:default;padding:10px 12px 4px}
+
+/* long menus: a soft fade at the edge that still has more to scroll */
+.xmenu::before,.xmenu::after,.ddlist::before,.ddlist::after{content:"";display:block;position:sticky;height:34px;pointer-events:none;z-index:3;opacity:0;transition:opacity .15s;grid-column:1/-1}
+.xmenu::before,.ddlist::before{top:-6px;margin-bottom:-34px;background:linear-gradient(var(--card) 15%,rgba(255,255,255,0))}
+.xmenu::after,.ddlist::after{bottom:-6px;height:52px;margin-top:-52px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2358618a' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") center bottom 4px/16px no-repeat,linear-gradient(rgba(255,255,255,0),var(--card) 62%)}
+.clsdd .ddlist::before{top:-10px}.clsdd .ddlist::after{bottom:-10px}
+.xmenu.ft::before,.ddlist.ft::before,.xmenu.fb::after,.ddlist.fb::after{opacity:1}
 @media(prefers-reduced-motion:reduce){.xmenu{animation:none}.xsel::after{transition:none}}
 
 @media(prefers-reduced-motion:reduce){.ddlist{animation:none}.ddbtn .chev{transition:none}}
@@ -1172,7 +1179,7 @@ function dropdown(host,{placeholder,options,value,onChange,disabled,render,label
   options.forEach(o=>{const li=el('li');li.setAttribute('role','option');li.setAttribute('aria-selected',o.value===value);li.tabIndex=-1;
     const ok=el('span','ok');ok.innerHTML=CHECK;li.append(...render(o,false),ok);
     li.onclick=e=>{e.stopPropagation();close();if(o.value!==value)onChange(o.value)};list.append(li)});
-  const open=()=>{closeAllDD();list.hidden=false;btn.setAttribute('aria-expanded','true');const c=list.querySelector('[aria-selected=true]')||list.firstElementChild;if(c){c.focus();c.scrollIntoView({block:'nearest'})}};
+  const open=()=>{closeAllDD();list.hidden=false;requestAnimationFrame(()=>sfUpd(list));btn.setAttribute('aria-expanded','true');const c=list.querySelector('[aria-selected=true]')||list.firstElementChild;if(c){c.focus();c.scrollIntoView({block:'nearest'})}};
   btn.onclick=e=>{e.stopPropagation();list.hidden?open():close()};
   btn.addEventListener('keydown',e=>{if(e.key==='ArrowDown'&&list.hidden){e.preventDefault();open()}});
   list.addEventListener('keydown',e=>{const it=[...list.children],k=it.indexOf(document.activeElement);
@@ -2388,7 +2395,9 @@ function xselOpen(sel){xselClose();const w=sel.parentNode,m=document.createEleme
   m.style.minWidth=Math.max(r.width,160)+'px';m.style.maxWidth=Math.min(vw-24,460)+'px';m.style.maxHeight=Math.max(120,Math.min(360,up?above:below))+'px';
   const mw=m.offsetWidth;m.style.left=Math.max(12,Math.min(r.left,vw-mw-12))+'px';
   if(up)m.style.bottom=(vh-r.top+6)+'px';else m.style.top=(r.bottom+6)+'px';
-  const cur=XSEL.items.findIndex(li=>li.getAttribute('aria-selected')==='true');xselAct(cur<0?0:cur,true)}
+  const cur=XSEL.items.findIndex(li=>li.getAttribute('aria-selected')==='true');xselAct(cur<0?0:cur,true);sfUpd(m)}
+function sfUpd(el){if(!el)return;const t=el.scrollTop>2,b=el.scrollTop+el.clientHeight<el.scrollHeight-2;el.classList.toggle('ft',t);el.classList.toggle('fb',b)}
+document.addEventListener('scroll',e=>{const t=e.target;if(t&&t.classList&&(t.classList.contains('xmenu')||t.classList.contains('ddlist')))sfUpd(t)},true);
 function xselAct(i,center){if(i<0||i>=XSEL.items.length)return;XSEL.items.forEach(li=>li.classList.remove('act'));XSEL.act=i;const li=XSEL.items[i];li.classList.add('act');
   const m=XSEL.menu;if(li.offsetTop<m.scrollTop)m.scrollTop=li.offsetTop-6;else if(li.offsetTop+li.offsetHeight>m.scrollTop+m.clientHeight)m.scrollTop=li.offsetTop+li.offsetHeight-m.clientHeight+6;
   if(center)m.scrollTop=li.offsetTop-m.clientHeight/2+li.offsetHeight/2}
